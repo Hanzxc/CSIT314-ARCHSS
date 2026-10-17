@@ -2,6 +2,8 @@
 # A user group e.g. User Admin, Interior Designer, Customer, Platform Manager.
 # One row in the user_profile table.
 
+import json
+
 from database.db import getConnection
 
 # the platform's fixed permission list (US3 assumptions) - don't rename these
@@ -28,16 +30,19 @@ class UserProfile:
 
     # US1, US4, US5, US6 - UT4.1 to UT4.4
     def getUserProfile(self, profileId):
-        # TODO:
-        # - load the row from user_profile with this profileId
-        # - permissions column is saved as JSON text -> json.loads() it back into a list
-        # - found -> return a UserProfile, not found (9999, -1, 0...) -> return None
-        pass
+        # returns the UserProfile with this id, or None if there isn't one
+        conn = getConnection()
+        row = conn.execute("SELECT * FROM user_profile WHERE profileId = ?", (profileId,)).fetchone()
+        conn.close()
+
+        if row is None:
+            return None
+        return UserProfile(row["profileId"], row["profileName"], row["description"],
+                           json.loads(row["permissions"]), row["status"])
 
     # US1, US6 - UT6.5
     def isActive(self):
-        # TODO: return True if self.status == "Active", else False
-        pass
+        return self.status == "Active"
 
     # US3, US5 - UT3.1
     def getAllPermissions(self):

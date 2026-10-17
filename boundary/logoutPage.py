@@ -14,12 +14,13 @@ class LogoutPage:
         self.logoutController = LogoutController()
 
     def clickLogout(self):
-        # TODO:
-        # - loggedOut = self.logoutController.logout()
-        # - loggedOut True  -> return self.displayLoginPage(MSG_LOGGED_OUT)
-        # - loggedOut False -> return self.displayLoginPage(MSG_SESSION_ENDED)
-        pass
+        loggedOut = self.logoutController.logout()
+        if loggedOut:
+            return self.displayLoginPage(MSG_LOGGED_OUT)
+        return self.displayLoginPage(MSG_SESSION_ENDED)
 
     def displayLoginPage(self, msg):
-        # TODO: return render_template("login.html", successMessage=msg)
-        pass
+        # green tick for a normal log out (wireframe 4b), blue info box if the session had already ended (4c)
+        if msg == MSG_LOGGED_OUT:
+            return render_template("login.html", successMessage=msg)
+        return render_template("login.html", infoMessage=msg)

@@ -51,7 +51,8 @@ CSIT314-ARCHSS/
 ├── database/
 │   ├── schema.sql              user_profile + user_account tables
 │   └── db.py                   getConnection(), initDatabase()
-├── templates/                  HTML pages (to add, from the wireframes)
+├── templates/                  HTML pages, from the wireframes (base.html = shared header + menu)
+├── static/                     style.css shared by every page
 ├── tests/                      one test file per user story (UT cases from the docs)
 ├── Sprint_1/                   US1-US6 docs + diagrams
 └── Sprint_2/
@@ -151,13 +152,13 @@ Use these names for the same things everywhere (they come from the sequence diag
 | `fieldErrors` | dict of form errors, keys `"profileName"` and `"permissions"` |
 | `msg` | the message passed to a display...Message() method |
 
-**Session keys:** `session["userId"]`, `session["profileId"]` (set at login, cleared at logout)
+**Session keys:** `session["userId"]`, `session["profileId"]`, `session["username"]` (set at login, cleared at logout)
 
 **Status values:** exactly `"Active"` or `"Suspended"`
 
 **HTML form field names:** `username`, `password`, `profileName`, `description`, `permissions` (tick boxes)
 
-**Templates:** `login.html`, `dashboard.html`, `userProfiles.html`, `createUserProfile.html`, `viewUserProfile.html`, `updateUserProfile.html`
+**Templates:** `base.html` (admin pages extend this), `login.html`, `dashboard.html`, `userProfiles.html`, `createUserProfile.html`, `viewUserProfile.html`, `updateUserProfile.html`
 
 ## URLs
 
@@ -192,6 +193,6 @@ Use these names for the same things everywhere (they come from the sequence diag
 
 ## Still to do
 
-- HTML templates in `templates/` (from the wireframes)
+- HTML templates for US2-US6 in `templates/` (from the wireframes)
 - `database/seedData.py` - test data, about 100 records per table (spec requirement), with hashed passwords
 - GitHub Actions workflow to run `pytest` on every push

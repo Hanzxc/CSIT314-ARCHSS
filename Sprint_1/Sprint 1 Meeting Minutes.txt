@@ -3,14 +3,14 @@ Interior Design Platform
 SPRINT 1 PLANNING MEETING - MINUTES
 ==============================================================
 
-Date:        17 October 2026
+Date:        9 October 2026 to 16 October 2026
 Time:        [start] - [end]
 Location:    [room / online]
 Chairperson: [name]
 Minute taker: [name]
 
 Attendees:   [name], [name], [name], [name], [name]
-Apologies:   [name, or "None"]
+Apologies:   None
 
 
 1. PURPOSE OF THE MEETING

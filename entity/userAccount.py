@@ -26,14 +26,23 @@ class UserAccount:
 
     # US1 - UT1.1 to UT1.4
     def verifyCredentials(self, username, password):
-        # TODO:
-        # - hash the typed password with hashPassword()
-        # - look for a row in user_account with this username AND that hash
-        # - found -> return a UserAccount filled in from the row
-        # - not found (or empty username/password) -> return None, don't throw an error
-        pass
+        # returns the matching UserAccount, or None if the username/password is wrong
+        if not username or not password:
+            return None
+
+        conn = getConnection()
+        row = conn.execute(
+            "SELECT * FROM user_account WHERE username = ? AND password = ?",
+            (username, hashPassword(password)),
+        ).fetchone()
+        conn.close()
+
+        if row is None:
+            return None
+        return UserAccount(row["userId"], row["username"], row["password"], row["fullName"],
+                           row["email"], row["phone"], row["profileId"], row["status"],
+                           row["createdDate"])
 
     # US1 - UT1.5
     def isActive(self):
-        # TODO: return True if self.status == "Active", else False
-        pass
+        return self.status == "Active"

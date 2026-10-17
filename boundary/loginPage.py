@@ -14,33 +14,33 @@ class LoginPage:
         self.loginController = LoginController()
 
     def openLoginPage(self):
-        # TODO: return self.displayLoginForm()
-        pass
+        return self.displayLoginForm()
 
     def displayLoginForm(self):
-        # TODO: return render_template("login.html")
-        pass
+        return render_template("login.html")
 
     def submitLogin(self, username, password):
-        # TODO (sequence diagram msgs 4-19):
-        # - if not self.validateInput(...) -> return self.displayErrorMessage(MSG_EMPTY_FIELDS)
-        # - account = self.loginController.login(username, password)
-        # - account not None -> return self.redirectToDashboard(account)
-        # - account is None  -> return self.displayErrorMessage(MSG_INVALID_LOGIN)
-        pass
+        # empty field -> the controller is never called (alt flow 4a)
+        if not self.validateInput(username, password):
+            return self.displayErrorMessage(MSG_EMPTY_FIELDS)
+
+        account = self.loginController.login(username, password)
+        if account is not None:
+            return self.redirectToDashboard(account)
+        return self.displayErrorMessage(MSG_INVALID_LOGIN)
 
     # UT1.9, UT1.10
     def validateInput(self, username, password):
-        # TODO: return False if username or password is empty, else True
-        pass
+        if not username.strip() or not password:
+            return False
+        return True
 
     def redirectToDashboard(self, account):
-        # TODO:
-        # - session["userId"] = account.userId
-        # - session["profileId"] = account.profileId
-        # - return redirect(url_for("dashboard"))
-        pass
+        # start the session - other pages read the logged-in user from here
+        session["userId"] = account.userId
+        session["profileId"] = account.profileId
+        session["username"] = account.username
+        return redirect(url_for("dashboard"))
 
     def displayErrorMessage(self, msg):
-        # TODO: return render_template("login.html", errorMessage=msg)
-        pass
+        return render_template("login.html", errorMessage=msg)

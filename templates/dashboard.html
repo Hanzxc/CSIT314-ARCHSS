@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- US1 - wireframe 4c, where the User Admin lands after logging in -->
+    <h1>Welcome back, {{ username }}</h1>
+    <p class="subtitle">What would you like to manage today?</p>
+
+    <div class="cards">
+        <div class="card">
+            <h2>User Profiles</h2>
+            <p>Create, view, update and suspend user groups, and choose what each group can do.</p>
+            <a href="{{ url_for('profiles') }}" class="btn-outline">Open</a>
+        </div>
+        <div class="card">
+            <h2>User Accounts</h2>
+            <p>Create, view, update and suspend the accounts of the people who use the platform.</p>
+            <a href="#" class="btn-outline">Open</a>
+        </div>
+    </div>
+{% endblock %}

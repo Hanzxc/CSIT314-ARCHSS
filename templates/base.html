@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Interior Design Platform{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- shared layout for every admin page: header with Log out (US2) + side menu -->
+    <div class="header">
+        <span class="logo">Interior Design Platform</span>
+        <div class="user-info">
+            <span>Logged in as {{ username }} ({{ profileName }})</span>
+            <form method="POST" action="{{ url_for('logout') }}">
+                <button type="submit" class="btn-outline">Log out</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="layout">
+        <nav class="sidebar">
+            <a href="{{ url_for('dashboard') }}" class="{% if activePage == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{{ url_for('profiles') }}" class="{% if activePage == 'profiles' %}active{% endif %}">User Profiles</a>
+            <a href="#">User Accounts</a>
+        </nav>
+
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # Flask app - links each URL to its boundary (page) class
 # run with:  python app.py   then open http://127.0.0.1:5000
 
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, session, render_template
 
 from boundary.loginPage import LoginPage
 from boundary.logoutPage import LogoutPage
@@ -9,10 +9,18 @@ from boundary.createUserProfilePage import CreateUserProfilePage
 from boundary.viewUserProfilePage import ViewUserProfilePage
 from boundary.updateUserProfilePage import UpdateUserProfilePage
 from boundary.suspendUserProfilePage import SuspendUserProfilePage
+from entity.userProfile import UserProfile
 from database.db import initDatabase
 
 app = Flask(__name__)
 app.secret_key = "change-this-later"     # TODO: move to an environment variable
+
+
+@app.after_request
+def noCache(response):
+    # stops the browser showing an old admin page when you press Back after logging out (US2 wireframe 4b)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/")
@@ -38,8 +46,14 @@ def logout():
 # User Admin dashboard (where US1 ends up)
 @app.route("/dashboard")
 def dashboard():
-    # TODO: check session["userId"] exists, then render dashboard.html
-    pass
+    # not logged in -> back to the login page
+    if "userId" not in session:
+        return redirect(url_for("login"))
+
+    profile = UserProfile().getUserProfile(session["profileId"])
+    return render_template("dashboard.html", activePage="dashboard",
+                           username=session["username"],
+                           profileName=profile.profileName if profile else "")
 
 
 # User Profiles list page (has the Create and View buttons)

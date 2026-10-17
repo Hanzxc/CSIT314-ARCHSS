@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log in - Interior Design Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- US1 Log in - wireframes 4a and 4b -->
+    <div class="login-card">
+        <h1>Interior Design Platform</h1>
+        <p class="subtitle">Log in to your account</p>
+
+        {% if errorMessage %}
+            <div class="message error">{{ errorMessage }}</div>
+        {% endif %}
+        {% if successMessage %}
+            <div class="message success">&#10003; {{ successMessage }}</div>
+        {% endif %}
+        {% if infoMessage %}
+            <div class="message info">&#8505; {{ infoMessage }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username">
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter your password">
+
+            <button type="submit" class="btn-primary">Log in</button>
+        </form>
+    </div>
+</body>
+</html>
