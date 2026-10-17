@@ -1,0 +1,104 @@
+CSIT314 Software Development Methodologies - Group Project
+Interior Design Platform
+SPRINT 1 PLANNING MEETING - MINUTES
+==============================================================
+
+Date:        17 October 2026
+Time:        [start] - [end]
+Location:    [room / online]
+Chairperson: [name]
+Minute taker: [name]
+
+Attendees:   [name], [name], [name], [name], [name]
+Apologies:   [name, or "None"]
+
+
+1. PURPOSE OF THE MEETING
+--------------------------------------------------------------
+- Pick the user stories for Sprint 1.
+- Decide the programming languages and tools for the front end
+  and the back end.
+
+
+2. USER STORIES CHOSEN FOR SPRINT 1
+--------------------------------------------------------------
+The team agreed to start with the User Admin stories. Every other
+user (Interior Designer, Customer, Platform Manager) needs to log in
+and needs a user profile first, so these have to be done first.
+
+  US1  Log in                 - User Admin logs in to manage users
+  US2  Log out                - User Admin ends their session
+  US3  Create user profile    - add a new user group with permissions
+  US4  View user profile      - see a profile's details and permissions
+  US5  Update user profile    - change a profile's name, description
+                                and permissions
+  US6  Suspend user profile   - block a user group from logging in
+
+Reasons:
+- These stories don't depend on any other stories.
+- They are small enough to finish in one sprint.
+- Together they give us a working login and user profile system
+  for the later sprints to build on.
+
+For each story we agreed to do: the user story with acceptance
+criteria, use case description, use case diagram, wireframes,
+B-C-E class diagram, sequence diagram and test cases. All of these
+are in the US1 - US6 folders in Sprint_1.
+
+
+3. PROGRAMMING LANGUAGES AND TOOLS
+--------------------------------------------------------------
+Back end:
+  - Python 3.11+   - easy for everyone in the team to read and write.
+  - Flask          - a small Python web framework. Each Boundary class
+                     becomes a page, so it fits our B-C-E design.
+  - SQLite         - built into Python, nothing to install, and it
+                     works on GitHub Actions for CI.
+
+Front end:
+  - HTML and CSS pages made with Flask's templates (Jinja), built from
+    our wireframes.
+  - A bit of JavaScript where needed, e.g. the "Are you sure?" box
+    when suspending a user profile (US6).
+
+Testing and CI/CD:
+  - pytest for unit tests. We will write the tests first (TDD) using
+    the unit test cases (UT) in each user story document.
+  - GitHub Actions to run all the tests every time someone pushes.
+
+Other options we talked about:
+  - Java (Spring Boot) - matches the diagrams' types, but takes much
+    longer to set up. Not chosen.
+
+
+4. OTHER DECISIONS
+--------------------------------------------------------------
+- Code follows B-C-E: boundary/, control/ and entity/ folders, one
+  controller per use case.
+- Class, function and variable names must be exactly the same as in
+  our class diagrams (camelCase), so the code matches the design.
+  The full naming list is in README.md.
+- Passwords are stored as a hash, never as plain text.
+
+
+5. ACTION ITEMS
+--------------------------------------------------------------
+  Task                                              Who       Due
+  ------------------------------------------------  --------  --------
+  Set up the repo with the B-C-E folders and files  [name]    [date]
+  Write the unit tests first (TDD) for US1 - US6    [name]    [date]
+  Code the entity classes (UserAccount, UserProfile)[name]    [date]
+  Code the controllers for US1 - US6                [name]    [date]
+  Make the HTML pages from the wireframes           [name]    [date]
+  Make the test data (about 100 records per table)  [name]    [date]
+  Set up GitHub Actions to run pytest               [name]    [date]
+
+
+6. NEXT MEETING
+--------------------------------------------------------------
+Date/time: [date, time]
+Agenda:    progress on Sprint 1 tasks, demo of log in and user
+           profiles, start planning Sprint 2.
+
+
+Meeting closed at [time].
