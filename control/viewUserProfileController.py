@@ -6,5 +6,6 @@ from entity.userProfile import UserProfile
 class ViewUserProfileController:
     # UT4.5, UT4.6
     def getUserProfile(self, profileId):
-        # TODO: profile = UserProfile().getUserProfile(profileId), return profile (or None)
-        pass
+        # just passes it through, gives None back if the id doesn't exist
+        profile = UserProfile().getUserProfile(profileId)
+        return profile

@@ -2,7 +2,8 @@
 
 Interior Design Platform - CSIT314 group project.
 Sprint 1 covers the User Admin's user stories **US1 - US6** (log in, log out, create / view / update / suspend user profile).
-The design docs and diagrams for each story are in [Sprint_1/](Sprint_1/).
+Sprint 2 starts with **US7** (search user profiles).
+The design docs and diagrams for each story are in [Sprint_1/](Sprint_1/) and [Sprint_2/](Sprint_2/).
 
 ## Tech we're using
 
@@ -18,7 +19,8 @@ The design docs and diagrams for each story are in [Sprint_1/](Sprint_1/).
 
 ```
 pip install -r requirements.txt
-python app.py          # starts the site at http://127.0.0.1:5000 and creates the database
+python -m database.seedData   # creates the database + 100 profiles / 100 accounts of test data
+python app.py          # starts the site at http://127.0.0.1:5000
 pytest                 # runs all the unit tests
 ```
 
@@ -37,14 +39,16 @@ CSIT314-ARCHSS/
 │   ├── createUserProfilePage.py        US3
 │   ├── viewUserProfilePage.py          US4
 │   ├── updateUserProfilePage.py        US5
-│   └── suspendUserProfilePage.py       US6
+│   ├── suspendUserProfilePage.py       US6
+│   └── searchUserProfilePage.py        US7
 ├── control/                    one controller per use case (business rules)
 │   ├── loginController.py              US1
 │   ├── logoutController.py             US2
 │   ├── createUserProfileController.py  US3
 │   ├── viewUserProfileController.py    US4
 │   ├── updateUserProfileController.py  US5
-│   └── suspendUserProfileController.py US6
+│   ├── suspendUserProfileController.py US6
+│   └── searchUserProfileController.py  US7
 ├── entity/                     reads and writes the database
 │   ├── userAccount.py
 │   └── userProfile.py
@@ -55,7 +59,7 @@ CSIT314-ARCHSS/
 ├── static/                     style.css shared by every page
 ├── tests/                      one test file per user story (UT cases from the docs)
 ├── Sprint_1/                   US1-US6 docs + diagrams
-└── Sprint_2/
+└── Sprint_2/                   US7 docs + diagrams
 ```
 
 ## Naming rules
@@ -106,6 +110,7 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 | `createUserProfile(profileName, description, permissions)` | bool | US3 |
 | `updateUserProfile(profileId, profileName, description, permissions)` | bool | US5 |
 | `suspendUserProfile(profileId)` | bool | US6 |
+| `searchUserProfiles(keyword)` | list of UserProfile (empty list if nothing matches) | US7 |
 
 `ALL_PERMISSIONS` - the 8 fixed permissions: Manage user accounts, Manage user profiles, Manage company profile, Manage own IDPs, View IDP statistics, Search, view and save IDPs, Manage IDP categories, Generate reports.
 
@@ -122,6 +127,7 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 | | `getAllPermissions()` | list of str |
 | | `updateUserProfile(profileId, profileName, description, permissions)` | bool |
 | `SuspendUserProfileController` | `suspendUserProfile(profileId, adminProfileId)` | bool |
+| `SearchUserProfileController` | `searchUserProfiles(keyword)` | list of UserProfile |
 
 ### Boundary
 
@@ -133,6 +139,7 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 | `ViewUserProfilePage` | `selectUserProfile(profileId)`, `displayUserProfile(profile)`, `displayErrorMessage(msg)` |
 | `UpdateUserProfilePage` | `clickUpdate(profileId)`, `displayUpdateForm(profile, permissionList)`, `submitUpdate(profileName, description, permissions)`, `validateInput(profileName, permissions)` -> bool, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)` |
 | `SuspendUserProfilePage` | `clickSuspend(profileId)`, `displayConfirmation()`, `confirmSuspend()`, `cancelSuspend()`, `closeConfirmation()`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)` |
+| `SearchUserProfilePage` | `searchUserProfiles(keyword)`, `displayResults(profiles)`, `displayNoResultsMessage()` |
 
 ## Shared variable names
 
@@ -151,12 +158,14 @@ Use these names for the same things everywhere (they come from the sequence diag
 | `adminProfileId` | profileId of the admin who is logged in |
 | `fieldErrors` | dict of form errors, keys `"profileName"` and `"permissions"` |
 | `msg` | the message passed to a display...Message() method |
+| `keyword` | what was typed in the search box (US7) |
+| `profiles` | list of UserProfile from a search (US7) |
 
 **Session keys:** `session["userId"]`, `session["profileId"]`, `session["username"]` (set at login, cleared at logout)
 
 **Status values:** exactly `"Active"` or `"Suspended"`
 
-**HTML form field names:** `username`, `password`, `profileName`, `description`, `permissions` (tick boxes)
+**HTML form field names:** `username`, `password`, `profileName`, `description`, `permissions` (tick boxes), `keyword` (search box), `choice` (`ok` / `cancel` in the suspend box)
 
 **Templates:** `base.html` (admin pages extend this), `login.html`, `dashboard.html`, `userProfiles.html`, `createUserProfile.html`, `viewUserProfile.html`, `updateUserProfile.html`
 
@@ -167,11 +176,11 @@ Use these names for the same things everywhere (they come from the sequence diag
 | `/login` | GET, POST | US1 |
 | `/logout` | POST | US2 |
 | `/dashboard` | GET | US1 |
-| `/profiles` | GET | list page |
+| `/profiles` | GET | list page + US7 search (`/profiles?keyword=...`) |
 | `/profiles/create` | GET, POST | US3 |
 | `/profiles/<profileId>` | GET | US4 |
 | `/profiles/<profileId>/update` | GET, POST | US5 |
-| `/profiles/<profileId>/suspend` | POST | US6 |
+| `/profiles/<profileId>/suspend` | GET (shows the "Are you sure?" box), POST (OK / Cancel) | US6 |
 
 ## Messages (copy them exactly - the test cases check them)
 
@@ -190,9 +199,8 @@ Use these names for the same things everywhere (they come from the sequence diag
 | `MSG_UPDATED` | User profile updated successfully | US5 |
 | `MSG_SUSPENDED` | User profile suspended successfully | US6 |
 | `MSG_CANNOT_SUSPEND` | This user profile cannot be suspended | US6 |
+| `MSG_NO_RESULTS` | No user profiles found | US7 |
 
 ## Still to do
 
-- HTML templates for US2-US6 in `templates/` (from the wireframes)
-- `database/seedData.py` - test data, about 100 records per table (spec requirement), with hashed passwords
 - GitHub Actions workflow to run `pytest` on every push

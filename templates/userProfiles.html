@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}User Profiles - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- User Profiles list (US3/US4 wireframe 4a) + the search box for US7 -->
+    <div class="page-top">
+        <h1>User Profiles</h1>
+        <a href="{{ url_for('createUserProfile') }}" class="btn-small btn-blue">+ Create user profile</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('profiles') }}" class="search-bar">
+        <input type="text" name="keyword" value="{{ keyword }}" placeholder="Search by name or description">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        {% if keyword %}
+            <a href="{{ url_for('profiles') }}" class="btn-small btn-grey">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if noResultsMessage %}
+        <div class="message info">&#8505; {{ noResultsMessage }}</div>
+    {% else %}
+        <table class="list-table">
+            <tr>
+                <th>Profile name</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            {% for profile in profiles %}
+                <tr>
+                    <td><strong>{{ profile.profileName }}</strong></td>
+                    <td>{{ profile.description }}</td>
+                    <td><span class="badge {{ profile.status|lower }}">{{ profile.status }}</span></td>
+                    <td><a href="{{ url_for('viewUserProfile', profileId=profile.profileId) }}">View</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+{% endblock %}

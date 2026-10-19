@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Update user profile - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- US5 Update user profile - wireframes 4b (filled-in form) and 4c (name already used) -->
+    <h1>Update user profile</h1>
+
+    {% if errorMessage %}
+        <div class="message error">{{ errorMessage }}</div>
+    {% endif %}
+
+    {% if profileId %}
+        <p>Status: <span class="badge {{ status|lower }}">{{ status }}</span>
+           <span class="hint">(use Suspend on the details page to change this)</span></p>
+
+        <form method="POST" action="{{ url_for('updateUserProfile', profileId=profileId) }}" class="profile-form">
+            <label for="profileName">Profile name *</label>
+            <input type="text" id="profileName" name="profileName" value="{{ profileName }}"
+                   class="{% if fieldErrors.profileName %}field-error{% endif %}">
+            {% if fieldErrors.profileName %}
+                <p class="field-error-text">{{ fieldErrors.profileName }}</p>
+            {% endif %}
+
+            <label for="description">Description (optional)</label>
+            <textarea id="description" name="description" rows="3">{{ description }}</textarea>
+
+            <label>Permissions *</label>
+            <div class="permission-box {% if fieldErrors.permissions %}field-error{% endif %}">
+                {% for permission in permissionList %}
+                    <label class="tick">
+                        <input type="checkbox" name="permissions" value="{{ permission }}"
+                               {% if permission in permissions %}checked{% endif %}>
+                        {{ permission }}
+                    </label>
+                {% endfor %}
+            </div>
+            {% if fieldErrors.permissions %}
+                <p class="field-error-text">{{ fieldErrors.permissions }}</p>
+            {% endif %}
+
+            <div class="form-buttons">
+                <button type="submit" class="btn-small btn-blue">Save changes</button>
+                <a href="{{ url_for('viewUserProfile', profileId=profileId) }}" class="btn-small btn-grey">Cancel</a>
+            </div>
+        </form>
+    {% else %}
+        <!-- the profile doesn't exist (anymore) -->
+        <a href="{{ url_for('profiles') }}" class="btn-small btn-grey">Back to User Profiles</a>
+    {% endif %}
+{% endblock %}

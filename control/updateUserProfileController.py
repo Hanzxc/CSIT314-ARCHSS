@@ -6,19 +6,23 @@ from entity.userProfile import UserProfile
 class UpdateUserProfileController:
     # loads the current details into the form
     def getUserProfile(self, profileId):
-        # TODO: return UserProfile().getUserProfile(profileId)
-        pass
+        return UserProfile().getUserProfile(profileId)
 
     # for the tick boxes on the form
     def getAllPermissions(self):
-        # TODO: return UserProfile().getAllPermissions()
-        pass
+        return UserProfile().getAllPermissions()
 
     # UT5.3 to UT5.8
     def updateUserProfile(self, profileId, profileName, description, permissions):
-        # TODO (sequence diagram msgs 14-18):
-        # - return False if profileName is empty or permissions is empty (UT5.6, UT5.7)
-        # - nameTaken = UserProfile().isProfileNameTaken(profileName, profileId)
-        # - only if nameTaken is False -> updated = UserProfile().updateUserProfile(...)
-        # - return success (True / False), False if profileId doesn't exist (UT5.5)
-        pass
+        # same as create - don't rely on the page having checked it (UT5.6, UT5.7)
+        if not profileName or not profileName.strip() or not permissions:
+            return False
+
+        # pass profileId in so it doesn't count its OWN name as taken (seq diagram msgs 14-15)
+        nameTaken = UserProfile().isProfileNameTaken(profileName, profileId)
+
+        success = False
+        if not nameTaken:
+            # comes back False if profileId doesn't exist (UT5.5)
+            success = UserProfile().updateUserProfile(profileId, profileName, description, permissions)
+        return success

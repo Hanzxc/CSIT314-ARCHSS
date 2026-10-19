@@ -13,17 +13,16 @@ class ViewUserProfilePage:
         self.viewUserProfileController = ViewUserProfileController()
 
     def selectUserProfile(self, profileId):
-        # TODO (sequence diagram msgs 2-8):
-        # - profile = self.viewUserProfileController.getUserProfile(profileId)
-        # - profile not None -> return self.displayUserProfile(profile)
-        # - profile is None  -> return self.displayErrorMessage(MSG_NOT_FOUND)
-        pass
+        profile = self.viewUserProfileController.getUserProfile(profileId)
+        if profile is not None:
+            return self.displayUserProfile(profile)
+        return self.displayErrorMessage(MSG_NOT_FOUND)
 
     def displayUserProfile(self, profile):
-        # TODO: render_template("viewUserProfile.html", profile=profile)
-        # show name, description, status badge and every permission
-        pass
+        # name, description, status badge and every permission (wireframe 4b)
+        return render_template("viewUserProfile.html", activePage="profiles", profile=profile)
 
     def displayErrorMessage(self, msg):
-        # TODO: render_template("viewUserProfile.html", profile=None, errorMessage=msg)
-        pass
+        # wireframe 4c - just the message and a link back to the list
+        return render_template("viewUserProfile.html", activePage="profiles",
+                               profile=None, errorMessage=msg)

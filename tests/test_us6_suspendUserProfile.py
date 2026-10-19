@@ -1,9 +1,97 @@
-# Unit tests for US6 Suspend user profile - write these FIRST (TDD)
+# Unit tests for US6 Suspend user profile - written FIRST (TDD)
+# admin01 is in profile 1 (User Admin), cust001 is in profile 3 (Customer)
 
-# TODO UT6.1  test_ut6_1_suspendUserProfile_valid             -> (3, 1) True, status "Suspended"
-# TODO UT6.2  test_ut6_2_suspendUserProfile_alreadySuspended  -> False
-# TODO UT6.3  test_ut6_3_suspendUserProfile_ownProfile        -> (1, 1) False, still Active
-# TODO UT6.4  test_ut6_4_suspendUserProfile_notFound          -> (9999, 1) False, no error
-# TODO UT6.5  test_ut6_5_isActive_afterSuspend                -> False
-# TODO UT6.6  test_ut6_6_login_afterSuspend                   -> cust001 can't log in, None
-# TODO UT6.7  test_ut6_7_suspend_keepsAccounts                -> same number of accounts in profile 3
+from app import app
+from database.db import getConnection
+from entity.userProfile import UserProfile
+from control.suspendUserProfileController import SuspendUserProfileController
+from control.loginController import LoginController
+
+
+def countAccountsInProfile(profileId):
+    conn = getConnection()
+    total = conn.execute("SELECT COUNT(*) FROM user_account WHERE profileId = ?", (profileId,)).fetchone()[0]
+    conn.close()
+    return total
+
+
+# ---------- SuspendUserProfileController.suspendUserProfile() ----------
+
+def test_ut6_1_suspendUserProfile_valid():
+    assert SuspendUserProfileController().suspendUserProfile(3, 1) is True
+    assert UserProfile().getUserProfile(3).status == "Suspended"
+
+
+def test_ut6_2_suspendUserProfile_alreadySuspended():
+    SuspendUserProfileController().suspendUserProfile(3, 1)
+    # second time round it's already suspended so it should say no
+    assert SuspendUserProfileController().suspendUserProfile(3, 1) is False
+
+
+def test_ut6_3_suspendUserProfile_ownProfile():
+    # admin can't lock themselves out
+    assert SuspendUserProfileController().suspendUserProfile(1, 1) is False
+    assert UserProfile().getUserProfile(1).status == "Active"
+
+
+def test_ut6_4_suspendUserProfile_notFound():
+    assert SuspendUserProfileController().suspendUserProfile(9999, 1) is False
+
+
+# ---------- after suspending ----------
+
+def test_ut6_5_isActive_afterSuspend():
+    SuspendUserProfileController().suspendUserProfile(3, 1)
+    assert UserProfile().getUserProfile(3).isActive() is False
+
+
+def test_ut6_6_login_afterSuspend():
+    SuspendUserProfileController().suspendUserProfile(3, 1)
+    assert LoginController().login("cust001", "Cust@123") is None
+
+
+def test_ut6_7_suspend_keepsAccounts():
+    # suspending the group shouldn't delete the accounts in it
+    before = countAccountsInProfile(3)
+    assert UserProfile().suspendUserProfile(3) is True
+    assert countAccountsInProfile(3) == before
+
+
+# ---------- whole page, through the browser (test client) ----------
+
+def loginAsAdmin01(client):
+    return client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+
+
+def test_ut6_8_suspendPage_success():
+    # extra: wireframe 4c - details page now shows Suspended
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.post("/profiles/3/suspend", follow_redirects=True)
+    assert b"User profile suspended successfully" in response.data
+    assert b"Suspended" in response.data
+
+
+def test_ut6_9_suspendPage_ownProfile():
+    # extra: alt flow 4a
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.post("/profiles/1/suspend", follow_redirects=True)
+    assert b"This user profile cannot be suspended" in response.data
+
+
+def test_ut6_10_suspendButton_showsConfirmation():
+    # extra: wireframe 4b - clicking Suspend only asks, doesn't suspend yet
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/profiles/3/suspend")
+    assert b"Are you sure" in response.data
+    assert UserProfile().getUserProfile(3).status == "Active"
+
+
+def test_ut6_11_confirmation_cancel():
+    # extra: alt flow 3a - Cancel changes nothing
+    client = app.test_client()
+    loginAsAdmin01(client)
+    client.post("/profiles/3/suspend", data={"choice": "cancel"})
+    assert UserProfile().getUserProfile(3).status == "Active"

@@ -1,7 +1,7 @@
 # Boundary: CreateUserProfilePage - UC3 Create user profile (US3)
 # template: templates/createUserProfile.html
 
-from flask import render_template, redirect, url_for
+from flask import render_template, redirect, url_for, flash
 
 from control.createUserProfileController import CreateUserProfileController
 
@@ -17,37 +17,61 @@ class CreateUserProfilePage:
         self.createUserProfileController = CreateUserProfileController()
         self.fieldErrors = {}       # e.g. {"profileName": MSG_NAME_LENGTH, "permissions": MSG_NO_PERMISSION}
 
-    def clickCreateUserProfile(self):
-        # TODO:
-        # - permissionList = self.createUserProfileController.getAllPermissions()
-        # - return self.displayCreateForm(permissionList)
-        pass
+        # whatever the admin typed, so the form can be refilled if there's an error (alt flow 4a)
+        self.profileName = ""
+        self.description = ""
+        self.permissions = []
 
-    def displayCreateForm(self, permissionList):
-        # TODO: return render_template("createUserProfile.html", permissionList=permissionList, ...)
-        # (when showing errors, also pass back what was typed so it isn't lost)
-        pass
+    def clickCreateUserProfile(self):
+        permissionList = self.createUserProfileController.getAllPermissions()
+        return self.displayCreateForm(permissionList)
+
+    def displayCreateForm(self, permissionList, msg=None):
+        return render_template("createUserProfile.html", activePage="profiles",
+                               permissionList=permissionList,
+                               profileName=self.profileName,
+                               description=self.description,
+                               permissions=self.permissions,
+                               fieldErrors=self.fieldErrors,
+                               errorMessage=msg)
 
     def submitUserProfile(self, profileName, description, permissions):
-        # TODO (sequence diagram msgs 8-19):
-        # - if not self.validateInput(...) -> return self.displayErrorMessage(MSG_FIX_FIELDS)
-        # - success = self.createUserProfileController.createUserProfile(...)
-        # - success True  -> return self.displaySuccessMessage(MSG_CREATED)
-        # - success False -> return self.displayErrorMessage(MSG_NAME_TAKEN)
-        pass
+        # remember what was typed first, in case we need to show the form again
+        self.profileName = profileName
+        self.description = description
+        self.permissions = permissions
+
+        # bad input -> controller never gets called (outer alt in the seq diagram)
+        if not self.validateInput(profileName, permissions):
+            return self.displayErrorMessage(MSG_FIX_FIELDS)
+
+        success = self.createUserProfileController.createUserProfile(profileName, description, permissions)
+        if success:
+            return self.displaySuccessMessage(MSG_CREATED)
+
+        # the only way it fails now is the name being taken (alt flow 5a)
+        self.fieldErrors["profileName"] = MSG_NAME_TAKEN
+        return self.displayErrorMessage(MSG_NAME_TAKEN)
 
     # UT3.9 to UT3.12
     def validateInput(self, profileName, permissions):
-        # TODO:
-        # - name must be 3-50 chars (after strip) -> else self.fieldErrors["profileName"] = MSG_NAME_LENGTH
-        # - at least 1 permission ticked -> else self.fieldErrors["permissions"] = MSG_NO_PERMISSION
-        # - return True if no errors, else False
-        pass
+        self.fieldErrors = {}       # start fresh each time
+
+        name = profileName.strip()
+        if len(name) < 3 or len(name) > 50:
+            self.fieldErrors["profileName"] = MSG_NAME_LENGTH
+
+        if not permissions:
+            self.fieldErrors["permissions"] = MSG_NO_PERMISSION
+
+        return len(self.fieldErrors) == 0
 
     def displaySuccessMessage(self, msg):
-        # TODO: back to the User Profiles list with the message
-        pass
+        # back to the User Profiles list, flash() keeps the message across the redirect (wireframe 4d)
+        flash(msg, "success")
+        return redirect(url_for("profiles"))
 
     def displayErrorMessage(self, msg):
-        # TODO: show the form again with msg + self.fieldErrors highlighted
-        pass
+        # same form again with the message on top + the bad fields in red (wireframe 4c)
+        permissionList = self.createUserProfileController.getAllPermissions()
+        return self.displayCreateForm(permissionList, msg)

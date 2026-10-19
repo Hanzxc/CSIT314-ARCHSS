@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}User profile - Interior Design Platform{% endblock %}
+
+{% block content %}
+    {% if profile %}
+        <!-- US4 details page (wireframe 4b), with the Update (US5) and Suspend (US6) buttons -->
+        <div class="page-top">
+            <h1>{{ profile.profileName }} <span class="badge {{ profile.status|lower }}">{{ profile.status }}</span></h1>
+            <div class="form-buttons">
+                <a href="{{ url_for('updateUserProfile', profileId=profile.profileId) }}" class="btn-small btn-blue">Update</a>
+                {% if profile.status == 'Active' %}
+                    <a href="{{ url_for('suspendUserProfile', profileId=profile.profileId) }}" class="btn-small btn-red">Suspend</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <h3>Description</h3>
+        <p>{{ profile.description or "(no description)" }}</p>
+
+        <h3>Permissions</h3>
+        <ul class="permission-list">
+            {% for permission in profile.permissions %}
+                <li>&#10003; {{ permission }}</li>
+            {% endfor %}
+        </ul>
+
+        <a href="{{ url_for('profiles') }}">&larr; Back to User Profiles</a>
+
+        {% if showConfirmation %}
+            <!-- US6 wireframe 4b - the "Are you sure?" box -->
+            <div class="overlay">
+                <div class="confirm-box">
+                    <h2>Suspend user profile?</h2>
+                    <p>Are you sure you want to suspend <strong>{{ profile.profileName }}</strong>?
+                       Users in this profile won't be able to log in.</p>
+                    <form method="POST" action="{{ url_for('suspendUserProfile', profileId=profile.profileId) }}">
+                        <button type="submit" name="choice" value="ok" class="btn-small btn-red">OK</button>
+                        <button type="submit" name="choice" value="cancel" class="btn-small btn-grey">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- US4 wireframe 4c - not found -->
+        <h1>User profile</h1>
+        <div class="message error">{{ errorMessage }}</div>
+        <a href="{{ url_for('profiles') }}" class="btn-small btn-grey">Back to User Profiles</a>
+    {% endif %}
+{% endblock %}

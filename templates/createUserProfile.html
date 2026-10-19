@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Create user profile - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- US3 Create user profile - wireframes 4b (form) and 4c (with errors) -->
+    <h1>Create user profile</h1>
+
+    {% if errorMessage %}
+        <div class="message error">{{ errorMessage }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('createUserProfile') }}" class="profile-form">
+        <label for="profileName">Profile name *</label>
+        <input type="text" id="profileName" name="profileName" value="{{ profileName }}"
+               class="{% if fieldErrors.profileName %}field-error{% endif %}">
+        {% if fieldErrors.profileName %}
+            <p class="field-error-text">{{ fieldErrors.profileName }}</p>
+        {% endif %}
+
+        <label for="description">Description (optional)</label>
+        <textarea id="description" name="description" rows="3">{{ description }}</textarea>
+
+        <label>Permissions *</label>
+        <div class="permission-box {% if fieldErrors.permissions %}field-error{% endif %}">
+            {% for permission in permissionList %}
+                <label class="tick">
+                    <input type="checkbox" name="permissions" value="{{ permission }}"
+                           {% if permission in permissions %}checked{% endif %}>
+                    {{ permission }}
+                </label>
+            {% endfor %}
+        </div>
+        {% if fieldErrors.permissions %}
+            <p class="field-error-text">{{ fieldErrors.permissions }}</p>
+        {% endif %}
+
+        <div class="form-buttons">
+            <button type="submit" class="btn-small btn-blue">Create</button>
+            <a href="{{ url_for('profiles') }}" class="btn-small btn-grey">Cancel</a>
+        </div>
+    </form>
+{% endblock %}
