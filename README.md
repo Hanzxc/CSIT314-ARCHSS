@@ -69,7 +69,7 @@ CSIT314-ARCHSS/
 ├── static/                     style.css shared by every page
 ├── tests/                      one test file per user story (UT cases from the docs)
 ├── Sprint_1/                   US1-US6 docs + diagrams
-└── Sprint_2/                   US7-US12 docs + diagrams (US8-US12 drawn in UMLet)
+└── Sprint_2/                   US7-US12 docs + diagrams (draw.io)
 ```
 
 ## Naming rules
