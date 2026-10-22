@@ -1,0 +1,10 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Company profile not found - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>View company profile</h1>
+    <div class="message info" role="status">{{ errorMessage }}</div>
+    <div class="form-buttons">
+        <a href="{{ url_for('createCompanyProfile') }}" class="btn-small btn-blue">Create company profile</a>
+        <a href="{{ url_for('interiorDesignerDashboard') }}" class="btn-small btn-grey">Back to dashboard</a>
+    </div>
+{% endblock %}

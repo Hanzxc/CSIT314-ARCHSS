@@ -1,0 +1,278 @@
+# Unit tests for US18 Search company information.
+# conftest.py creates a fresh database for every test.
+# Designer tests add designer13 / Design@123 (Tengku Uda Designer, profile 2).
+
+from app import app
+from database.db import getConnection
+from entity.userAccount import UserAccount
+from entity.companyProfile import CompanyProfile
+from control.searchCompanyInformationController import SearchCompanyInformationController
+
+
+def companyData():
+    return {"companyName": "Uda Interiors", "description": "Interior design for homes.",
+            "services": "Space planning, renovation", "email": "hello@udainteriors.com",
+            "phone": "+65 6123 4567", "address": "10 Design Street"}
+
+
+def createDesigner13():
+    UserAccount().createUserAccount(
+        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+    return UserAccount().verifyCredentials("designer13", "Design@123").userId
+
+
+def createCompanyForDesigner13():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(userId, companyData())
+    return userId
+
+
+def fieldNamesOf(results):
+    return [result["field"] for result in results]
+
+
+def loginAsDesigner13(client):
+    return client.post("/designer/login", data={"username": "designer13", "password": "Design@123"})
+
+
+def companyRows():
+    conn = getConnection()
+    rows = conn.execute("SELECT * FROM company_profile ORDER BY companyId").fetchall()
+    conn.close()
+    return [tuple(row) for row in rows]
+
+
+# ---------- SearchCompanyInformationController.searchCompanyInformation() ----------
+
+def test_ut18_1_search_partOfValue():
+    userId = createCompanyForDesigner13()
+    results = SearchCompanyInformationController().searchCompanyInformation(userId, "renov")
+    assert fieldNamesOf(results) == ["services"]
+    assert results[0]["value"] == "Space planning, renovation"
+
+
+def test_ut18_2_search_capitals():
+    userId = createCompanyForDesigner13()
+    assert fieldNamesOf(SearchCompanyInformationController().searchCompanyInformation(userId, "RENOVATION")) == ["services"]
+
+
+def test_ut18_3_search_emptyKeyword_returnsAllFields():
+    userId = createCompanyForDesigner13()
+    results = SearchCompanyInformationController().searchCompanyInformation(userId, "")
+    assert fieldNamesOf(results) == ["companyName", "description", "services", "email", "phone", "address"]
+
+
+def test_ut18_4_search_noMatch():
+    userId = createCompanyForDesigner13()
+    assert SearchCompanyInformationController().searchCompanyInformation(userId, "zzzz") == []
+
+
+def test_ut18_5_search_trimsKeyword():
+    userId = createCompanyForDesigner13()
+    assert fieldNamesOf(SearchCompanyInformationController().searchCompanyInformation(userId, "  renovation  ")) == ["services"]
+
+
+def test_ut18_6_search_spacesOnly_returnsAll():
+    userId = createCompanyForDesigner13()
+    assert len(SearchCompanyInformationController().searchCompanyInformation(userId, "   ")) == 6
+
+
+def test_ut18_7_search_fieldLabel():
+    userId = createCompanyForDesigner13()
+    results = SearchCompanyInformationController().searchCompanyInformation(userId, "phone")
+    assert fieldNamesOf(results) == ["phone"]
+    assert results[0]["value"] == "+65 6123 4567"
+
+
+def test_ut18_8_search_adminRejected():
+    createCompanyForDesigner13()
+    assert SearchCompanyInformationController().canSearchCompanyInformation(1) is False
+    assert SearchCompanyInformationController().searchCompanyInformation(1, "") == []
+
+
+def test_ut18_9_search_noProfile():
+    userId = createDesigner13()
+    assert SearchCompanyInformationController().hasCompanyProfile(userId) is False
+    assert SearchCompanyInformationController().searchCompanyInformation(userId, "") == []
+
+
+# ---------- CompanyProfile.searchCompanyInformation() ----------
+
+def test_ut18_10_entity_byEmail():
+    userId = createCompanyForDesigner13()
+    assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "hello@")) == ["email"]
+
+
+def test_ut18_11_entity_byAddress():
+    userId = createCompanyForDesigner13()
+    assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "Design Street")) == ["address"]
+
+
+def test_ut18_12_entity_otherOwnerExcluded():
+    createCompanyForDesigner13()
+    UserAccount().createUserAccount("designer18", "Design@123", "Daniel Tan", "", "", 2)
+    otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
+    assert CompanyProfile().searchCompanyInformation(otherId, "Uda") == []
+
+
+def test_ut18_13_entity_treatsPercentAsLiteral():
+    userId = createCompanyForDesigner13()
+    assert CompanyProfile().searchCompanyInformation(userId, "%") == []
+    data = companyData()
+    data["description"] = "Save 20% on design"
+    CompanyProfile().updateCompanyProfile(userId, data)
+    assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "%")) == ["description"]
+
+
+def test_ut18_14_entity_doesNotChangeData():
+    userId = createCompanyForDesigner13()
+    before = companyRows()
+    CompanyProfile().searchCompanyInformation(userId, "design")
+    assert companyRows() == before
+
+
+def test_ut18_15_entity_noInternalAccountData():
+    userId = createCompanyForDesigner13()
+    assert CompanyProfile().searchCompanyInformation(userId, "designer13") == []
+    assert CompanyProfile().searchCompanyInformation(userId, "Design@123") == []
+
+
+# ---------- whole page, through the browser (test client) ----------
+
+def test_ut18_16_searchPage_showsResults():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search?keyword=renovation")
+    assert response.status_code == 200
+    assert b"Services offered" in response.data
+    assert b"Space planning, renovation" in response.data
+    assert b"hello@udainteriors.com" not in response.data
+    assert b'value="renovation"' in response.data
+
+
+def test_ut18_17_searchPage_noResults():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search?keyword=zzzz")
+    assert response.status_code == 200
+    assert b"No matching company information found" in response.data
+    assert b'value="zzzz"' in response.data
+
+
+def test_ut18_18_searchPage_noKeyword_showsAll():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search")
+    for text in companyData().values():
+        assert text.encode() in response.data
+
+
+def test_ut18_19_searchPage_notLoggedIn():
+    client = app.test_client()
+    response = client.get("/designer/company/search?keyword=design")
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/designer/login")
+
+
+def test_ut18_20_searchPage_adminForbidden():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    assert client.get("/designer/company/search").status_code == 403
+
+
+def test_ut18_21_searchPage_noProfile():
+    createDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search")
+    assert response.status_code == 404
+    assert b"You have not created a company profile yet" in response.data
+    assert b'href="/designer/company/create"' in response.data
+
+
+def test_ut18_22_searchPage_ignoresForgedOwner():
+    createCompanyForDesigner13()
+    UserAccount().createUserAccount("designer18", "Design@123", "Daniel Tan", "", "", 2)
+    otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
+    data = companyData()
+    data["services"] = "Other designer confidential service"
+    CompanyProfile().createCompanyProfile(otherId, data)
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search?keyword=confidential&designerId=" + str(otherId))
+    assert b"No matching company information found" in response.data
+    assert b"Other designer confidential service" not in response.data
+
+
+def test_ut18_23_searchPage_optionalFieldsEmpty():
+    userId = createDesigner13()
+    data = companyData()
+    data.update(email="", phone="", address="")
+    CompanyProfile().createCompanyProfile(userId, data)
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search")
+    assert response.data.count(b"Not provided") == 3
+
+
+def test_ut18_24_searchPage_escapesKeywordAndValue():
+    userId = createDesigner13()
+    data = companyData()
+    data["description"] = "<script>alert(1)</script>"
+    CompanyProfile().createCompanyProfile(userId, data)
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search", query_string={"keyword": "<script>"})
+    assert b"<script>" not in response.data
+    assert b"&lt;script&gt;" in response.data
+
+
+def test_ut18_25_searchPage_doesNotChangeData():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    before = companyRows()
+    client.get("/designer/company/search?keyword=design")
+    client.get("/designer/company/search?keyword=zzzz")
+    assert companyRows() == before
+
+
+def test_ut18_26_searchPage_accessRemovedAfterLogin():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    conn = getConnection()
+    conn.execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
+    conn.commit()
+    conn.close()
+    assert client.get("/designer/company/search").status_code == 403
+
+
+def test_ut18_27_viewPage_showsSearchLink():
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    assert b'href="/designer/company/search"' in client.get("/designer/company").data
+
+
+def test_ut18_28_search_afterUpdateAndDelete():
+    createDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    client.post("/designer/company/create", data=companyData())
+    data = companyData()
+    data["services"] = "Office refurbishment"
+    client.post("/designer/company/update", data=data)
+    assert b"Office refurbishment" in client.get("/designer/company/search?keyword=refurb").data
+    client.get("/designer/company/delete")
+    with client.session_transaction() as session:
+        confirmation = dict(session["companyDeleteConfirmation"])
+    client.post("/designer/company/delete", data={"choice": "delete", "companyId": str(confirmation["companyId"]),
+                "confirmationToken": confirmation["token"]})
+    response = client.get("/designer/company/search?keyword=refurb")
+    assert response.status_code == 404
+    assert b"Office refurbishment" not in response.data

@@ -1,0 +1,14 @@
+{# Reusable customer-facing company content. Keep designer navigation outside this partial. #}
+<article class="card" aria-label="Company profile">
+    <h2>{{ company.companyName }}</h2>
+    <h3>About the company</h3>
+    <p style="white-space: pre-wrap">{{ company.description }}</p>
+    <h3>Services offered</h3>
+    <p style="white-space: pre-wrap">{{ company.services }}</p>
+    <h3>Contact details</h3>
+    <table class="details-table">
+        <tr><th scope="row">Email</th><td>{{ company.email or "Not provided" }}</td></tr>
+        <tr><th scope="row">Phone</th><td>{{ company.phone or "Not provided" }}</td></tr>
+        <tr><th scope="row">Address</th><td style="white-space: pre-wrap">{{ company.address or "Not provided" }}</td></tr>
+    </table>
+</article>

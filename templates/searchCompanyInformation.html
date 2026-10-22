@@ -1,0 +1,25 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Search company information - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Search my company information</h1>
+    <p class="subtitle">Search by field name or saved information. An empty search shows all company fields.</p>
+    <form method="GET" action="{{ url_for('searchCompanyInformation') }}" class="search-bar">
+        <label for="keyword" class="hint">Keyword</label>
+        <input type="text" id="keyword" name="keyword" value="{{ keyword }}" placeholder="e.g. renovation, phone, email">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        <a href="{{ url_for('searchCompanyInformation') }}" class="btn-small btn-grey">Clear</a>
+    </form>
+    <table class="list-table">
+        <thead><tr><th scope="col">Field</th><th scope="col">Information</th></tr></thead>
+        <tbody>
+            {% for result in results %}
+                <tr><th scope="row">{{ result.label }}</th><td style="white-space: pre-wrap">{{ result.value or "Not provided" }}</td></tr>
+            {% else %}
+                <tr><td colspan="2">{{ noResultsMessage }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="form-buttons">
+        <a href="{{ url_for('viewCompanyProfile') }}" class="btn-small btn-grey">Back to company profile</a>
+    </div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Delete company profile - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>View company profile</h1>
+    {% include "companyProfileDetails.html" %}
+    <div class="overlay">
+        <section class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+            <h2 id="delete-title">Delete company profile?</h2>
+            <p>Are you sure you want to delete <strong>{{ company.companyName }}</strong>?</p>
+            <p>This removes your company information from the platform. Your user account is kept.</p>
+            <form method="POST" action="{{ url_for('deleteCompanyProfile') }}">
+                <input type="hidden" name="companyId" value="{{ company.companyId }}">
+                <input type="hidden" name="confirmationToken" value="{{ confirmationToken }}">
+                <div class="form-buttons">
+                    <button type="submit" name="choice" value="delete" class="btn-small btn-red">Delete company profile</button>
+                    <button type="submit" name="choice" value="cancel" class="btn-small btn-grey">Cancel</button>
+                </div>
+            </form>
+        </section>
+    </div>
+{% endblock %}

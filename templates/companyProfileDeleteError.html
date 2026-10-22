@@ -1,0 +1,10 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Company profile deletion unavailable - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Delete company profile</h1>
+    <div class="message error" role="alert">{{ errorMessage }}</div>
+    <div class="form-buttons">
+        <a href="{{ url_for('deleteCompanyProfile') }}" class="btn-small btn-blue">Open confirmation</a>
+        <a href="{{ url_for('viewCompanyProfile') }}" class="btn-small btn-grey">Back to company profile</a>
+    </div>
+{% endblock %}

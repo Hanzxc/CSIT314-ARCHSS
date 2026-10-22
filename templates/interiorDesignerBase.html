@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Interior Designer - Interior Design Platform{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <span class="logo">Interior Design Platform</span>
+        <div class="user-info">
+            <span>Logged in as {{ username }} (Interior Designer)</span>
+            <form method="POST" action="{{ url_for('interiorDesignerLogout') }}">
+                <button type="submit" class="btn-outline">Log out</button>
+            </form>
+        </div>
+    </div>
+    <div class="layout">
+        <nav class="sidebar" aria-label="Designer navigation">
+            <a href="{{ url_for('interiorDesignerDashboard') }}" class="{% if activePage == 'dashboard' %}active{% endif %}">Dashboard</a>
+        </nav>
+        <main class="content">
+            {% for category, msg in get_flashed_messages(with_categories=true) %}
+                <div class="message {{ category }}" role="status">{{ msg }}</div>
+            {% endfor %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

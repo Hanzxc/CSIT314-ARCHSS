@@ -3,8 +3,20 @@
 
 from functools import wraps
 
-from flask import Flask, request, redirect, url_for, session, render_template
+from flask import Flask, request, redirect, url_for, session, render_template, abort
 
+from boundary.interiorDesignerLoginPage import InteriorDesignerLoginPage
+from boundary.createCompanyProfilePage import CreateCompanyProfilePage
+from boundary.viewCompanyProfilePage import ViewCompanyProfilePage
+from boundary.updateCompanyProfilePage import UpdateCompanyProfilePage
+from boundary.deleteCompanyProfilePage import DeleteCompanyProfilePage
+from boundary.searchCompanyInformationPage import SearchCompanyInformationPage
+from boundary.interiorDesignerLogoutPage import InteriorDesignerLogoutPage
+from control.interiorDesignerLoginController import InteriorDesignerLoginController
+from entity.userAccount import UserAccount
+
+from boundary.platformManagerLoginPage import PlatformManagerLoginPage
+from control.platformManagerLoginController import PlatformManagerLoginController
 from boundary.loginPage import LoginPage
 from boundary.logoutPage import LogoutPage
 from boundary.createUserProfilePage import CreateUserProfilePage
@@ -37,6 +49,18 @@ def loginRequired(routeFunction):
     def wrapper(*args, **kwargs):
         if "userId" not in session:
             return redirect(url_for("login"))
+        # US13: the existing management routes are for admins. Recheck the
+        # database rather than treating any authenticated session as an admin.
+        account = UserAccount().getUserAccount(session["userId"])
+        profile = UserProfile().getUserProfile(account.profileId) if account else None
+        if not account or not account.isActive() or not profile or not profile.isActive():
+            abort(403)
+        if routeFunction.__name__ == "dashboard" and InteriorDesignerLoginController().isInteriorDesigner(account):
+            return redirect(url_for("interiorDesignerDashboard"))
+        if routeFunction.__name__ == "dashboard" and PlatformManagerLoginController().isPlatformManager(account):
+            return redirect(url_for("platformManagerDashboard"))
+        if not {"Manage user accounts", "Manage user profiles"}.issubset(profile.permissions):
+            abort(403)
         return routeFunction(*args, **kwargs)
     return wrapper
 
@@ -63,6 +87,71 @@ def login():
     if request.method == "POST":
         return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
     return page.openLoginPage()
+
+
+# US13: dedicated designer entry point, using the same CSS and entities.
+@app.route("/designer/login", methods=["GET", "POST"])
+def interiorDesignerLogin():
+    page = InteriorDesignerLoginPage()
+    if request.method == "POST":
+        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
+    return page.openLoginPage()
+
+
+@app.route("/designer/dashboard")
+def interiorDesignerDashboard():
+    return InteriorDesignerLoginPage().openDashboard()
+
+
+# US14 Create company profile. Ownership is taken from the session in the boundary.
+@app.route("/designer/company/create", methods=["GET", "POST"])
+def createCompanyProfile():
+    page = CreateCompanyProfilePage()
+    if request.method == "POST":
+        companyData = {field: request.form.get(field, "") for field in
+                       ("companyName", "description", "services", "email", "phone", "address")}
+        return page.submitCompanyProfile(companyData)
+    return page.clickCreateCompanyProfile()
+
+
+# US15 View the company profile owned by the authenticated designer.
+@app.route("/designer/company", methods=["GET"])
+def viewCompanyProfile():
+    return ViewCompanyProfilePage().clickView()
+
+
+# US16 Update the existing company profile owned by the authenticated designer.
+@app.route("/designer/company/update", methods=["GET", "POST"])
+def updateCompanyProfile():
+    page = UpdateCompanyProfilePage()
+    if request.method == "POST":
+        companyData = {field: request.form.get(field, "") for field in
+                       ("companyName", "description", "services", "email", "phone", "address")}
+        return page.submitUpdate(companyData)
+    return page.clickUpdate()
+
+
+# US17 GET opens confirmation; only an explicit, validated POST can delete.
+@app.route("/designer/company/delete", methods=["GET", "POST"])
+def deleteCompanyProfile():
+    page = DeleteCompanyProfilePage()
+    if request.method == "POST":
+        return page.submitDelete(request.form.get("choice", ""),
+                                 request.form.get("companyId", type=int),
+                                 request.form.get("confirmationToken", ""))
+    return page.clickDelete()
+
+
+# US18 Search only the authenticated designer's company information.
+@app.route("/designer/company/search", methods=["GET"])
+def searchCompanyInformation():
+    return SearchCompanyInformationPage().searchCompanyInformation(request.args.get("keyword", ""))
+
+
+# US19 End the current designer browser session; no active-role guard is required to log out.
+@app.route("/designer/logout", methods=["POST"])
+def interiorDesignerLogout():
+    return InteriorDesignerLogoutPage().clickLogout()
 
 
 # US2 Log out
@@ -196,6 +285,22 @@ def suspendUserAccount(userId):
     return page.confirmSuspend()
 
 
+# US39 Platform manager login, sharing the existing account and profile entities.
+@app.route("/manager/login", methods=["GET", "POST"])
+def platformManagerLogin():
+    page = PlatformManagerLoginPage()
+    if request.method == "POST":
+        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
+    return page.openLoginPage()
+
+
+@app.route("/manager/dashboard")
+def platformManagerDashboard():
+    return PlatformManagerLoginPage().openDashboard()
+
+
 if __name__ == "__main__":
     initDatabase()
     app.run(debug=True)
+
+

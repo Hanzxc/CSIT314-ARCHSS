@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platform Manager Dashboard - Interior Design Platform</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body><header class="header"><span class="logo">Interior Design Platform</span><span>Logged in as {{ account.username }} (Platform Manager)</span></header>
+<div class="layout"><nav class="sidebar"><a class="active" href="{{ url_for('platformManagerDashboard') }}">Dashboard</a></nav>
+<main class="content"><h1>Welcome back, {{ account.username }}</h1><p class="subtitle">Your IDP categories and reports</p>
+<div class="cards"><div class="card"><h2>IDP Categories</h2><p>Manage interior design project categories.</p><span class="hint">Available in a later story</span></div>
+<div class="card"><h2>Reports</h2><p>Generate platform reports.</p><span class="hint">Available in a later story</span></div></div></main></div></body></html>
