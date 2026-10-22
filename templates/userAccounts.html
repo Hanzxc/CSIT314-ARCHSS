@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}User Accounts - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- User Accounts list + the search box for US12, Create button for US8 -->
+    <div class="page-top">
+        <h1>User Accounts</h1>
+        <a href="{{ url_for('createUserAccount') }}" class="btn-small btn-blue">+ Create user account</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('accounts') }}" class="search-bar">
+        <input type="text" name="keyword" value="{{ keyword }}" placeholder="Search by username, name or email">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        {% if keyword %}
+            <a href="{{ url_for('accounts') }}" class="btn-small btn-grey">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if noResultsMessage %}
+        <div class="message info">&#8505; {{ noResultsMessage }}</div>
+    {% else %}
+        <table class="list-table">
+            <tr>
+                <th>Username</th>
+                <th>Full name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            {% for account in accounts %}
+                <tr>
+                    <td><strong>{{ account.username }}</strong></td>
+                    <td>{{ account.fullName }}</td>
+                    <td>{{ account.email or "" }}</td>
+                    <td><span class="badge {{ account.status|lower }}">{{ account.status }}</span></td>
+                    <td><a href="{{ url_for('viewUserAccount', userId=account.userId) }}">View</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+{% endblock %}

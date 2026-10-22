@@ -1,0 +1,1158 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>20</y>
+      <w>700</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>*Use Case Diagram - US10 Update user account*
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>480</x>
+      <y>70</y>
+      <w>320</w>
+      <h>190</h>
+    </coordinates>
+    <panel_attributes>Interior Design Platform</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLActor</id>
+    <coordinates>
+      <x>100</x>
+      <y>100</y>
+      <w>110</w>
+      <h>121</h>
+    </coordinates>
+    <panel_attributes>User Admin</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLUseCase</id>
+    <coordinates>
+      <x>560</x>
+      <y>130</y>
+      <w>200</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>Update user account
+(UC10)</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>210</x>
+      <y>155</y>
+      <w>350</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes>10.0;10.0;330.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>330</y>
+      <w>700</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>*B-C-E Class Diagram - UC10 Update user account (US10)*
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>60</x>
+      <y>380</y>
+      <w>561</w>
+      <h>160</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;boundary&gt;&gt;
+UpdateUserAccountPage
+--
++clickUpdate(userId)
++displayUpdateForm(account)
++submitUpdate(userId, username, fullName, email, phone, profileId)
++validateInput(username, fullName, email, phone, profileId): boolean
++displaySuccessMessage(msg)
++displayErrorMessage(msg)</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>761</x>
+      <y>380</y>
+      <w>656</w>
+      <h>92</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;control&gt;&gt;
+UpdateUserAccountController
+--
++getUserAccount(userId): UserAccount
++updateUserAccount(userId, username, fullName, email, phone, profileId): boolean</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1557</x>
+      <y>380</y>
+      <w>656</w>
+      <h>270</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;entity&gt;&gt;
+UserAccount
+--
+-userId: int
+-username: String
+-password: String
+-fullName: String
+-email: String
+-phone: String
+-profileId: int
+-status: String
+-createdDate: Date
+--
++getUserAccount(userId): UserAccount
++isUsernameTaken(username, userId=None): boolean
++updateUserAccount(userId, username, fullName, email, phone, profileId): boolean</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>621</x>
+      <y>430</y>
+      <w>140</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes>0.0;10.0;140.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>631</x>
+      <y>390</y>
+      <w>120</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>calls
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1417</x>
+      <y>440</y>
+      <w>140</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>0.0;10.0;140.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>1427</x>
+      <y>425</y>
+      <w>120</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>uses
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1557</x>
+      <y>690</y>
+      <w>656</w>
+      <h>185</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;entity&gt;&gt;
+UserProfile
+--
+-profileId: int
+-profileName: String
+-description: String
+-permissions: List&lt;String&gt;
+-status: String
+--
++getUserProfile(profileId): UserProfile
++isActive(): boolean</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1417</x>
+      <y>440</y>
+      <w>140</w>
+      <h>313</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>0.0;10.0;140.0;290.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>1427</x>
+      <y>630</y>
+      <w>120</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>uses
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1880</x>
+      <y>650</y>
+      <w>10</w>
+      <h>40</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes>5.0;0.0;5.0;40.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>1900</x>
+      <y>660</y>
+      <w>220</w>
+      <h>20</h>
+    </coordinates>
+    <panel_attributes>belongs to  0..* -- 1</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>1010</y>
+      <w>700</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>*Sequence Diagram - UC10 Update user account (US10)*
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>95</x>
+      <y>1060</y>
+      <w>110</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>User Admin</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>320</x>
+      <y>1060</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:UpdateUserAccountPage</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>620</x>
+      <y>1060</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:UpdateUserAccountController</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>920</x>
+      <y>1060</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:UserAccount</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1220</x>
+      <y>1060</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:UserProfile</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>1137</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>1: clickUpdate(userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>1170</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>460</x>
+      <y>1227</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>2: getUserAccount(userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>450</x>
+      <y>1260</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1317</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>3: getUserAccount(userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1350</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1407</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>4: account
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1440</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1045</x>
+      <y>1355</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>460</x>
+      <y>1497</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>5: account
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>450</x>
+      <y>1530</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>745</x>
+      <y>1265</y>
+      <w>10</w>
+      <h>280</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>1587</y>
+      <w>380</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>6: displayUpdateForm(account)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>1620</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>1670</y>
+      <w>280</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>7: submitUpdate(userId, username, fullName, email, phone, profileId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>1720</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>1760</y>
+      <w>380</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>8: validateInput(username, fullName, email, phone, profileId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>1810</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>460</x>
+      <y>1918</y>
+      <w>280</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>9: updateUserAccount(userId, username, fullName, email, phone, profileId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>450</x>
+      <y>1985</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2042</y>
+      <w>580</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>10: getUserProfile(profileId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2075</y>
+      <w>600</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>580.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2132</y>
+      <w>580</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>11: profile
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2165</y>
+      <w>600</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;580.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1345</x>
+      <y>2080</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2222</y>
+      <w>580</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>12: isActive()
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2255</y>
+      <w>600</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>580.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2312</y>
+      <w>580</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>13: active
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2345</y>
+      <w>600</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;580.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1345</x>
+      <y>2260</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2385</y>
+      <w>280</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>14: isUsernameTaken(username, userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2435</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2492</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>15: usernameTaken
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2525</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1045</x>
+      <y>2440</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2623</y>
+      <w>280</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>16: updateUserAccount(userId, username, fullName, email, phone, profileId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2690</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2747</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>17: updated
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>2780</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1045</x>
+      <y>2695</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>690</x>
+      <y>2582</y>
+      <w>720</w>
+      <h>246</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>700</x>
+      <y>2585</y>
+      <w>50</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>opt</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>2585</y>
+      <w>640</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[profile active AND usernameTaken == false]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>460</x>
+      <y>2868</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>18: success
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>450</x>
+      <y>2901</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>745</x>
+      <y>1990</y>
+      <w>10</w>
+      <h>926</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>3016</y>
+      <w>380</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>19: displaySuccessMessage("User account updated successfully")
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>3066</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>3133</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>20: account updated
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>3166</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>90</x>
+      <y>3209</y>
+      <w>780</w>
+      <h>10</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;5.0;770.0;5.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>100</x>
+      <y>3217</y>
+      <w>360</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[success == false]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>3262</y>
+      <w>380</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>21: displayErrorMessage("Invalid profile or username already exists")
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>3312</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>3379</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>22: error message
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>3412</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>90</x>
+      <y>2958</y>
+      <w>780</w>
+      <h>502</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>100</x>
+      <y>2961</y>
+      <w>50</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>alt</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>2961</y>
+      <w>700</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[success == true]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>70</x>
+      <y>3480</y>
+      <w>1360</w>
+      <h>10</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;5.0;1350.0;5.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>80</x>
+      <y>3488</y>
+      <w>360</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[a required field is missing]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>3533</y>
+      <w>380</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>23: displayErrorMessage("Please fill in all required fields")
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>3583</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>3650</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>24: error message
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>3683</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>70</x>
+      <y>1877</y>
+      <w>1360</w>
+      <h>1854</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>80</x>
+      <y>1880</y>
+      <w>50</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>alt</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>140</x>
+      <y>1880</y>
+      <w>1280</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[input is valid]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>445</x>
+      <y>1175</y>
+      <w>10</w>
+      <h>2523</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>134</x>
+      <y>1104</y>
+      <w>33</w>
+      <h>2687</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2667.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>1104</y>
+      <w>33</w>
+      <h>2687</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2667.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>734</x>
+      <y>1104</y>
+      <w>33</w>
+      <h>2687</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2667.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1034</x>
+      <y>1104</y>
+      <w>33</w>
+      <h>2687</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2667.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1334</x>
+      <y>1104</y>
+      <w>33</w>
+      <h>2687</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2667.0</additional_attributes>
+  </element>
+</diagram>

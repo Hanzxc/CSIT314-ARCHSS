@@ -12,6 +12,11 @@ from boundary.viewUserProfilePage import ViewUserProfilePage
 from boundary.updateUserProfilePage import UpdateUserProfilePage
 from boundary.suspendUserProfilePage import SuspendUserProfilePage
 from boundary.searchUserProfilePage import SearchUserProfilePage
+from boundary.createUserAccountPage import CreateUserAccountPage
+from boundary.viewUserAccountPage import ViewUserAccountPage
+from boundary.updateUserAccountPage import UpdateUserAccountPage
+from boundary.suspendUserAccountPage import SuspendUserAccountPage
+from boundary.searchUserAccountPage import SearchUserAccountPage
 from entity.userProfile import UserProfile
 from database.db import initDatabase
 
@@ -124,6 +129,68 @@ def suspendUserProfile(profileId):
         return page.clickSuspend(profileId)
 
     page.profileId = profileId
+    if request.form.get("choice") == "cancel":
+        return page.cancelSuspend()
+    return page.confirmSuspend()
+
+
+# US12 Search user account - this is also the User Accounts list page
+# /accounts shows everything, /accounts?keyword=chloe only shows the matches
+@app.route("/accounts")
+@loginRequired
+def accounts():
+    return SearchUserAccountPage().searchUserAccounts(request.args.get("keyword", ""))
+
+
+# US8 Create user account
+# profileId comes from the drop-down as text, type=int turns it into a number (None if nothing picked)
+@app.route("/accounts/create", methods=["GET", "POST"])
+@loginRequired
+def createUserAccount():
+    page = CreateUserAccountPage()
+    if request.method == "POST":
+        return page.submitCreateAccount(request.form.get("username", ""),
+                                        request.form.get("password", ""),
+                                        request.form.get("fullName", ""),
+                                        request.form.get("email", ""),
+                                        request.form.get("phone", ""),
+                                        request.form.get("profileId", type=int))
+    return page.clickCreateUserAccount()
+
+
+# US9 View user account
+@app.route("/accounts/<int:userId>")
+@loginRequired
+def viewUserAccount(userId):
+    return ViewUserAccountPage().clickView(userId)
+
+
+# US10 Update user account
+@app.route("/accounts/<int:userId>/update", methods=["GET", "POST"])
+@loginRequired
+def updateUserAccount(userId):
+    page = UpdateUserAccountPage()
+    if request.method == "POST":
+        return page.submitUpdate(userId,
+                                 request.form.get("username", ""),
+                                 request.form.get("fullName", ""),
+                                 request.form.get("email", ""),
+                                 request.form.get("phone", ""),
+                                 request.form.get("profileId", type=int))
+    return page.clickUpdate(userId)
+
+
+# US11 Suspend user account
+# GET  = admin clicked Suspend -> show the confirmation box
+# POST = admin clicked Suspend or Cancel in the box
+@app.route("/accounts/<int:userId>/suspend", methods=["GET", "POST"])
+@loginRequired
+def suspendUserAccount(userId):
+    page = SuspendUserAccountPage()
+    if request.method == "GET":
+        return page.clickSuspend(userId)
+
+    page.userId = userId
     if request.form.get("choice") == "cancel":
         return page.cancelSuspend()
     return page.confirmSuspend()

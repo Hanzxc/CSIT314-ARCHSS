@@ -22,7 +22,7 @@
         <nav class="sidebar">
             <a href="{{ url_for('dashboard') }}" class="{% if activePage == 'dashboard' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('profiles') }}" class="{% if activePage == 'profiles' %}active{% endif %}">User Profiles</a>
-            <a href="#">User Accounts</a>
+            <a href="{{ url_for('accounts') }}" class="{% if activePage == 'accounts' %}active{% endif %}">User Accounts</a>
         </nav>
 
         <main class="content">

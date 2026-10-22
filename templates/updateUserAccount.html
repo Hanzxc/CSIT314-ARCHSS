@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Update user account - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- US10 Update user account - form filled in with the current details -->
+    <h1>Update user account</h1>
+
+    {% if errorMessage %}
+        <div class="message error">{{ errorMessage }}</div>
+    {% endif %}
+
+    {% if userId %}
+        <p>Status: <span class="badge {{ status|lower }}">{{ status }}</span>
+           <span class="hint">(password and status can't be changed here)</span></p>
+
+        <form method="POST" action="{{ url_for('updateUserAccount', userId=userId) }}" class="profile-form">
+            <label for="username">Username *</label>
+            <input type="text" id="username" name="username" value="{{ form.username }}"
+                   class="{% if fieldErrors.username %}field-error{% endif %}">
+            {% if fieldErrors.username %}<p class="field-error-text">{{ fieldErrors.username }}</p>{% endif %}
+
+            <label for="fullName">Full name *</label>
+            <input type="text" id="fullName" name="fullName" value="{{ form.fullName }}"
+                   class="{% if fieldErrors.fullName %}field-error{% endif %}">
+            {% if fieldErrors.fullName %}<p class="field-error-text">{{ fieldErrors.fullName }}</p>{% endif %}
+
+            <label for="email">Email (optional)</label>
+            <input type="email" id="email" name="email" value="{{ form.email }}">
+
+            <label for="phone">Phone (optional)</label>
+            <input type="text" id="phone" name="phone" value="{{ form.phone }}">
+
+            <label for="profileId">User profile *</label>
+            <select id="profileId" name="profileId" class="{% if fieldErrors.profileId %}field-error{% endif %}">
+                <option value="">-- pick a user profile --</option>
+                {% for profile in profiles %}
+                    <option value="{{ profile.profileId }}" {% if profile.profileId == form.profileId %}selected{% endif %}>
+                        {{ profile.profileName }}{% if profile.status != 'Active' %} (Suspended){% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+            {% if fieldErrors.profileId %}<p class="field-error-text">{{ fieldErrors.profileId }}</p>{% endif %}
+
+            <div class="form-buttons">
+                <button type="submit" class="btn-small btn-blue">Save</button>
+                <a href="{{ url_for('viewUserAccount', userId=userId) }}" class="btn-small btn-grey">Cancel</a>
+            </div>
+        </form>
+    {% else %}
+        <!-- the account doesn't exist (anymore) -->
+        <a href="{{ url_for('accounts') }}" class="btn-small btn-grey">Back to User Accounts</a>
+    {% endif %}
+{% endblock %}

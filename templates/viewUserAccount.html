@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}User account - Interior Design Platform{% endblock %}
+
+{% block content %}
+    {% if account %}
+        <!-- US9 details page, with the Update (US10) and Suspend (US11) buttons -->
+        <div class="page-top">
+            <h1>{{ account.username }} <span class="badge {{ account.status|lower }}">{{ account.status }}</span></h1>
+            <div class="form-buttons">
+                <a href="{{ url_for('updateUserAccount', userId=account.userId) }}" class="btn-small btn-blue">Update</a>
+                {# no Suspend button if it's already suspended or it's the admin's own account (TC11.7, TC11.8) #}
+                {% if account.status == 'Active' and account.userId != session['userId'] %}
+                    <a href="{{ url_for('suspendUserAccount', userId=account.userId) }}" class="btn-small btn-red">Suspend</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- the password is never shown, not even the hash -->
+        <table class="details-table">
+            <tr><th>Full name</th><td>{{ account.fullName }}</td></tr>
+            <tr><th>Email</th><td>{{ account.email or "-" }}</td></tr>
+            <tr><th>Phone</th><td>{{ account.phone or "-" }}</td></tr>
+            <tr><th>User profile</th><td>{{ profile.profileName if profile else "-" }}</td></tr>
+            <tr><th>Status</th><td>{{ account.status }}</td></tr>
+            <tr><th>Created</th><td>{{ account.createdDate }}</td></tr>
+        </table>
+
+        <a href="{{ url_for('accounts') }}">&larr; Back to User Accounts</a>
+
+        {% if showConfirmation %}
+            <!-- US11 confirmation box -->
+            <div class="overlay">
+                <div class="confirm-box">
+                    <h2>Suspend user account?</h2>
+                    <p>Are you sure you want to suspend <strong>{{ account.username }} ({{ account.fullName }})</strong>?
+                       They won't be able to log in.</p>
+                    <form method="POST" action="{{ url_for('suspendUserAccount', userId=account.userId) }}">
+                        <button type="submit" name="choice" value="ok" class="btn-small btn-red">Suspend</button>
+                        <button type="submit" name="choice" value="cancel" class="btn-small btn-grey">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- US9 alt flow 2a - not found -->
+        <h1>User account</h1>
+        <div class="message error">{{ errorMessage }}</div>
+        <a href="{{ url_for('accounts') }}" class="btn-small btn-grey">Back to User Accounts</a>
+    {% endif %}
+{% endblock %}

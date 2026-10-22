@@ -1,0 +1,873 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>20</y>
+      <w>700</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>*Use Case Diagram - US11 Suspend user account*
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>480</x>
+      <y>70</y>
+      <w>320</w>
+      <h>190</h>
+    </coordinates>
+    <panel_attributes>Interior Design Platform</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLActor</id>
+    <coordinates>
+      <x>100</x>
+      <y>100</y>
+      <w>110</w>
+      <h>121</h>
+    </coordinates>
+    <panel_attributes>User Admin</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLUseCase</id>
+    <coordinates>
+      <x>560</x>
+      <y>130</y>
+      <w>200</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>Suspend user account
+(UC11)</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>210</x>
+      <y>155</y>
+      <w>350</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes>10.0;10.0;330.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>330</y>
+      <w>700</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>*B-C-E Class Diagram - UC11 Suspend user account (US11)*
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>60</x>
+      <y>380</y>
+      <w>280</w>
+      <h>177</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;boundary&gt;&gt;
+SuspendUserAccountPage
+--
++clickSuspend(userId)
++displayConfirmation()
++confirmSuspend()
++cancelSuspend()
++closeConfirmation()
++displaySuccessMessage(msg)
++displayErrorMessage(msg)</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>480</x>
+      <y>380</y>
+      <w>411</w>
+      <h>75</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;control&gt;&gt;
+SuspendUserAccountController
+--
++suspendUserAccount(userId, adminUserId): boolean</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1031</x>
+      <y>380</y>
+      <w>340</w>
+      <h>270</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;entity&gt;&gt;
+UserAccount
+--
+-userId: int
+-username: String
+-password: String
+-fullName: String
+-email: String
+-phone: String
+-profileId: int
+-status: String
+-createdDate: Date
+--
++getUserAccount(userId): UserAccount
++isActive(): boolean
++suspendUserAccount(userId): boolean</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>340</x>
+      <y>430</y>
+      <w>140</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes>0.0;10.0;140.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>350</x>
+      <y>390</y>
+      <w>120</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>calls
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>891</x>
+      <y>440</y>
+      <w>140</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>0.0;10.0;140.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>901</x>
+      <y>425</y>
+      <w>120</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>uses
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>0</x>
+      <y>750</y>
+      <w>700</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>*Sequence Diagram - UC11 Suspend user account (US11)*
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>95</x>
+      <y>800</y>
+      <w>110</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>User Admin</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>320</x>
+      <y>800</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:SuspendUserAccountPage</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>620</x>
+      <y>800</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:SuspendUserAccountController</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>920</x>
+      <y>800</y>
+      <w>260</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>:UserAccount</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>877</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>1: clickSuspend(userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>910</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>967</y>
+      <w>380</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>2: displayConfirmation()
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>1000</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>1142</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>3: confirmSuspend()
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>1175</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>460</x>
+      <y>1215</y>
+      <w>280</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>4: suspendUserAccount(userId, adminUserId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>450</x>
+      <y>1265</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1322</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>5: getUserAccount(userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1355</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1412</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>6: account
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1445</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1045</x>
+      <y>1360</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1502</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>7: isActive()
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1535</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1592</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>8: active
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1625</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1045</x>
+      <y>1540</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1757</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>9: suspendUserAccount(userId)
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1790</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1847</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>10: suspended
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>750</x>
+      <y>1880</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1045</x>
+      <y>1795</y>
+      <w>10</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>690</x>
+      <y>1682</y>
+      <w>460</w>
+      <h>246</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>700</x>
+      <y>1685</y>
+      <w>50</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>opt</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>760</x>
+      <y>1685</y>
+      <w>380</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[account != null AND active AND userId != adminUserId]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>460</x>
+      <y>1968</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>11: success
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>450</x>
+      <y>2001</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>745</x>
+      <y>1270</y>
+      <w>10</w>
+      <h>746</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>2116</y>
+      <w>380</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>12: displaySuccessMessage("User account suspended successfully")
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>2166</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>2233</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>13: account shown as Suspended
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>2266</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>90</x>
+      <y>2309</y>
+      <w>780</w>
+      <h>10</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;5.0;770.0;5.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>100</x>
+      <y>2317</y>
+      <w>360</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[success == false]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>2362</y>
+      <w>380</w>
+      <h>47</h>
+    </coordinates>
+    <panel_attributes>14: displayErrorMessage("This user account cannot be suspended")
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>2412</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>2479</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>15: error message
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>2512</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;.</panel_attributes>
+    <additional_attributes>10.0;10.0;280.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>90</x>
+      <y>2058</y>
+      <w>780</w>
+      <h>502</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>100</x>
+      <y>2061</y>
+      <w>50</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>alt</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>2061</y>
+      <w>700</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[success == true]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>70</x>
+      <y>2580</y>
+      <w>1100</w>
+      <h>10</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;5.0;1090.0;5.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>80</x>
+      <y>2588</y>
+      <w>360</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[User Admin clicks "Cancel"]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>160</x>
+      <y>2650</y>
+      <w>280</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>16: cancelSuspend()
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>150</x>
+      <y>2683</y>
+      <w>300</w>
+      <h>33</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>280.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>470</x>
+      <y>2740</y>
+      <w>380</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>17: closeConfirmation()
+style=wordwrap</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>2773</y>
+      <w>100</w>
+      <h>50</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;40.0;90.0;40.0;90.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>70</x>
+      <y>1067</y>
+      <w>1100</w>
+      <h>1781</h>
+    </coordinates>
+    <panel_attributes />
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>80</x>
+      <y>1070</y>
+      <w>50</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>alt</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Text</id>
+    <coordinates>
+      <x>140</x>
+      <y>1070</y>
+      <w>1020</w>
+      <h>22</h>
+    </coordinates>
+    <panel_attributes>[User Admin clicks "Suspend"]</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>445</x>
+      <y>915</y>
+      <w>10</w>
+      <h>1933</h>
+    </coordinates>
+    <panel_attributes>
+</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>134</x>
+      <y>844</y>
+      <w>33</w>
+      <h>2064</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2044.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>434</x>
+      <y>844</y>
+      <w>33</w>
+      <h>2064</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2044.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>734</x>
+      <y>844</y>
+      <w>33</w>
+      <h>2064</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2044.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1034</x>
+      <y>844</y>
+      <w>33</w>
+      <h>2064</h>
+    </coordinates>
+    <panel_attributes>lt=.</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;2044.0</additional_attributes>
+  </element>
+</diagram>
