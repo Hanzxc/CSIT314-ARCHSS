@@ -1,0 +1,139 @@
+2.1 User Admin
+User Story #
+User Story Description
+#1
+As a user admin, I want to log in so that I can manage users.
+#2
+As a user admin, I want to log out so that other people cannot use my account.
+#3
+As a user admin, I want to create a user profile so that I can set up a user group and choose what its users can do.
+#4
+As a user admin, I want to view a user profile so that I can check the group’s details and what its users can do.
+#5
+As a user admin, I want to update a user profile so that the group’s details and permissions stay up to date.
+#6
+As a user admin, I want to suspend a user profile so that users in that group cannot log in.
+#7
+As a user admin, I want to search for user profiles so that I can find the group I need to manage.
+#8
+As a user admin, I want to create a user account so that a new user can join the system.
+#9
+As a user admin, I want to view a user account so that I can check the user’s details, group, and account status.
+#10
+As a user admin, I want to update a user account so that the user’s details and group are correct.
+#11
+As a user admin, I want to suspend a user account so that the user cannot log in. - re
+#12
+As a user admin, I want to search for user accounts so that I can find the user I need to manage.
+
+ 
+
+
+
+
+
+
+
+
+
+2.2 Interior Designer
+User Story #
+User Story Description
+#13
+As an interior designer, I want to log in so that I can manage my company’s information and IDPs.
+#14
+As an interior designer, I want to create a company profile so that customers can learn about my company and its services.
+#15
+As an interior designer, I want to view my company profile so that I can check what customers see.
+#16
+As an interior designer, I want to update my company profile so that customers see the latest information.
+#17
+As an interior designer, I want to delete my company profile so that it is no longer shown on the platform.
+#18
+As an interior designer, I want to search my company’s information so that I can find the details I need.
+#19
+As an interior designer, I want to log out so that other people cannot use my account.
+#20
+As an interior designer, I want to add a current IDP so that I can show customers what I am working on.
+#21
+As an interior designer, I want to view my current IDPs so that I can check how they look to customers.
+#22
+As an interior designer, I want to update a current IDP so that customers can see its latest progress.
+#23
+As an interior designer, I want to delete a current IDP so that it is no longer shown on the platform.
+#24
+As an interior designer, I want to search my current IDPs so that I can find the IDP I need to manage.
+#25
+As an interior designer, I want to add a past IDP so that I can show customers my completed work.
+#26
+As an interior designer, I want to view my past IDPs so that I can check how they look to customers.
+#27
+As an interior designer, I want to update a past IDP so that its details are correct.
+#28
+As an interior designer, I want to delete a past IDP so that it is no longer shown on the platform.
+#29
+As an interior designer, I want to search my past IDPs so that I can find the IDP I need to manage.
+#37
+As an interior designer, I want to see how many views each of my IDPs has so that I can tell which IDPs get the most attention.
+#38
+As an interior designer, I want to see how many users have saved each of my IDPs so that I can tell which IDPs people are interested in.
+
+ 
+2.3 Customer
+User Story #
+User Story Description
+#30
+As a customer, I want to log in so that I can view and manage my saved IDPs.
+#31
+As a customer, I want to search for IDPs so that I can find designs I like.
+#32
+As a customer, I want to view an IDP so that I can see its details and learn about the designer’s work.
+#33
+As a customer, I want to save an IDP so that I can look at it again later.
+#34
+As a customer, I want to search my saved list so that I can find an IDP I saved earlier.
+#35
+As a customer, I want to view my saved list so that I can see all the IDPs I have saved.
+#36
+As a customer, I want to log out so that other people cannot use my account.
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2.4 Platform Manager
+User Story #
+User Story Description
+#39
+As a platform manager, I want to log in so that I can manage IDP categories and reports.
+#40
+As a platform manager, I want to log out so that other people cannot use my account.
+#41
+As a platform manager, I want to create an IDP category so that similar interior design IDPs can be grouped together.
+#42
+As a platform manager, I want to view IDP categories and the IDPs in them so that I can check whether IDPs are grouped correctly.
+#43
+As a platform manager, I want to update an IDP category so that its name and details stay up to date.
+#44
+As a platform manager, I want to suspend an IDP category so that users can no longer see or select it.
+#45
+As a platform manager, I want to search for IDP categories so that I can find the category I need to manage.
+#46
+As a platform manager, I want to generate a daily report so that I can see which IDP categories were most popular on a selected day.
+#47
+As a platform manager, I want to generate a weekly report so that I can see which IDP categories were most popular in a selected week.
+#48
+As a platform manager, I want to generate a monthly report so that I can see which IDP categories were most popular in a selected month.
+
