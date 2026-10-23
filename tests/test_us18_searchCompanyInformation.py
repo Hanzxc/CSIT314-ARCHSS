@@ -276,3 +276,14 @@ def test_ut18_28_search_afterUpdateAndDelete():
     response = client.get("/designer/company/search?keyword=refurb")
     assert response.status_code == 404
     assert b"Office refurbishment" not in response.data
+
+
+def test_ut18_suspendedProfile_isUnavailable():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(userId, companyData())
+    profile = CompanyProfile().getCompanyProfile(userId)
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    client = app.test_client()
+    loginAsDesigner13(client)
+    assert client.get("/designer/company/search?keyword=Uda").status_code == 404
+    assert CompanyProfile().searchCompanyInformation(userId, "Uda") == []

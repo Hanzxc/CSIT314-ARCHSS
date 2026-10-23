@@ -294,3 +294,68 @@ def test_ut14_31_seedCompanyData_has100AndDoesNotDuplicate():
     assert countCompanies() == 100
     assert seedCompanyData() == 0
     assert countCompanies() == 100
+
+
+# ---------- Active / Suspended lifecycle ----------
+
+def test_ut14_32_create_setsActiveAutomatically():
+    userId = createDesigner13()
+    data = companyData()
+    data["status"] = "Suspended"
+    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is True
+    assert CompanyProfile().getCompanyProfile(userId).status == "Active"
+
+
+def test_ut14_33_create_reactivatesSuspendedRowWithNewDetails():
+    userId = createDesigner13()
+    control = CreateCompanyProfileController()
+    assert control.createCompanyProfile(userId, companyData()) is True
+    original = CompanyProfile().getCompanyProfile(userId)
+    assert CompanyProfile().suspendCompanyProfile(userId, original.companyId) is True
+    assert control.hasCompanyProfile(userId) is False
+    data = companyData()
+    data["companyName"] = "Uda Interiors Reopened"
+    data["phone"] = ""
+    assert control.createCompanyProfile(userId, data) is True
+    restored = CompanyProfile().getCompanyProfile(userId)
+    assert restored.status == "Active"
+    assert restored.companyId == original.companyId
+    assert restored.createdDate == original.createdDate
+    assert restored.companyName == "Uda Interiors Reopened"
+    assert restored.phone == ""
+    assert restored.revision == original.revision + 1
+    assert countCompanies() == 1
+    assert control.createCompanyProfile(userId, data) is False
+
+
+def test_ut14_34_create_invalidInputDoesNotReactivate():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(userId, companyData())
+    original = CompanyProfile().getCompanyProfile(userId)
+    CompanyProfile().suspendCompanyProfile(userId, original.companyId)
+    data = companyData()
+    data["companyName"] = ""
+    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is False
+    conn = getConnection()
+    row = conn.execute("SELECT * FROM company_profile WHERE designerId=?", (userId,)).fetchone()
+    conn.close()
+    assert row["status"] == "Suspended"
+    assert row["companyName"] == original.companyName
+
+
+def test_ut14_35_createPage_reactivatesThenViewShowsActive():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(userId, companyData())
+    original = CompanyProfile().getCompanyProfile(userId)
+    CompanyProfile().suspendCompanyProfile(userId, original.companyId)
+    client = app.test_client()
+    loginAsDesigner13(client)
+    data = companyData()
+    data["companyName"] = "Reactivated Interiors"
+    response = client.post("/designer/company/create", data=data, follow_redirects=True)
+    assert b"Company profile created successfully" in response.data
+    response = client.get("/designer/company")
+    assert b"Reactivated Interiors" in response.data
+    assert b"Company profile status:" in response.data
+    assert b"Active" in response.data
+    assert countCompanies() == 1

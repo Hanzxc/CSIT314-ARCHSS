@@ -31,5 +31,7 @@ CREATE TABLE IF NOT EXISTS company_profile (
     email        TEXT NOT NULL DEFAULT '' CHECK(length(email) <= 254),
     phone        TEXT NOT NULL DEFAULT '' CHECK(length(phone) <= 30),
     address      TEXT NOT NULL DEFAULT '' CHECK(length(address) <= 300),
-    createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
+    revision     INTEGER NOT NULL DEFAULT 1
 );

@@ -36,7 +36,7 @@ class DeleteCompanyProfilePage:
     def displayConfirmation(self, profile):
         token = token_urlsafe(24)
         session["companyDeleteConfirmation"] = {
-            "designerId": session["userId"], "companyId": profile.companyId, "token": token}
+            "designerId": session["userId"], "companyId": profile.companyId, "revision": profile.revision, "token": token}
         return render_template("deleteCompanyProfile.html", company=profile,
                                confirmationToken=token, activePage="company")
 
@@ -54,12 +54,14 @@ class DeleteCompanyProfilePage:
         confirmation = session.get("companyDeleteConfirmation")
         designerId = session["userId"]
         if (not confirmation or confirmation.get("designerId") != designerId
-                or confirmation.get("companyId") != companyId or not confirmationToken
+                or confirmation.get("companyId") != companyId
+                or not isinstance(confirmation.get("revision"), int) or not confirmationToken
                 or not compare_digest(confirmation["token"], confirmationToken)):
             return self.displayErrorMessage(MSG_CONFIRM_AGAIN)
-        # Consume confirmation once. A stale companyId cannot delete a replacement profile.
+        # Consume once and bind to this activation, even when reactivation keeps the same companyId.
         session.pop("companyDeleteConfirmation", None)
-        if self.deleteCompanyProfileController.deleteCompanyProfile(designerId, companyId):
+        if self.deleteCompanyProfileController.deleteCompanyProfile(
+                designerId, companyId, confirmation["revision"]):
             return self.displaySuccessMessage(MSG_DELETED)
         if self.deleteCompanyProfileController.getCompanyProfile(designerId) is None:
             return self.displayNotFoundMessage()

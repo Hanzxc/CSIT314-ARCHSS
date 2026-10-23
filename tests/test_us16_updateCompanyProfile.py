@@ -310,3 +310,16 @@ def test_ut16_28_createUpdateView_endToEnd():
     assert b"Renovation, office design" in response.data
     assert b"Space planning, renovation" not in response.data
     assert len(companyRows()) == 1
+
+
+def test_ut16_suspendedProfile_isUnavailable():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(userId, companyData())
+    profile = CompanyProfile().getCompanyProfile(userId)
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    client = app.test_client()
+    loginAsDesigner13(client)
+    data = companyData()
+    data["companyName"] = "Must not save"
+    assert client.post("/designer/company/update", data=data).status_code == 404
+    assert CompanyProfile().updateCompanyProfile(userId, data) is False

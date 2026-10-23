@@ -3,6 +3,7 @@
 {% block content %}
     <h1>View company profile</h1>
     <p class="subtitle">Preview your company's information and services.</p>
+    <p>Company profile status: <strong>{{ company.status }}</strong></p>
     {% include "companyProfileDetails.html" %}
     <div class="form-buttons">
         <a href="{{ url_for('searchCompanyInformation') }}" class="btn-small btn-blue">Search company information</a>

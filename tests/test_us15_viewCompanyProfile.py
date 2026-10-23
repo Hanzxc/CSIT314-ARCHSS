@@ -265,3 +265,14 @@ def test_ut15_24_createThenView_endToEnd():
     assert response.status_code == 200
     assert b"Uda Interiors" in response.data
     assert b"Space planning, renovation" in response.data
+
+
+def test_ut15_suspendedProfile_isUnavailable():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(userId, companyData())
+    profile = CompanyProfile().getCompanyProfile(userId)
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    client = app.test_client()
+    loginAsDesigner13(client)
+    assert client.get("/designer/company").status_code == 404
+    assert b"Uda Interiors" not in client.get("/designer/company").data

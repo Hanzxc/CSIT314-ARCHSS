@@ -18,5 +18,13 @@ def initDatabase():
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         conn = getConnection()
         conn.executescript(f.read())
+        # CREATE TABLE IF NOT EXISTS does not add columns to older databases.
+        # Idempotent migration: preserve existing company/account/profile records.
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(company_profile)")}
+        if "status" not in columns:
+            conn.execute("ALTER TABLE company_profile ADD COLUMN status TEXT NOT NULL DEFAULT 'Active' "
+                         "CHECK(status IN ('Active', 'Suspended'))")
+        if "revision" not in columns:
+            conn.execute("ALTER TABLE company_profile ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
         conn.commit()
         conn.close()

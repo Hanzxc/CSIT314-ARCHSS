@@ -15,6 +15,7 @@ from boundary.interiorDesignerLogoutPage import InteriorDesignerLogoutPage
 from control.interiorDesignerLoginController import InteriorDesignerLoginController
 from entity.userAccount import UserAccount
 
+from boundary.restoreCompanyProfilePage import RestoreCompanyProfilePage
 from boundary.platformManagerLoginPage import PlatformManagerLoginPage
 from control.platformManagerLoginController import PlatformManagerLoginController
 from boundary.loginPage import LoginPage
@@ -297,6 +298,12 @@ def platformManagerLogin():
 @app.route("/manager/dashboard")
 def platformManagerDashboard():
     return PlatformManagerLoginPage().openDashboard()
+
+
+# US17 recovery: restore saved company details without re-entering them.
+@app.route("/designer/company/restore", methods=["POST"])
+def restoreCompanyProfile():
+    return RestoreCompanyProfilePage().submitRestore(request.form.get("confirmationToken", ""))
 
 
 if __name__ == "__main__":

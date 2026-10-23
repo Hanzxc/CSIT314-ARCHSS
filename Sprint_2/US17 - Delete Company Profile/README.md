@@ -1,115 +1,27 @@
-# US17 — Delete company profile
+# US17 - Delete Company Profile
 
-> As an interior designer, I want to delete my company profile so that it is no longer shown on the platform.
+Updated company-profile lifecycle amendment, applied together after US13-19 and US39.
 
-Apply this repository update **after US13–16**. It follows the same simple Python test/helper format, camelCase filenames and methods, three UML diagram types, one editable draw.io file, numbered PNG filenames and labelled wireframes with Notes panels. Sample names and branding are unchanged. Only repository files are packaged, not a complete project.
+## Behaviour
+Delete is implemented as soft deletion. The controller retains deleteCompanyProfile() to match the visible Delete action but delegates persistence to CompanyProfile.suspendCompanyProfile(). Only an Active row matching designerId/companyId is set to Suspended; business data, user account and login session remain. Cancel keeps the profile Active. Confirmation is bound to the owner, company ID, activation revision and random token, and is consumed once. The expectedRevision predicate prevents a confirmation from an earlier activation from suspending the reactivated row.
 
-## Behaviour and assumptions
+The shared CompanyProfile entity contains status (Active/Suspended) and revision (activation version). Status is system-controlled; it is not an editable creation field. getCompanyProfile() returns only Active profiles. Reactivation is the recommended option (a): it uses the newly submitted details, not an automatic recovery of all old field values. A suspended row is preserved until explicitly reactivated, but reactivation replaces its business details; this is not a full historical audit/version archive.
 
-The US15 company view now has a **Delete company profile** link alongside Update and Back. Opening it loads a confirmation dialog naming the existing company. Opening the dialog does not delete anything.
+## Code and database
+Full replacement source files are supplied in the amendment ZIP, with an exact list in its root README and CHANGED-FILES.txt. Replace file contents; do not append complete versions below old code. app.py and login code do not change in this amendment. Existing routes and Delete wording remain.
 
-- **Cancel** clears the pending confirmation and returns to the company view, keeping its data.
-- **Delete company profile** submits an explicit confirmation. Success deletes the company record, flashes `Company profile deleted successfully` and returns to the designer dashboard.
-- The dashboard then offers US14 creation again, because no company profile remains. The old company view/update page returns the missing-profile response (404).
-- The designer's user account and login session are retained; other designers' profiles are unaffected.
+Start with python app.py. database.db.initDatabase() automatically adds missing status/revision columns to an existing database, keeps all existing rows, and can run repeatedly. Existing companies become Active with revision 1. Keep your own database/archss.db; the package contains no database file. US15/16/18 changes use the shared active-only entity behaviour, with regression tests in each story's test file.
 
-This implementation uses a **physical delete** of the company's database row, not an archived/hidden status. There is no restore operation in these stories. This is a design assumption to confirm with your group/tutor. Only `company_profile` is targeted; no user-account deletion, logout or IDP deletion is implemented. Later customer pages reading the same entity will no longer find the deleted record; customer routing is outside these designer stories.
+## Tests and browser checks
+Run python -m pytest tests -q from the repository root. Verified amendment with Restore: 422 tests pass, including existing admin/designer/manager tests and the new suspension, reactivation and migration checks. Test data uses the existing isolated conftest.py fixture; browser-created records are not used by pytest.
 
-Only the session user owns the deletion. Both `designerId` and the confirmed `companyId` must match the database row. Posted/query owner fields are ignored. A session-bound confirmation includes that specific company ID and a random token; the boundary checks it before deletion and consumes it once. Missing/wrong/reused confirmation, altered IDs and unknown choices return HTTP 400 without deleting a profile. An old confirmation cannot remove a replacement profile created later under the same account. Opening a new dialog replaces that session's pending confirmation.
+In the running website, log in as an Active Interior Designer, create a company, view its Active status, update/search it, open Delete and try Cancel, then confirm Delete. The dashboard offers Restore company profile for its own Suspended record. The old view/update/search URLs must return 404 while suspended. Restore returns the same saved record to Active with all business details unchanged. The existing explicit US14 creation route can still reactivate using newly entered details, but the normal suspended-dashboard action is Restore. User account/login are kept. A fresh confirmation works; an old consumed or earlier-activation confirmation cannot suspend the reactivated company.
 
-US13 account/profile status and designer-permission checks are reused on GET and POST, and the control rechecks access before deleting. No session redirects to designer login; unsuitable access returns 403. No profile returns the existing 404 page with a creation link. A failed deletion with a remaining/replacement record returns a failure page to reopen confirmation; it does not delete that replacement automatically.
+## Diagrams
+The PNG use case/BCE/sequence diagrams and labelled wireframes use the existing story format. The draw.io file is editable. Only story-relevant entity methods are shown; status/revision are included. US14 explains insertion versus reactivation. US17 shows suspension and the revision guard. US15/16/18 document Active-only access. Images are diagram/wireframe exports rather than browser screenshots. Written use case descriptions and written test case tables remain deferred.
 
-## Repository files
 
-Add these new files to their matching existing folders:
+## Own-dashboard Restore extension (US17)
+The existing designer dashboard now checks for its own Suspended company and shows a Restore company profile POST button instead of Create in that state. It shows status only, not a list of company records. Active companies show View; designers with no company row show Create. A fresh signed-session confirmation is prepared when the dashboard opens. The Restore boundary reads the owner/record/revision from that confirmation, never from posted owner or company fields. Restore rechecks account/profile/permissions, changes only status/revision, clears stale delete confirmation, and redirects to the existing company view with Company profile restored successfully. Invalid/reused confirmations redirect to the dashboard with an error and no business-data changes. Logging out clears the session; reopening the dashboard after login prepares a fresh Restore button.
 
-```text
-boundary/deleteCompanyProfilePage.py
-control/deleteCompanyProfileController.py
-templates/deleteCompanyProfile.html
-templates/companyProfileDeleteError.html
-tests/test_us17_deleteCompanyProfile.py
-Sprint_2/US17 - Delete Company Profile/...
-```
-
-Combine these modified files with the group's latest versions:
-
-```text
-app.py
-entity/companyProfile.py
-templates/viewCompanyProfile.html
-```
-
-All implementation files are required alongside the test and Sprint_2 folder. Paths in the ZIP are relative to the repository root. Keep other group files; add new files alongside them and preserve newer shared changes when combining modified files. The entity gains `deleteCompanyProfile(designerId, companyId)` while retaining its create/get/update methods. There is no schema change or migration. US13–16 test files are unchanged. No Git commit, push or merge has been performed.
-
-## Diagram/code mapping
-
-| Element | Implementation |
-|---|---|
-| Boundary `DeleteCompanyProfilePage` | `boundary/deleteCompanyProfilePage.py` |
-| Control `DeleteCompanyProfileController` | `control/deleteCompanyProfileController.py` |
-| Entity `CompanyProfile` | Extended `entity/companyProfile.py` |
-| Shared access control | Existing `InteriorDesignerLoginController.getAuthenticatedDesigner()` |
-| Confirmation dialog | `templates/deleteCompanyProfile.html` |
-| Reopen-confirmation error page | `templates/companyProfileDeleteError.html` |
-| Delete entry link | `templates/viewCompanyProfile.html` |
-| Route | GET/POST `/designer/company/delete` in `app.py` |
-
-The single sequence diagram covers opening the dialog, choosing Cancel or Delete, checking confirmation, deleting the exact owned record and success/failure outcomes. Early access-denial behaviour is stated at the top. The BCE diagram uses the actual class and method names and shows only relevant methods of reused classes. The confirmation/session logic lives in the Boundary; authorisation and persistence are delegated to the Control and Entity.
-
-```text
-US17 Delete company profile.drawio
-diagrams/
-  2 Use Case Diagram.png
-  4a Wireframe - Delete button.png
-  4b Wireframe - Confirm delete.png
-  4c Wireframe - Company deleted.png
-  4d Wireframe - Profile not found.png
-  4e Wireframe - Confirmation error.png
-  5 BCE Class Diagram.png
-  6 Sequence Diagram.png
-```
-
-The draw.io file has eight editable pages. PNGs are locally rendered vector illustrations checked visually, not browser screenshots. Written use case descriptions, Word reports and written test case tables remain deferred.
-
-## Run pass/fail tests
-
-Open a terminal at the group **repository root**, after combining all files:
-
-```powershell
-python -m pytest tests/test_us17_deleteCompanyProfile.py -v --basetemp=.test-tmp-us17
-python -m pytest -q --basetemp=.test-tmp-all
-```
-
-If `python` is not recognised on the computer used to prepare these packages:
-
-```powershell
-$us17Python = "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe"
-& $us17Python -m pytest tests/test_us17_deleteCompanyProfile.py -v --basetemp=.test-tmp-us17
-& $us17Python -m pytest -q --basetemp=.test-tmp-all
-```
-
-**Verified: 28 US17 tests passed; 302 tests passed overall**, including all 274 prior tests. Tests cover successful deletion, Cancel, unchanged accounts/login, owner isolation, access restrictions, no deletion on GET, missing records, forged owner/company fields, confirmation validation/reuse, stale confirmation versus replacement records, escaped company names and the create–view–update–delete flow.
-
-Tests use the existing `conftest.py` isolated temporary database and local helper functions. They do not delete records from your demo database. No website server or manual credential entry is needed. Use `--basetemp` folders only for disposable test scratch data; pytest recreates them. The first run failed because the new controller was absent; final runs passed. This records this development session, not prior group activity.
-
-## Try it in the browser
-
-From the repository root, start the same application:
-
-```powershell
-python app.py
-```
-
-Use the explicit executable above if needed. Leave the terminal running and visit `http://127.0.0.1:5000/login`.
-
-1. Log in with your existing fictional designer account, such as `designer13` / `Design@123` if set up in US13/14.
-2. Use US14 to create a sample company if none exists, then open **View company profile**.
-3. Select **Delete company profile**. Verify that the confirmation names your sample company.
-4. Try **Cancel** first: the company remains.
-5. Open the dialog again and choose **Delete company profile** to remove that sample company's actual row from the demo database.
-6. Check the success message and Create button on the dashboard. Visiting the old company view shows that no profile exists, while the account remains logged in.
-
-A manual confirmed deletion persists across application restarts and has no undo here. Use sample data for the demonstration. You can create a new profile through US14 afterward. Automated tests are repeatable because they use fresh temporary databases instead.
-
-Fresh accounts/databases use the earlier US13/14 setup. US17 does not reset credentials or seed company data automatically. Admin and designer features still run through one server. Stop it with Ctrl+C.
+This is implemented by RestoreCompanyProfilePage, RestoreCompanyProfileController and the shared Company's getSuspendedCompanyProfile()/restoreCompanyProfile() methods, plus POST /designer/company/restore in app.py. It adds no suspended-company listing page. The new tests/test_us17_restoreCompanyProfile.py contains 25 simple pytest functions. All 422 tests pass. US17's single sequence canvas covers Delete followed by the own-dashboard Restore interaction; BCE/use case diagrams and restored/error wireframes agree with the implementation. The US13 login flow, US19 logout and US39 manager login retain their existing behaviour; the shared designer dashboard is integrated through InteriorDesignerLoginPage.openDashboard().

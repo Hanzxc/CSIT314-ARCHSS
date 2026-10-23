@@ -2,6 +2,7 @@
 {% block title %}Create company profile - Interior Design Platform{% endblock %}
 {% block content %}
     <h1>Create company profile</h1>
+    <p>A new profile becomes Active. If you previously deleted your profile, submitting this form reactivates the saved record using these details.</p>
     <p class="subtitle">Tell customers about your company and its services. * Required field</p>
     {% if errorMessage %}<div class="message error" role="alert">{{ errorMessage }}</div>{% endif %}
     <form method="POST" action="{{ url_for('createCompanyProfile') }}" class="profile-form" novalidate>

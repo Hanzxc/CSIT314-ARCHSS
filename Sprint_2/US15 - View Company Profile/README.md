@@ -1,109 +1,27 @@
-# US15 — View company profile
+# US15 - View Company Profile
 
-> As an interior designer, I want to view my company profile so that I can check what customers see.
+Updated company-profile lifecycle amendment, applied together after US13-19 and US39.
 
-Apply this repository update **after US13 and US14**. The package follows the same simple Python test style, camelCase naming, three UML diagram types, numbered diagram PNGs, one editable draw.io file, and labelled wireframes with Notes panels. The sample designer remains `Tengku Uda Designer`, username `designer13`, password `Design@123`.
+## Behaviour
+The owner view returns only an Active company profile and displays its status outside the reusable customer-facing content. A missing or Suspended profile returns HTTP 404 with the existing Create link. Business data is not displayed for Suspended profiles.
 
-## What it adds
+The shared CompanyProfile entity contains status (Active/Suspended) and revision (activation version). Status is system-controlled; it is not an editable creation field. getCompanyProfile() returns only Active profiles. Reactivation is the recommended option (a): it uses the newly submitted details, not an automatic recovery of all old field values. A suspended row is preserved until explicitly reactivated, but reactivation replaces its business details; this is not a full historical audit/version archive.
 
-The Company Profile card on the designer dashboard now shows **View company profile** once a profile exists. The link opens `/designer/company` and displays the saved company name, description, services, email, phone and address. Blank optional contact fields show `Not provided`. Back to dashboard returns without changing data.
+## Code and database
+Full replacement source files are supplied in the amendment ZIP, with an exact list in its root README and CHANGED-FILES.txt. Replace file contents; do not append complete versions below old code. app.py and login code do not change in this amendment. Existing routes and Delete wording remain.
 
-This is a read-only preview of the public-facing company content. The business details are in a reusable `companyProfileDetails.html` template, ready for later customer pages to include. Actual customer navigation/routes are outside US15 and are not claimed to be implemented. The designer navigation remains outside this reusable company card. Internal IDs, timestamps, account full name, account email and credentials are not displayed in the company card.
+Start with python app.py. database.db.initDatabase() automatically adds missing status/revision columns to an existing database, keeps all existing rows, and can run repeatedly. Existing companies become Active with revision 1. Keep your own database/archss.db; the package contains no database file. US15/16/18 changes use the shared active-only entity behaviour, with regression tests in each story's test file.
 
-The view always uses the authenticated session's userId. A designer cannot choose a different owner through URL parameters. US13 account/profile status and designer permission checks are reused. No login session redirects to designer login; unsuitable access returns 403. An authorised designer with no profile gets a 404 page explaining that no profile exists, with a link to US14 creation. Edit, delete and logout remain in their assigned stories.
+## Tests and browser checks
+Run python -m pytest tests -q from the repository root. Verified amendment with Restore: 422 tests pass, including existing admin/designer/manager tests and the new suspension, reactivation and migration checks. Test data uses the existing isolated conftest.py fixture; browser-created records are not used by pytest.
 
-## Files to put into the group repository
+In the running website, log in as an Active Interior Designer, create a company, view its Active status, update/search it, open Delete and try Cancel, then confirm Delete. The dashboard offers Restore company profile for its own Suspended record. The old view/update/search URLs must return 404 while suspended. Restore returns the same saved record to Active with all business details unchanged. The existing explicit US14 creation route can still reactivate using newly entered details, but the normal suspended-dashboard action is Restore. User account/login are kept. A fresh confirmation works; an old consumed or earlier-activation confirmation cannot suspend the reactivated company.
 
-New files:
+## Diagrams
+The PNG use case/BCE/sequence diagrams and labelled wireframes use the existing story format. The draw.io file is editable. Only story-relevant entity methods are shown; status/revision are included. US14 explains insertion versus reactivation. US17 shows suspension and the revision guard. US15/16/18 document Active-only access. Images are diagram/wireframe exports rather than browser screenshots. Written use case descriptions and written test case tables remain deferred.
 
-```text
-boundary/viewCompanyProfilePage.py
-control/viewCompanyProfileController.py
-templates/viewCompanyProfile.html
-templates/companyProfileDetails.html
-templates/companyProfileNotFound.html
-tests/test_us15_viewCompanyProfile.py
-Sprint_2/US15 - View Company Profile/...
-```
 
-Modified files to combine with your group's latest versions:
+## Own-dashboard Restore extension (US17)
+The existing designer dashboard now checks for its own Suspended company and shows a Restore company profile POST button instead of Create in that state. It shows status only, not a list of company records. Active companies show View; designers with no company row show Create. A fresh signed-session confirmation is prepared when the dashboard opens. The Restore boundary reads the owner/record/revision from that confirmation, never from posted owner or company fields. Restore rechecks account/profile/permissions, changes only status/revision, clears stale delete confirmation, and redirects to the existing company view with Company profile restored successfully. Invalid/reused confirmations redirect to the dashboard with an error and no business-data changes. Logging out clears the session; reopening the dashboard after login prepares a fresh Restore button.
 
-```text
-app.py
-templates/interiorDesignerDashboard.html
-```
-
-The archive's paths are relative to the repository root. Add new files to existing matching folders; do not replace whole folders. The modified files are based on the last delivered US14 version, so preserve any newer group changes when combining them. This is a prepared repository update; no commit, push or Git merge has been performed.
-
-US15 reuses `CompanyProfile.getCompanyProfile(designerId)` and the US14 database table without changing the entity or schema. There is no new migration. All US13 and US14 test files are unchanged. The archive excludes database files and caches, and contains no complete project package.
-
-## Code/diagram mapping
-
-| Design element | Code |
-|---|---|
-| Boundary `ViewCompanyProfilePage` | `boundary/viewCompanyProfilePage.py` |
-| Control `ViewCompanyProfileController` | `control/viewCompanyProfileController.py` |
-| Entity `CompanyProfile` | Existing US14 `entity/companyProfile.py`, unchanged |
-| Shared access check | Existing US13 `InteriorDesignerLoginController`, unchanged |
-| Company details | `templates/companyProfileDetails.html` |
-| Designer view wrapper | `templates/viewCompanyProfile.html` |
-| Missing-profile response | `templates/companyProfileNotFound.html` |
-| Route | GET `/designer/company` in `app.py` |
-
-The BCE diagram uses the actual class and method names. It shows only relevant methods of reused classes. The single sequence diagram follows `clickView()`, access checks, the owner-specific lookup and the success/missing-profile response. The no-session redirect is stated at the top of the diagram.
-
-## Diagram folder
-
-```text
-US15 View company profile.drawio
-diagrams/
-  2 Use Case Diagram.png
-  4a Wireframe - View button.png
-  4b Wireframe - Company details.png
-  4c Wireframe - No company profile.png
-  4d Wireframe - Optional fields empty.png
-  5 BCE Class Diagram.png
-  6 Sequence Diagram.png
-```
-
-The draw.io file contains seven editable pages. PNGs are report images generated locally from the vector boards and checked visually; they are not browser screenshots. Written use case descriptions and written test case tables remain deferred.
-
-## Run pass/fail tests
-
-Open a terminal **at your group repository root**, not inside Sprint_2 or tests. With Python configured:
-
-```powershell
-python -m pytest tests/test_us15_viewCompanyProfile.py -v --basetemp=.test-tmp-us15
-python -m pytest -q --basetemp=.test-tmp-all
-```
-
-On the computer used to prepare this package, Python was available at the following path. If `python` is not recognised, use:
-
-```powershell
-$us15Python = "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe"
-& $us15Python -m pytest tests/test_us15_viewCompanyProfile.py -v --basetemp=.test-tmp-us15
-& $us15Python -m pytest -q --basetemp=.test-tmp-all
-```
-
-**Verified results: 24 US15 tests passed; 246 tests passed overall**, including all 222 preceding tests. No website server is needed for automated tests. The existing `conftest.py` supplies an isolated temporary database for every test, and local helper functions create the designer/company data they need. `--basetemp` folders are for disposable test files; pytest recreates them.
-
-The tests check company fields, no profile, access restrictions, suspended accounts/profiles, ownership separation, ignored forged owner parameters, escaped text, no private account details in the business card, optional empty contacts, read-only behaviour, dashboard links and the create-then-view integration flow. The initial pre-implementation run failed because the new controller was absent; the final runs above passed. This records this development session, not earlier group work.
-
-## Try the website
-
-After adding all files, run the same application as before:
-
-```powershell
-python app.py
-```
-
-Use the explicit Python executable above if necessary. Leave the terminal running and open `http://127.0.0.1:5000/login` in your browser.
-
-1. Log in as `designer13` / `Design@123` (if you created this demo account during US13/14).
-2. If there is no company yet, use US14's Create company profile first.
-3. On the dashboard, select **View company profile**.
-4. Check the displayed information, then select **Back to dashboard**.
-
-If you already saved a profile in US14, this view reads that same profile. US15 does not reset data or create another company. On a fresh database, run the existing `database.seedData` setup and create a designer account as described in the US13/14 instructions before logging in. Your admin can also create an account assigned to an active Interior Designer profile.
-
-The same single server runs admin and designer features. Stop it with Ctrl+C when finished.
+This is implemented by RestoreCompanyProfilePage, RestoreCompanyProfileController and the shared Company's getSuspendedCompanyProfile()/restoreCompanyProfile() methods, plus POST /designer/company/restore in app.py. It adds no suspended-company listing page. The new tests/test_us17_restoreCompanyProfile.py contains 25 simple pytest functions. All 422 tests pass. US17's single sequence canvas covers Delete followed by the own-dashboard Restore interaction; BCE/use case diagrams and restored/error wireframes agree with the implementation. The US13 login flow, US19 logout and US39 manager login retain their existing behaviour; the shared designer dashboard is integrated through InteriorDesignerLoginPage.openDashboard().

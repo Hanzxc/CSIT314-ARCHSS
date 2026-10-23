@@ -3,6 +3,7 @@ from flask import redirect, render_template, session, url_for
 
 from control.interiorDesignerLoginController import InteriorDesignerLoginController
 from control.createCompanyProfileController import CreateCompanyProfileController
+from boundary.restoreCompanyProfilePage import RestoreCompanyProfilePage
 
 MSG_EMPTY_FIELDS = "Please enter your username and password"
 MSG_INVALID_LOGIN = "Invalid login details or access unavailable"
@@ -48,4 +49,5 @@ class InteriorDesignerLoginPage:
             return render_template("interiorDesignerAccessDenied.html"), 403
         return render_template("interiorDesignerDashboard.html", account=account,
                                activePage="dashboard",
-                               hasCompanyProfile=CreateCompanyProfileController().hasCompanyProfile(userId))
+                               hasCompanyProfile=CreateCompanyProfileController().hasCompanyProfile(userId),
+                               restoreToken=RestoreCompanyProfilePage().prepareRestore(userId))

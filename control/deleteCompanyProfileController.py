@@ -13,7 +13,7 @@ class DeleteCompanyProfileController:
             return None
         return CompanyProfile().getCompanyProfile(designerId)
 
-    def deleteCompanyProfile(self, designerId, companyId):
+    def deleteCompanyProfile(self, designerId, companyId, expectedRevision=None):
         if not self.canDeleteCompanyProfile(designerId):
             return False
-        return CompanyProfile().deleteCompanyProfile(designerId, companyId)
+        return CompanyProfile().suspendCompanyProfile(designerId, companyId, expectedRevision)

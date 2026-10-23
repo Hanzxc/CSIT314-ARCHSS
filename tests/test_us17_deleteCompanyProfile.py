@@ -54,7 +54,7 @@ def test_ut17_1_deleteCompanyProfile_valid():
     companyId = CompanyProfile().getCompanyProfile(userId).companyId
     assert DeleteCompanyProfileController().deleteCompanyProfile(userId, companyId) is True
     assert CompanyProfile().getCompanyProfile(userId) is None
-    assert countCompanies() == 0
+    assert countCompanies() == 1
 
 
 def test_ut17_2_deleteCompanyProfile_missing():
@@ -96,36 +96,37 @@ def test_ut17_6_deleteCompanyProfile_keepsAccount():
     assert InteriorDesignerLoginController().login("designer13", "Design@123") is not None
 
 
-# ---------- CompanyProfile.deleteCompanyProfile() ----------
+# ---------- CompanyProfile.suspendCompanyProfile() ----------
 
-def test_ut17_7_entity_deletesOnlyMatchingOwner():
+def test_ut17_7_entity_suspendsOnlyMatchingOwner():
     userId = createCompanyForDesigner13()
     UserAccount().createUserAccount("designer17", "Design@123", "Daniel Tan", "", "", 2)
     otherId = UserAccount().verifyCredentials("designer17", "Design@123").userId
     CompanyProfile().createCompanyProfile(otherId, companyData())
     companyId = CompanyProfile().getCompanyProfile(userId).companyId
-    assert CompanyProfile().deleteCompanyProfile(otherId, companyId) is False
-    assert CompanyProfile().deleteCompanyProfile(userId, companyId) is True
+    assert CompanyProfile().suspendCompanyProfile(otherId, companyId) is False
+    assert CompanyProfile().suspendCompanyProfile(userId, companyId) is True
     assert CompanyProfile().getCompanyProfile(otherId) is not None
-    assert countCompanies() == 1
+    assert countCompanies() == 2
 
 
 def test_ut17_8_entity_repeatedDeleteReturnsFalse():
     userId = createCompanyForDesigner13()
     companyId = CompanyProfile().getCompanyProfile(userId).companyId
-    assert CompanyProfile().deleteCompanyProfile(userId, companyId) is True
-    assert CompanyProfile().deleteCompanyProfile(userId, companyId) is False
+    assert CompanyProfile().suspendCompanyProfile(userId, companyId) is True
+    assert CompanyProfile().suspendCompanyProfile(userId, companyId) is False
 
 
-def test_ut17_9_entity_oldIdCannotDeleteReplacement():
+def test_ut17_9_entity_oldRevisionCannotSuspendReactivatedProfile():
     userId = createCompanyForDesigner13()
-    oldId = CompanyProfile().getCompanyProfile(userId).companyId
-    CompanyProfile().deleteCompanyProfile(userId, oldId)
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    original = CompanyProfile().getCompanyProfile(userId)
+    assert CompanyProfile().suspendCompanyProfile(userId, original.companyId, original.revision) is True
+    assert CompanyProfile().createCompanyProfile(userId, companyData()) is True
     replacement = CompanyProfile().getCompanyProfile(userId)
-    assert replacement.companyId != oldId
-    assert CompanyProfile().deleteCompanyProfile(userId, oldId) is False
-    assert CompanyProfile().getCompanyProfile(userId).companyId == replacement.companyId
+    assert replacement.companyId == original.companyId
+    assert replacement.revision == original.revision + 1
+    assert CompanyProfile().suspendCompanyProfile(userId, original.companyId, original.revision) is False
+    assert CompanyProfile().getCompanyProfile(userId).status == "Active"
 
 
 # ---------- whole page, through the browser (test client) ----------
@@ -156,7 +157,7 @@ def test_ut17_12_deletePage_success():
     data = openDeleteConfirmation(client)
     response = client.post("/designer/company/delete", data=data, follow_redirects=True)
     assert b"Company profile deleted successfully" in response.data
-    assert b'href="/designer/company/create"' in response.data
+    assert b'action="/designer/company/restore"' in response.data
     assert CompanyProfile().getCompanyProfile(userId) is None
 
 
@@ -290,7 +291,7 @@ def test_ut17_25_deletePage_staleConfirmationKeepsReplacement():
     client = app.test_client()
     loginAsDesigner13(client)
     data = openDeleteConfirmation(client)
-    CompanyProfile().deleteCompanyProfile(userId, int(data["companyId"]))
+    CompanyProfile().suspendCompanyProfile(userId, int(data["companyId"]))
     CompanyProfile().createCompanyProfile(userId, companyData())
     replacementId = CompanyProfile().getCompanyProfile(userId).companyId
     response = client.post("/designer/company/delete", data=data)
@@ -330,6 +331,35 @@ def test_ut17_28_createViewUpdateDelete_endToEnd():
     client.post("/designer/company/update", data=data)
     assert b"Uda Interiors Studio" in client.get("/designer/company").data
     client.post("/designer/company/delete", data=openDeleteConfirmation(client))
-    assert countCompanies() == 0
+    assert countCompanies() == 1
     assert client.get("/designer/company").status_code == 404
-    assert b'href="/designer/company/create"' in client.get("/designer/dashboard").data
+    assert b'action="/designer/company/restore"' in client.get("/designer/dashboard").data
+
+
+def test_ut17_29_suspend_keepsAllBusinessData():
+    userId = createCompanyForDesigner13()
+    conn = getConnection()
+    before = dict(conn.execute("SELECT * FROM company_profile WHERE designerId=?", (userId,)).fetchone())
+    conn.close()
+    assert DeleteCompanyProfileController().deleteCompanyProfile(userId, before["companyId"]) is True
+    conn = getConnection()
+    after = dict(conn.execute("SELECT * FROM company_profile WHERE designerId=?", (userId,)).fetchone())
+    conn.close()
+    assert after["status"] == "Suspended"
+    before["status"] = "Suspended"
+    assert after == before
+
+
+def test_ut17_30_suspend_filtersViewUpdateSearchAndOffersCreate():
+    userId = createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    client.post("/designer/company/delete", data=openDeleteConfirmation(client))
+    assert client.get("/designer/company").status_code == 404
+    assert client.get("/designer/company/update").status_code == 404
+    assert client.post("/designer/company/update", data=companyData()).status_code == 404
+    assert client.get("/designer/company/search?keyword=Uda").status_code == 404
+    assert CompanyProfile().updateCompanyProfile(userId, companyData()) is False
+    assert CompanyProfile().searchCompanyInformation(userId, "") == []
+    assert b'action="/designer/company/restore"' in client.get("/designer/dashboard").data
+    assert client.get("/designer/company/create").status_code == 200

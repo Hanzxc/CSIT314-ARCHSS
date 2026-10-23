@@ -15,6 +15,13 @@
                 <p class="message success">Company profile created</p>
                 <a href="{{ url_for('viewCompanyProfile') }}"
                    class="btn-outline">View company profile</a>
+            {% elif restoreToken %}
+                <p class="message info">Company profile status: Suspended</p>
+                <p>Your saved company details are kept. Restore to show them again.</p>
+                <form method="POST" action="{{ url_for('restoreCompanyProfile') }}">
+                    <input type="hidden" name="confirmationToken" value="{{ restoreToken }}">
+                    <button type="submit" class="btn-small btn-blue">Restore company profile</button>
+                </form>
             {% else %}
                 <a href="{{ url_for('createCompanyProfile') }}"
                    class="btn-outline">Create company profile</a>
