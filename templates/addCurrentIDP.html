@@ -1,0 +1,42 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Add current IDP - Interior Design Platform{% endblock %}
+{% block content %}
+    <!-- US20 Add current IDP - wireframes 4b (form), 4c (errors) and 4e (no categories yet) -->
+    <h1>Add current IDP</h1>
+    <p class="subtitle">Show customers a project you are working on now. * Required field</p>
+    {% if errorMessage %}<div class="message error" role="alert">{{ errorMessage }}</div>{% endif %}
+    {% if categories %}
+        <form method="POST" action="{{ url_for('addCurrentIDP') }}" class="profile-form" novalidate>
+            <label for="title">Project title *</label>
+            <input type="text" id="title" name="title" value="{{ idpData.get('title', '') }}" maxlength="100"
+                   class="{% if fieldErrors.get('title') %}field-error{% endif %}">
+            {% if fieldErrors.get('title') %}<p class="field-error-text">{{ fieldErrors['title'] }}</p>{% endif %}
+
+            <label for="categoryId">IDP category *</label>
+            <select id="categoryId" name="categoryId" class="{% if fieldErrors.get('categoryId') %}field-error{% endif %}">
+                <option value="">-- Choose a category --</option>
+                {% for category in categories %}
+                    <option value="{{ category.categoryId }}" {% if idpData.get('categoryId') == category.categoryId %}selected{% endif %}>{{ category.categoryName }}</option>
+                {% endfor %}
+            </select>
+            {% if fieldErrors.get('categoryId') %}<p class="field-error-text">{{ fieldErrors['categoryId'] }}</p>{% endif %}
+
+            <label for="description">Project description *</label>
+            <textarea id="description" name="description" rows="4" maxlength="2000"
+                      class="{% if fieldErrors.get('description') %}field-error{% endif %}">{{ idpData.get('description', '') }}</textarea>
+            {% if fieldErrors.get('description') %}<p class="field-error-text">{{ fieldErrors['description'] }}</p>{% endif %}
+
+            <label for="location">Location (optional)</label>
+            <input type="text" id="location" name="location" value="{{ idpData.get('location', '') }}" maxlength="200"
+                   class="{% if fieldErrors.get('location') %}field-error{% endif %}">
+            {% if fieldErrors.get('location') %}<p class="field-error-text">{{ fieldErrors['location'] }}</p>{% endif %}
+
+            <div class="form-buttons">
+                <button type="submit" class="btn-small btn-blue">Add current IDP</button>
+                <a href="{{ url_for('interiorDesignerDashboard') }}" class="btn-small btn-grey">Cancel</a>
+            </div>
+        </form>
+    {% else %}
+        <a href="{{ url_for('interiorDesignerDashboard') }}" class="btn-small btn-grey">Back to dashboard</a>
+    {% endif %}
+{% endblock %}

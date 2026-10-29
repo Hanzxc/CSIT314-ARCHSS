@@ -35,3 +35,25 @@ CREATE TABLE IF NOT EXISTS company_profile (
     status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
     revision     INTEGER NOT NULL DEFAULT 1
 );
+
+-- US41 - US45: IDP categories managed by the Platform Manager. Existing tables are retained.
+CREATE TABLE IF NOT EXISTS idp_category (
+    categoryId    INTEGER PRIMARY KEY AUTOINCREMENT,
+    categoryName  TEXT NOT NULL UNIQUE COLLATE NOCASE,  -- 3-50 chars, capitals don't matter
+    description   TEXT NOT NULL DEFAULT '' CHECK(length(description) <= 500),
+    status        TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
+    createdDate   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- US20: interior design projects (IDPs). designerId is the owner's userId.
+CREATE TABLE IF NOT EXISTS idp (
+    idpId        INTEGER PRIMARY KEY AUTOINCREMENT,
+    designerId   INTEGER NOT NULL REFERENCES user_account(userId),
+    categoryId   INTEGER NOT NULL REFERENCES idp_category(categoryId),
+    title        TEXT NOT NULL CHECK(length(trim(title)) BETWEEN 3 AND 100),
+    description  TEXT NOT NULL CHECK(length(trim(description)) BETWEEN 1 AND 2000),
+    location     TEXT NOT NULL DEFAULT '' CHECK(length(location) <= 200),
+    projectType  TEXT NOT NULL DEFAULT 'Current' CHECK(projectType IN ('Current', 'Past')),
+    status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
+    createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
