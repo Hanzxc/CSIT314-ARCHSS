@@ -10,10 +10,14 @@ MSG_NO_RESULTS = "No user profiles found"
 
 
 class SearchUserProfilePage:
+    # UC1.7 Search user profiles
+    # starts with an empty search box
     def __init__(self):
         self.searchUserProfileController = SearchUserProfileController()
         self.keyword = ""       # kept so it stays in the search box after searching
 
+    # UC1.7 Search user profiles
+    # admin clicked Search - ask the controller for matching profiles
     def searchUserProfiles(self, keyword):
         self.keyword = keyword
         profiles = self.searchUserProfileController.searchUserProfiles(keyword)

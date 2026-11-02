@@ -123,3 +123,15 @@ def test_ut3_14_createPage_nameTaken_keepsWhatWasTyped():
         "permissions": ["Search, view and save IDPs"]})
     assert b"A user profile with this name already exists" in response.data
     assert b"typed this already" in response.data
+
+
+def test_ut3_15_createPage_keepsHeader():
+    # bug fix: the form's profileName used to replace "(User Admin)" in the header
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/profiles/create")
+    assert b"Logged in as admin01 (User Admin)" in response.data
+    response = client.post("/profiles/create", data={
+        "profileName": "Customer", "description": "",
+        "permissions": ["Search, view and save IDPs"]})
+    assert b"Logged in as admin01 (User Admin)" in response.data

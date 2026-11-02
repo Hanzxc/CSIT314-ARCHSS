@@ -14,6 +14,8 @@ MSG_NOT_FOUND = "User profile not found"
 
 
 class UpdateUserProfilePage:
+    # UC5 Update user profile
+    # profileId gets filled in by clickUpdate() or the route
     def __init__(self):
         self.updateUserProfileController = UpdateUserProfileController()
         self.profileId = None       # set by clickUpdate() / the route, used by submitUpdate()
@@ -25,6 +27,8 @@ class UpdateUserProfilePage:
         self.permissions = []
         self.status = ""
 
+    # UC5 Update user profile
+    # admin clicked Update - load the profile and the permission list so the form starts filled in
     def clickUpdate(self, profileId):
         self.profileId = profileId
         profile = self.updateUserProfileController.getUserProfile(profileId)

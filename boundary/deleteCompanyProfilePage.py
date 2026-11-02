@@ -13,9 +13,13 @@ MSG_FAILED = "Company profile could not be deleted. Please reopen the confirmati
 
 
 class DeleteCompanyProfilePage:
+    # UC17 Delete company profile
+    # just sets up the controller
     def __init__(self):
         self.deleteCompanyProfileController = DeleteCompanyProfileController()
 
+    # UC17 Delete company profile
+    # not logged in -> back to the designer login, not a designer -> access denied page
     def checkAccess(self):
         if "userId" not in session:
             return redirect(url_for("interiorDesignerLogin"))
@@ -23,6 +27,8 @@ class DeleteCompanyProfilePage:
             return render_template("interiorDesignerAccessDenied.html"), 403
         return None
 
+    # UC17 Delete company profile
+    # designer clicked Delete - show the "are you sure?" box if they have a profile
     def clickDelete(self):
         denied = self.checkAccess()
         if denied is not None:
@@ -33,6 +39,8 @@ class DeleteCompanyProfilePage:
             return self.displayNotFoundMessage()
         return self.displayConfirmation(profile)
 
+    # UC17 Delete company profile
+    # makes a one-time token and remembers which profile is being deleted, so the confirm click can't be faked
     def displayConfirmation(self, profile):
         token = token_urlsafe(24)
         session["companyDeleteConfirmation"] = {
@@ -40,6 +48,8 @@ class DeleteCompanyProfilePage:
         return render_template("deleteCompanyProfile.html", company=profile,
                                confirmationToken=token, activePage="company")
 
+    # UC17 Delete company profile
+    # works out if they clicked Delete or Cancel in the confirmation box
     def submitDelete(self, choice, companyId, confirmationToken):
         denied = self.checkAccess()
         if denied is not None:
@@ -50,6 +60,8 @@ class DeleteCompanyProfilePage:
             return self.confirmDelete(companyId, confirmationToken)
         return self.displayErrorMessage(MSG_CONFIRM_AGAIN)
 
+    # UC17 Delete company profile
+    # only deletes if the token matches the one we gave out, then the profile gets suspended (not really deleted)
     def confirmDelete(self, companyId, confirmationToken):
         confirmation = session.get("companyDeleteConfirmation")
         designerId = session["userId"]
@@ -67,21 +79,31 @@ class DeleteCompanyProfilePage:
             return self.displayNotFoundMessage()
         return self.displayErrorMessage(MSG_FAILED)
 
+    # UC17 Delete company profile
+    # forget the token and go back to the profile, nothing changes
     def cancelDelete(self):
         session.pop("companyDeleteConfirmation", None)
         return self.closeConfirmation()
 
+    # UC17 Delete company profile
+    # back to the company profile page
     def closeConfirmation(self):
         return redirect(url_for("viewCompanyProfile"))
 
+    # UC17 Delete company profile
+    # back to the dashboard with a green message
     def displaySuccessMessage(self, msg):
         flash(msg, "success")
         return redirect(url_for("interiorDesignerDashboard"))
 
+    # UC17 Delete company profile
+    # something didn't match (e.g. old token), so show the error page
     def displayErrorMessage(self, msg):
         return render_template("companyProfileDeleteError.html", errorMessage=msg,
                                activePage="company"), 400
 
+    # UC17 Delete company profile
+    # shows the "no company profile" page (404) when there's nothing to show
     def displayNotFoundMessage(self):
         return render_template("companyProfileNotFound.html", errorMessage=MSG_NOT_FOUND,
                                activePage="company"), 404

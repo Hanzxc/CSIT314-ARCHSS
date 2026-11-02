@@ -9,9 +9,13 @@ MSG_NOT_FOUND = "Account not found"
 
 
 class ViewUserAccountPage:
+    # UC9 View user account
+    # just sets up the controller
     def __init__(self):
         self.viewUserAccountController = ViewUserAccountController()
 
+    # UC9 View user account
+    # admin clicked View on an account - show its details, or "Account not found"
     def clickView(self, userId):
         account = self.viewUserAccountController.viewUserAccount(userId)
         if account is not None:

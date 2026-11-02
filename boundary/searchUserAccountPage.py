@@ -10,10 +10,14 @@ MSG_NO_RESULTS = "No user accounts found"
 
 
 class SearchUserAccountPage:
+    # UC12 Search user account
+    # starts with an empty search box
     def __init__(self):
         self.searchUserAccountController = SearchUserAccountController()
         self.keyword = ""       # kept so it stays in the search box after searching
 
+    # UC12 Search user account
+    # admin clicked Search - ask the controller for matching accounts
     def searchUserAccounts(self, keyword):
         self.keyword = keyword
         accounts = self.searchUserAccountController.searchUserAccounts(keyword)

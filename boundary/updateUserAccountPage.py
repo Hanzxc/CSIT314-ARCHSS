@@ -13,6 +13,8 @@ MSG_FIELD_REQUIRED = "This field is required"
 
 
 class UpdateUserAccountPage:
+    # UC10 Update user account
+    # userId gets filled in by clickUpdate() or submitUpdate()
     def __init__(self):
         self.updateUserAccountController = UpdateUserAccountController()
         self.userId = None
@@ -23,6 +25,8 @@ class UpdateUserAccountPage:
         self.form = {"username": "", "fullName": "", "email": "", "phone": "", "profileId": None}
         self.status = ""
 
+    # UC10 Update user account
+    # admin clicked Update - load the account so the form starts filled in
     def clickUpdate(self, userId):
         self.userId = userId
         account = self.updateUserAccountController.getUserAccount(userId)
@@ -44,6 +48,8 @@ class UpdateUserAccountPage:
                                profiles=profiles, fieldErrors=self.fieldErrors,
                                errorMessage=msg)
 
+    # UC10 Update user account
+    # admin clicked Save - check the input, then let the controller save it
     def submitUpdate(self, userId, username, fullName, email, phone, profileId):
         self.userId = userId
         # keep what they typed so nothing gets wiped if there's an error

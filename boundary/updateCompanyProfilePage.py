@@ -13,11 +13,15 @@ FORM_FIELDS = ("companyName", "description", "services", "email", "phone", "addr
 
 
 class UpdateCompanyProfilePage:
+    # UC16 Update company profile
+    # starts with an empty form and no errors
     def __init__(self):
         self.updateCompanyProfileController = UpdateCompanyProfileController()
         self.companyData = {}
         self.fieldErrors = {}
 
+    # UC16 Update company profile
+    # not logged in -> back to the designer login, not a designer -> access denied page
     def checkAccess(self):
         if "userId" not in session:
             return redirect(url_for("interiorDesignerLogin"))
@@ -25,6 +29,8 @@ class UpdateCompanyProfilePage:
             return render_template("interiorDesignerAccessDenied.html"), 403
         return None
 
+    # UC16 Update company profile
+    # designer clicked Update - fill the form with their current company details
     def clickUpdate(self):
         denied = self.checkAccess()
         if denied is not None:
@@ -35,14 +41,20 @@ class UpdateCompanyProfilePage:
         self.companyData = {field: getattr(profile, field) for field in FORM_FIELDS}
         return self.displayUpdateForm()
 
+    # UC16 Update company profile
+    # shows the update form, with what was typed and any errors
     def displayUpdateForm(self, msg=None):
         return render_template("updateCompanyProfile.html", companyData=self.companyData,
                                fieldErrors=self.fieldErrors, errorMessage=msg, activePage="company")
 
+    # UC16 Update company profile
+    # asks the controller which fields are wrong, true if there are none
     def validateInput(self, companyData):
         self.fieldErrors = self.updateCompanyProfileController.getFieldErrors(companyData)
         return len(self.fieldErrors) == 0
 
+    # UC16 Update company profile
+    # designer pressed Save - check the input, then save it for the logged-in designer only
     def submitUpdate(self, companyData):
         denied = self.checkAccess()
         if denied is not None:
@@ -57,13 +69,19 @@ class UpdateCompanyProfilePage:
             return self.displayNotFoundMessage()
         return self.displayErrorMessage(MSG_FAILED)
 
+    # UC16 Update company profile
+    # back to the company profile with a green message
     def displaySuccessMessage(self, msg):
         flash(msg, "success")
         return redirect(url_for("viewCompanyProfile"))
 
+    # UC16 Update company profile
+    # stay on the form and show what went wrong
     def displayErrorMessage(self, msg):
         return self.displayUpdateForm(msg)
 
+    # UC16 Update company profile
+    # shows the "no company profile" page (404) when there's nothing to show
     def displayNotFoundMessage(self):
         return render_template("companyProfileNotFound.html", errorMessage=MSG_NOT_FOUND,
                                activePage="company"), 404

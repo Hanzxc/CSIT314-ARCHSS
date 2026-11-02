@@ -118,3 +118,11 @@ def test_ut5_13_updatePage_notFound():
     loginAsAdmin01(client)
     response = client.get("/profiles/9999/update")
     assert b"User profile not found" in response.data
+
+
+def test_ut5_14_updatePage_keepsHeader():
+    # bug fix: the profile being edited used to show up as the admin's own group in the header
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/profiles/3/update")
+    assert b"Logged in as admin01 (User Admin)" in response.data

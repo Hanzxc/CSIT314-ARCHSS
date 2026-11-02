@@ -21,6 +21,8 @@ ALL_PERMISSIONS = [
 
 
 class UserProfile:
+    # used by UC1, UC3 - UC13, UC39
+    # one user profile (group) = one row in the user_profile table
     def __init__(self, profileId=None, profileName="", description="",
                  permissions=None, status="Active"):
         self.profileId = profileId

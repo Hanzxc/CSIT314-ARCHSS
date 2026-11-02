@@ -12,6 +12,8 @@ MSG_FIELD_REQUIRED = "This field is required"
 
 
 class CreateUserAccountPage:
+    # UC8 Create user account
+    # starts with an empty form and no errors
     def __init__(self):
         self.createUserAccountController = CreateUserAccountController()
         self.fieldErrors = {}       # e.g. {"username": MSG_FIELD_REQUIRED}
@@ -20,6 +22,8 @@ class CreateUserAccountPage:
         # the password isn't kept on purpose - don't want it sitting in the page's HTML
         self.form = {"username": "", "fullName": "", "email": "", "phone": "", "profileId": None}
 
+    # UC8 Create user account
+    # admin clicked "Create user account" - just show the empty form
     def clickCreateUserAccount(self):
         return self.displayCreateForm()
 
@@ -31,6 +35,8 @@ class CreateUserAccountPage:
                                form=self.form, profiles=profiles,
                                fieldErrors=self.fieldErrors, errorMessage=msg)
 
+    # UC8 Create user account
+    # admin clicked Create - check the input first, then let the controller save it
     def submitCreateAccount(self, username, password, fullName, email, phone, profileId):
         self.form = {"username": username, "fullName": fullName, "email": email,
                      "phone": phone, "profileId": profileId}

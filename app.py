@@ -69,13 +69,16 @@ def loginRequired(routeFunction):
 @app.context_processor
 def headerInfo():
     # base.html shows "Logged in as ..." on every admin page, this saves passing it in every time
+    # "header..." names so a page's own form fields (username, profileName) can't overwrite them
     if "userId" not in session:
         return {}
     profile = UserProfile().getUserProfile(session["profileId"])
-    return {"username": session["username"],
-            "profileName": profile.profileName if profile else ""}
+    return {"headerUsername": session["username"],
+            "headerProfileName": profile.profileName if profile else ""}
 
 
+# UC1 Log in
+# opening the bare site just sends you to the login page
 @app.route("/")
 def home():
     return redirect(url_for("login"))
@@ -99,6 +102,8 @@ def interiorDesignerLogin():
     return page.openLoginPage()
 
 
+# UC13 Interior designer log in
+# the designer's home page after logging in (the page class checks the login itself)
 @app.route("/designer/dashboard")
 def interiorDesignerDashboard():
     return InteriorDesignerLoginPage().openDashboard()
@@ -295,6 +300,8 @@ def platformManagerLogin():
     return page.openLoginPage()
 
 
+# UC39 Platform manager log in
+# the platform manager's home page after logging in
 @app.route("/manager/dashboard")
 def platformManagerDashboard():
     return PlatformManagerLoginPage().openDashboard()

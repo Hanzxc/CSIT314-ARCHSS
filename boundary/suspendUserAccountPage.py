@@ -11,6 +11,8 @@ MSG_CANNOT_SUSPEND = "This user account cannot be suspended"
 
 
 class SuspendUserAccountPage:
+    # UC11 Suspend user account
+    # userId gets filled in by the route
     def __init__(self):
         self.suspendUserAccountController = SuspendUserAccountController()
         self.userId = None
@@ -43,6 +45,8 @@ class SuspendUserAccountPage:
         # alt flow 3a - nothing changes, just close the box
         return self.closeConfirmation()
 
+    # UC11 Suspend user account
+    # close the box and go back to the account details
     def closeConfirmation(self):
         return redirect(url_for("viewUserAccount", userId=self.userId))
 
@@ -51,6 +55,8 @@ class SuspendUserAccountPage:
         flash(msg, "success")
         return redirect(url_for("viewUserAccount", userId=self.userId))
 
+    # UC11 Suspend user account
+    # back to the account details with a red message
     def displayErrorMessage(self, msg):
         flash(msg, "error")
         return redirect(url_for("viewUserAccount", userId=self.userId))

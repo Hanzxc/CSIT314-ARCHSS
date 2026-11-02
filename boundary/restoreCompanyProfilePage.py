@@ -1,3 +1,4 @@
+# Boundary: RestoreCompanyProfilePage - UC17 Delete company profile, restore (US17)
 # US17 recovery Boundary: POST from the designer's own dashboard.
 from secrets import compare_digest, token_urlsafe
 from flask import flash, redirect, render_template, session, url_for
@@ -8,9 +9,13 @@ MSG_RESTORE_FAILED = "Company profile could not be restored. Please reopen the d
 
 
 class RestoreCompanyProfilePage:
+    # UC17 Delete company profile, restore
+    # just sets up the controller
     def __init__(self):
         self.restoreCompanyProfileController = RestoreCompanyProfileController()
 
+    # UC17 Delete company profile, restore
+    # if the designer has a deleted (suspended) profile, make a token for the Restore button
     def prepareRestore(self, designerId):
         profile = self.restoreCompanyProfileController.getSuspendedCompanyProfile(designerId)
         if profile is None:
@@ -23,6 +28,8 @@ class RestoreCompanyProfilePage:
         # Do not return business details to the suspended dashboard.
         return token
 
+    # UC17 Delete company profile, restore
+    # designer clicked Restore - check the token, then make the profile Active again
     def submitRestore(self, confirmationToken):
         if "userId" not in session:
             return redirect(url_for("interiorDesignerLogin"))
@@ -43,6 +50,8 @@ class RestoreCompanyProfilePage:
         flash(MSG_RESTORED, "success")
         return redirect(url_for("viewCompanyProfile"))
 
+    # UC17 Delete company profile, restore
+    # restore didn't work, so back to the dashboard with an error
     def displayFailure(self):
         flash(MSG_RESTORE_FAILED, "error")
         return redirect(url_for("interiorDesignerDashboard"))

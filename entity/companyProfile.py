@@ -13,6 +13,8 @@ COMPANY_SEARCH_LABELS = (
 
 
 class CompanyProfile:
+    # used by UC14 - UC18
+    # one company profile = one row in the company_profile table
     def __init__(self, companyId=None, designerId=None, companyName="", description="",
                  services="", email="", phone="", address="", createdDate=None,
                  status="Active", revision=1):
@@ -28,6 +30,8 @@ class CompanyProfile:
         self.status = status
         self.revision = revision
 
+    # used by UC14 - UC18
+    # returns the designer's Active profile, or None if they don't have one
     def getCompanyProfile(self, designerId):
         conn = getConnection()
         row = conn.execute("SELECT * FROM company_profile WHERE designerId = ? AND status = 'Active'", (designerId,)).fetchone()
@@ -36,6 +40,8 @@ class CompanyProfile:
             return None
         return CompanyProfile(**dict(row))
 
+    # UC17 Delete company profile (restore)
+    # returns the designer's deleted (Suspended) profile, or None
     def getSuspendedCompanyProfile(self, designerId):
         conn = getConnection()
         row = conn.execute(
@@ -61,6 +67,8 @@ class CompanyProfile:
             conn.close()
         return restored
 
+    # UC14 Create company profile
+    # saves a new profile, or brings back their old deleted one (keeps the same row)
     def createCompanyProfile(self, designerId, companyData):
         conn = getConnection()
         try:

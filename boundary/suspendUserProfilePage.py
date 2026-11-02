@@ -11,6 +11,8 @@ MSG_CANNOT_SUSPEND = "This user profile cannot be suspended"
 
 
 class SuspendUserProfilePage:
+    # UC6 Suspend user profile
+    # profileId gets filled in by the route
     def __init__(self):
         self.suspendUserProfileController = SuspendUserProfileController()
         self.profileId = None
@@ -51,6 +53,8 @@ class SuspendUserProfilePage:
         flash(msg, "success")
         return redirect(url_for("viewUserProfile", profileId=self.profileId))
 
+    # UC6 Suspend user profile
+    # back to the profile details with a red message
     def displayErrorMessage(self, msg):
         flash(msg, "error")
         return redirect(url_for("viewUserProfile", profileId=self.profileId))

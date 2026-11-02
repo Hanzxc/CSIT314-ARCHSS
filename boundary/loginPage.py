@@ -14,12 +14,18 @@ MSG_INVALID_LOGIN = "Invalid login details or account suspended"
 
 
 class LoginPage:
+    # UC1 Log in
+    # just sets up the controller
     def __init__(self):
         self.loginController = LoginController()
 
+    # UC1 Log in
+    # user opened the login page
     def openLoginPage(self):
         return self.displayLoginForm()
 
+    # UC1 Log in
+    # shows the empty login form
     def displayLoginForm(self):
         return render_template("login.html")
 
@@ -57,5 +63,7 @@ class LoginPage:
         # Existing admin dashboard.
         return redirect(url_for("dashboard"))
 
+    # UC1 Log in
+    # show the login form again with the error message
     def displayErrorMessage(self, msg):
         return render_template("login.html", errorMessage=msg)

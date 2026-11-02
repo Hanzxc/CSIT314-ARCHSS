@@ -13,6 +13,8 @@ MSG_NO_PERMISSION = "Tick at least one permission"
 
 
 class CreateUserProfilePage:
+    # UC3 Create user profile
+    # starts with an empty form and no errors
     def __init__(self):
         self.createUserProfileController = CreateUserProfileController()
         self.fieldErrors = {}       # e.g. {"profileName": MSG_NAME_LENGTH, "permissions": MSG_NO_PERMISSION}
@@ -22,10 +24,14 @@ class CreateUserProfilePage:
         self.description = ""
         self.permissions = []
 
+    # UC3 Create user profile
+    # admin clicked "Create user profile" - get the permission tick boxes and show the form
     def clickCreateUserProfile(self):
         permissionList = self.createUserProfileController.getAllPermissions()
         return self.displayCreateForm(permissionList)
 
+    # UC3 Create user profile
+    # shows the form, refilled with what was typed and with any errors highlighted
     def displayCreateForm(self, permissionList, msg=None):
         return render_template("createUserProfile.html", activePage="profiles",
                                permissionList=permissionList,

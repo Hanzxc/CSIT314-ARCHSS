@@ -21,6 +21,8 @@ def rowToAccount(row):
 
 
 class UserAccount:
+    # used by UC1, UC8 - UC13, UC39
+    # one user account = one row in the user_account table
     def __init__(self, userId=None, username="", password="", fullName="",
                  email="", phone="", profileId=None, status="Active", createdDate=None):
         self.userId = userId

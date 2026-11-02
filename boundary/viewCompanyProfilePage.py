@@ -9,9 +9,13 @@ MSG_NOT_FOUND = "You have not created a company profile yet"
 
 
 class ViewCompanyProfilePage:
+    # UC15 View company profile
+    # just sets up the controller
     def __init__(self):
         self.viewCompanyProfileController = ViewCompanyProfileController()
 
+    # UC15 View company profile
+    # not logged in -> back to the designer login, not a designer -> access denied page
     def checkAccess(self):
         if "userId" not in session:
             return redirect(url_for("interiorDesignerLogin"))
@@ -19,6 +23,8 @@ class ViewCompanyProfilePage:
             return render_template("interiorDesignerAccessDenied.html"), 403
         return None
 
+    # UC15 View company profile
+    # designer opened their company profile
     def clickView(self):
         denied = self.checkAccess()
         if denied is not None:
@@ -29,8 +35,12 @@ class ViewCompanyProfilePage:
             return self.displayErrorMessage(MSG_NOT_FOUND)
         return self.displayCompanyProfile(profile)
 
+    # UC15 View company profile
+    # shows all the company details
     def displayCompanyProfile(self, profile):
         return render_template("viewCompanyProfile.html", company=profile, activePage="company")
 
+    # UC15 View company profile
+    # shows the "no company profile" page (404) when there's nothing to show
     def displayErrorMessage(self, msg):
         return render_template("companyProfileNotFound.html", errorMessage=msg, activePage="company"), 404
