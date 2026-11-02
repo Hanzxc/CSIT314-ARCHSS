@@ -1,0 +1,12 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}{{ idp.title }} - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>View current IDP</h1>
+    <p class="subtitle">Preview the project details shown to customers.</p>
+    {% include "idpDetailContent.html" %}
+    <div class="form-buttons">
+        <a href="{{ url_for('updateCurrentIDP', idpId=idp.idpId) }}" class="btn-small btn-blue">Update current IDP</a>
+        <a href="{{ url_for('deleteCurrentIDP', idpId=idp.idpId) }}" class="btn-small btn-red">Delete current IDP</a>
+        <a href="{{ url_for('viewCurrentIDPs') }}" class="btn-small btn-grey">Back to list</a>
+    </div>
+{% endblock %}

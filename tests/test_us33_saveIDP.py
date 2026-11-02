@@ -21,9 +21,7 @@ def client():
         yield client
 
 def test_toggle_save_idp(client):
-    with client.session_transaction() as sess:
-        sess['user_id'] = 2
-        sess['user_role'] = 'Customer'
+    client.post('/customer/login', data=dict(username='cust001', password='Cust@123'))
 
     # 1. Bookmark IDP
     response = client.post('/customer/save-idp/105', follow_redirects=True)

@@ -1,0 +1,7 @@
+{% extends "customerBase.html" %}
+{% block title %}IDP unavailable - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>IDP unavailable</h1>
+    <p class="message info" role="status">This IDP is not available.</p>
+    <a href="{{ url_for('searchIDPs', keyword=keyword) }}" class="btn-small btn-grey">Back to search</a>
+{% endblock %}

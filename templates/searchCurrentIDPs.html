@@ -1,0 +1,21 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Search current IDPs - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Search my current IDPs</h1>
+    <p class="subtitle">Search by title, description, location or category. An empty search shows all your current IDPs.</p>
+    <form method="GET" action="{{ url_for('searchCurrentIDPs') }}" class="search-bar">
+        <label for="keyword" class="hint">Keyword</label>
+        <input type="text" id="keyword" name="keyword" value="{{ keyword }}" placeholder="e.g. kitchen, carpentry, Tampines">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        <a href="{{ url_for('searchCurrentIDPs') }}" class="btn-small btn-grey">Clear</a>
+    </form>
+    {% if idps %}
+        <p role="status">{{ idps|length }} current IDP{{ 's' if idps|length != 1 else '' }} found</p>
+        {% include "currentIDPCards.html" %}
+    {% else %}
+        <p class="message info" role="status">{{ noResultsMessage }}</p>
+    {% endif %}
+    <div class="form-buttons">
+        <a href="{{ url_for('viewCurrentIDPs') }}" class="btn-small btn-grey">Back to current IDPs</a>
+    </div>
+{% endblock %}

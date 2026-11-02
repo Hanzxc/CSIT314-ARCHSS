@@ -5,6 +5,73 @@ Sprint 1 covers the User Admin's user stories **US1 - US12** (log in, log out, c
 Sprint 2 covers the Interior Designer's stories **US13 - US19** (log in, create / view / update / delete / search company profile, log out) and the Platform Manager's **US39** (log in).
 The design docs (one .docx write-up per story) and diagrams for each story are in [Sprint_1/](Sprint_1/) and [Sprint_2/](Sprint_2/).
 
+## Integration with the November 6 main branch
+
+The current-project and customer stories are combined with the newer add/past-IDP,
+category and saved-list features. The shared IDP model retains both sets of
+methods. The designer dashboard offers both Add and View current IDPs.
+
+`idpDetailContent.html` is the reusable content partial for designer previews and
+customer details; `idpDetails.html` retains the upstream public-page template.
+The original Word documents and diagram images are preserved as story snapshots.
+
+Saved-list routes now use the same US30 customer session and access checks as
+customer search/detail pages. Saved IDPs are accessible from the dashboard/sidebar,
+and the detail page shows the appropriate Save/Remove action. The isolated test
+setup keeps demo categories separate from story fixtures; past-project tests use
+the current login flow and routes.
+
+## US30 Customer log in
+
+Customers can log in at `/customer/login` with `cust001 / Cust@123` after seeding.
+The shared `/login` also directs authorised customers to `/customer/dashboard`.
+Access requires an Active account/profile and the existing customer permission;
+the dashboard rechecks these on every request. Successful login replaces the old
+session without storing credentials. Saved-IDP viewing and management are later
+features, clearly labelled on the dashboard. Existing US2 logout is reused.
+
+The Word document, three diagrams, four wireframe PNGs and editable drawio file
+are in `Sprint_3/US30 - Customer Log In/`. US30 has **60 passing checks**;
+the complete suite has **756 passing tests**.
+
+## US31 Customer search for IDPs
+
+After customer login, select **Search IDPs** from the dashboard or sidebar.
+GET `/customer/idps/search?keyword=...` searches title, description, location and
+category with literal case-insensitive matching. Empty search or Clear browses
+all Active IDPs in Active categories, across designers and both Current/Past
+project types. Result cards show design summaries; detail viewing and saving are
+later stories. Search rechecks US30 access and changes no records or statistics.
+
+The Word document, three diagrams, four wireframe PNGs and editable drawio file
+are in `Sprint_3/US31 - Search IDPs/`. US31 has **57 passing checks**;
+the complete suite has **813 passing tests**.
+
+## US32 Customer view of an IDP
+
+Select **View** on a customer search result to open `/customer/idps/<idpId>`.
+The page shows full project details and the designer's Active company name,
+description and services when available. Missing company information uses a
+fallback message. Project/category visibility follows US31, and customer access
+is checked through US30. **Back to search** retains the keyword. Viewing is read-only.
+
+The Word document, three diagrams, four wireframe PNGs and editable drawio file
+are in `Sprint_3/US32 - View IDP/`. US32 has **58 passing checks**;
+the complete suite has **871 passing tests**.
+
+## US36 Customer log out
+
+The customer header now submits POST `/customer/logout`, clears the current
+browser session and returns to `/customer/login` with one-time success or
+already-ended feedback. It works even after access is revoked. Later dashboard,
+search and detail requests require login again. This follows the existing
+current-browser signed-cookie session design; it does not add global revocation
+of other browsers or copied cookies. Persistent records remain unchanged.
+
+The Word document, three diagrams, four wireframe PNGs and editable drawio file
+are in `Sprint_3/US36 - Customer Log Out/`. US36 has **38 passing checks**;
+the complete suite has **909 passing tests**.
+
 ## Tech we're using
 
 | What | Tool | Why |
@@ -24,6 +91,76 @@ python -m database.seedCompanyData   # optional: 100 demo designers (companydemo
 python app.py          # starts the site at http://127.0.0.1:5000
 pytest                 # runs all the unit tests
 ```
+
+## US21 View current IDPs
+
+The designer dashboard and sidebar link to `/designer/idps/current`. Selecting View opens
+`/designer/idps/current/<idpId>`, using a reusable customer-facing `idpDetailContent.html` partial.
+Both pages recheck US13 designer access and only retrieve the session owner's Active Current
+IDPs in Active categories. Missing/unavailable details return 404; no projects is a normal
+empty state. Viewing does not write data or increase customer view statistics.
+
+US21 includes the prerequisite `idp` and `idp_category` table definitions and IDP attributes
+from the US20 feature branch; it does not merge that branch or implement US20's add form.
+Startup adds missing tables while preserving existing records. The eventual US32 customer
+page can reuse the detail partial; that customer route is not implemented by US21.
+
+For optional demo projects, run `python -m database.seedData` then
+`python -m database.seedCurrentIDPData`. Sign in at `/designer/login` with
+`idpdemo001 / Demo@123` (or `idpdemo002 / Demo@123`). Each owns two current projects.
+Re-running the demo seed does not duplicate records or reactivate suspended records.
+
+Run `python -m pytest tests/test_us21_viewCurrentIDPs.py -q` for the story's tests.
+The Word document, editable diagrams and wireframes are in `Sprint_3/US21 - View Current IDPs/`.
+
+## US22 Update current IDP
+
+Open an own project from Current IDPs, select **Update current IDP**, edit its prefilled
+title, category, description/progress and optional location, then **Save changes**.
+The saved US21 preview shows the updated content; **Cancel** returns without saving.
+Wireframes and the update page follow the existing designer templates and shared CSS.
+
+GET/POST `/designer/idps/current/<idpId>/update` rechecks designer access and ownership.
+Only Active Current IDPs in Active source categories can be edited, and the selected
+destination category must be Active at save time. Posted owner/type/status/date fields
+are ignored. Invalid fields preserve input; submissions require the hidden user/project
+form token. US22 adds no new database columns and works with the US21 demo projects.
+
+Documentation, use case/BCE/combined sequence diagrams and four wireframes are in
+`Sprint_3/US22 - Update Current IDP/`. Run `python -m pytest tests/test_us22_updateCurrentIDP.py -q`.
+Verified suite: 569 tests passed, including 86 US22 checks and all 483 previous tests.
+
+## US23 Delete current IDP
+
+Open an own Current IDP preview and choose **Delete current IDP**. The existing-style
+confirmation dialog offers Delete and Cancel. Confirmed deletion sets the project to
+Suspended, preserving its record while hiding it from the current list, preview and
+update pages. Cancel leaves the project unchanged. No restore workflow is added.
+
+GET/POST `/designer/idps/current/<idpId>/delete` rechecks designer access, session ownership
+and visibility. Delete requires an explicit choice and a matching confirmation token.
+The guarded write also checks a compact fingerprint of the reviewed content; changes
+made after confirmation require a fresh review. Other projects and related data are retained.
+
+Documentation, three diagrams and four template-matching wireframes are in
+`Sprint_3/US23 - Delete Current IDP/`. Run `python -m pytest tests/test_us23_deleteCurrentIDP.py -q`.
+Verified suite: 641 tests passed, including 72 US23 checks and all 569 previous tests.
+
+## US24 Search current IDPs
+
+From **Current IDPs**, select **Search current IDPs**. The GET search at
+`/designer/idps/current/search?keyword=...` matches title, description/progress, location
+or category using case-insensitive literal substring matching. Empty searches and
+**Clear** show all visible own projects; results use the same cards as US21, newest first.
+**View** opens the existing preview and its management actions.
+
+Search always checks designer access and session ownership and excludes Past, Suspended,
+deleted and hidden-category projects. No-match and empty states are normal pages. Search
+does not write to the database. No migration or new dependency is required.
+
+Documentation, three diagrams and four template-matching wireframes are in
+`Sprint_3/US24 - Search Current IDPs/`. Run `python -m pytest tests/test_us24_searchCurrentIDPs.py -q`.
+Verified suite: 696 tests passed, including 55 US24 checks and all 641 previous tests.
 
 If you already have a `database/archss.db` from Sprint 1 you don't need to delete it - `python app.py` adds the new `company_profile` table on startup.
 

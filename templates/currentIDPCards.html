@@ -1,0 +1,11 @@
+{# The same project cards are used by US21 listing and US24 search. #}
+<div class="cards">
+    {% for idp in idps %}
+        <article class="card">
+            <h2>{{ idp.title }}</h2>
+            <p>{{ idp.categoryName }}{% if idp.location %} | {{ idp.location }}{% endif %}</p>
+            <a href="{{ url_for('viewCurrentIDP', idpId=idp.idpId) }}"
+               class="btn-outline" aria-label="View {{ idp.title }}">View</a>
+        </article>
+    {% endfor %}
+</div>

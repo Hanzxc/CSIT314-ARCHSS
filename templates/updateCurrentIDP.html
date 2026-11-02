@@ -1,0 +1,35 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Update current IDP - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Update current IDP</h1>
+    <p class="subtitle">Keep your project details and progress up to date. * Required field</p>
+    {% if errorMessage %}<div class="message error" role="alert">{{ errorMessage }}</div>{% endif %}
+    <form method="POST" action="{{ url_for('updateCurrentIDP', idpId=idpId) }}" class="profile-form" novalidate>
+        <input type="hidden" name="updateToken" value="{{ updateToken }}">
+        <label for="title">Project title *</label>
+        <input type="text" id="title" name="title" value="{{ idpData.get('title', '') }}" maxlength="100" required
+               class="{% if fieldErrors.get('title') %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get('title') else 'false' }}"{% if fieldErrors.get('title') %} aria-describedby="title-error"{% endif %}>
+        {% if fieldErrors.get('title') %}<p id="title-error" class="field-error-text">{{ fieldErrors['title'] }}</p>{% endif %}
+        <label for="categoryId">IDP category *</label>
+        <select id="categoryId" name="categoryId" required class="{% if fieldErrors.get('categoryId') %}field-error{% endif %}"
+                aria-invalid="{{ 'true' if fieldErrors.get('categoryId') else 'false' }}"{% if fieldErrors.get('categoryId') %} aria-describedby="categoryId-error"{% endif %}>
+            <option value="">Choose an available category</option>
+            {% for category in categories %}
+                <option value="{{ category.categoryId }}" {% if idpData.get('categoryId')|string == category.categoryId|string %}selected{% endif %}>{{ category.categoryName }}</option>
+            {% endfor %}
+        </select>
+        {% if fieldErrors.get('categoryId') %}<p id="categoryId-error" class="field-error-text">{{ fieldErrors['categoryId'] }}</p>{% endif %}
+        <label for="description">Project description and progress *</label>
+        <textarea id="description" name="description" rows="5" maxlength="2000" required
+                  class="{% if fieldErrors.get('description') %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get('description') else 'false' }}"{% if fieldErrors.get('description') %} aria-describedby="description-error"{% endif %}>{{ idpData.get('description', '') }}</textarea>
+        {% if fieldErrors.get('description') %}<p id="description-error" class="field-error-text">{{ fieldErrors['description'] }}</p>{% endif %}
+        <label for="location">Location (optional)</label>
+        <input type="text" id="location" name="location" value="{{ idpData.get('location', '') }}" maxlength="200"
+               class="{% if fieldErrors.get('location') %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get('location') else 'false' }}"{% if fieldErrors.get('location') %} aria-describedby="location-error"{% endif %}>
+        {% if fieldErrors.get('location') %}<p id="location-error" class="field-error-text">{{ fieldErrors['location'] }}</p>{% endif %}
+        <div class="form-buttons">
+            <button type="submit" class="btn-small btn-blue">Save changes</button>
+            <a href="{{ url_for('viewCurrentIDP', idpId=idpId) }}" class="btn-small btn-grey">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

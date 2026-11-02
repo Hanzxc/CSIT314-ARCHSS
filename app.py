@@ -12,6 +12,10 @@ from boundary.updateCompanyProfilePage import UpdateCompanyProfilePage
 from boundary.deleteCompanyProfilePage import DeleteCompanyProfilePage
 from boundary.searchCompanyInformationPage import SearchCompanyInformationPage
 from boundary.interiorDesignerLogoutPage import InteriorDesignerLogoutPage
+from boundary.viewCurrentIDPPage import ViewCurrentIDPPage
+from boundary.updateCurrentIDPPage import UpdateCurrentIDPPage
+from boundary.deleteCurrentIDPPage import DeleteCurrentIDPPage
+from boundary.searchCurrentIDPPage import SearchCurrentIDPPage
 from control.interiorDesignerLoginController import InteriorDesignerLoginController
 from entity.userAccount import UserAccount
 
@@ -19,6 +23,11 @@ from boundary.restoreCompanyProfilePage import RestoreCompanyProfilePage
 from boundary.platformManagerLoginPage import PlatformManagerLoginPage
 from control.platformManagerLoginController import PlatformManagerLoginController
 from boundary.loginPage import LoginPage
+from boundary.customerLoginPage import CustomerLoginPage
+from boundary.customerLogoutPage import CustomerLogoutPage
+from boundary.searchIDPPage import SearchIDPPage
+from boundary.viewIDPPage import ViewIDPPage
+from control.customerLoginController import CustomerLoginController
 from boundary.logoutPage import LogoutPage
 from boundary.createUserProfilePage import CreateUserProfilePage
 from boundary.viewUserProfilePage import ViewUserProfilePage
@@ -80,6 +89,8 @@ def loginRequired(routeFunction):
             return redirect(url_for("interiorDesignerDashboard"))
         if routeFunction.__name__ == "dashboard" and PlatformManagerLoginController().isPlatformManager(account):
             return redirect(url_for("platformManagerDashboard"))
+        if routeFunction.__name__ == "dashboard" and CustomerLoginController().isCustomer(account):
+            return redirect(url_for("customerDashboard"))
         if not {"Manage user accounts", "Manage user profiles"}.issubset(profile.permissions):
             abort(403)
         return routeFunction(*args, **kwargs)
@@ -135,6 +146,37 @@ def login():
     return page.openLoginPage()
 
 
+# US30: customer login reuses existing credentials and the customer permission.
+@app.route("/customer/login", methods=["GET", "POST"])
+def customerLogin():
+    page = CustomerLoginPage()
+    if request.method == "POST":
+        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
+    return page.openLoginPage()
+
+
+@app.route("/customer/dashboard", methods=["GET"])
+def customerDashboard():
+    return CustomerLoginPage().openDashboard()
+
+
+# US36: logout stays available after access revocation or session expiry.
+@app.route("/customer/logout", methods=["POST"])
+def customerLogout():
+    return CustomerLogoutPage().clickLogout()
+
+
+# US31: read-only customer catalogue search, guarded by the US30 access rules.
+@app.route("/customer/idps/search", methods=["GET"])
+def searchIDPs():
+    return SearchIDPPage().searchIDPs(request.args.get("keyword", ""))
+
+
+@app.route("/customer/idps/<int(signed=True):idpId>", methods=["GET"])
+def viewIDP(idpId):
+    return ViewIDPPage().selectIDP(idpId, request.args.get("keyword", ""))
+
+
 # US13: dedicated designer entry point, using the same CSS and entities.
 @app.route("/designer/login", methods=["GET", "POST"])
 def interiorDesignerLogin():
@@ -149,6 +191,41 @@ def interiorDesignerLogin():
 @app.route("/designer/dashboard")
 def interiorDesignerDashboard():
     return InteriorDesignerLoginPage().openDashboard()
+
+
+# US21: owner identity is read from the session by the boundary.
+@app.route("/designer/idps/current", methods=["GET"])
+def viewCurrentIDPs():
+    return ViewCurrentIDPPage().clickViewCurrentIDPs()
+
+
+@app.route("/designer/idps/current/search", methods=["GET"])
+def searchCurrentIDPs():
+    return SearchCurrentIDPPage().searchCurrentIDPs(request.args.get("keyword", ""))
+
+
+@app.route("/designer/idps/current/<int(signed=True):idpId>", methods=["GET"])
+def viewCurrentIDP(idpId):
+    return ViewCurrentIDPPage().selectCurrentIDP(idpId)
+
+
+@app.route("/designer/idps/current/<int(signed=True):idpId>/update", methods=["GET", "POST"])
+def updateCurrentIDP(idpId):
+    page = UpdateCurrentIDPPage()
+    if request.method == "POST":
+        idpData = {field: request.form.get(field, "")
+                   for field in ("title", "categoryId", "description", "location")}
+        return page.submitUpdate(idpId, idpData, request.form.get("updateToken", ""))
+    return page.clickUpdate(idpId)
+
+
+@app.route("/designer/idps/current/<int(signed=True):idpId>/delete", methods=["GET", "POST"])
+def deleteCurrentIDP(idpId):
+    page = DeleteCurrentIDPPage()
+    if request.method == "POST":
+        return page.submitDelete(idpId, request.form.get("choice", ""),
+                                 request.form.get("confirmationToken", ""))
+    return page.clickDelete(idpId)
 
 
 # US14 Create company profile. Ownership is taken from the session in the boundary.

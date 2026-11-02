@@ -1,0 +1,7 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Current IDP not found - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>{{ errorMessage }}</h1>
+    <p>This project is unavailable.</p>
+    <a href="{{ url_for('viewCurrentIDPs') }}" class="btn-small btn-grey">Back to list</a>
+{% endblock %}

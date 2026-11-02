@@ -14,8 +14,11 @@ def testDatabase(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "test.db"))
     db.initDatabase()
 
-    # 4 default profiles + admin01, admin02, cust001 (same data as database/seedData.py)
+    # Seed the current default users. Story fixtures create their own categories;
+    # keep demo catalogue additions from changing those isolated starting states.
     conn = db.getConnection()
     seedDefaultData(conn)
+    conn.execute("DELETE FROM idp_category")
+    conn.commit()
     conn.close()
     yield

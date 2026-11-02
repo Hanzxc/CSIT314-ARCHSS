@@ -8,6 +8,7 @@ from flask import render_template, redirect, url_for, session
 from control.loginController import LoginController
 from control.interiorDesignerLoginController import InteriorDesignerLoginController
 from control.platformManagerLoginController import PlatformManagerLoginController
+from control.customerLoginController import CustomerLoginController
 
 MSG_EMPTY_FIELDS = "Please enter your username and password"
 MSG_INVALID_LOGIN = "Invalid login details or account suspended"
@@ -59,6 +60,9 @@ class LoginPage:
         # US39: platform managers use their own dashboard.
         if PlatformManagerLoginController().isPlatformManager(account):
             return redirect(url_for("platformManagerDashboard"))
+
+        if CustomerLoginController().isCustomer(account):
+            return redirect(url_for("customerDashboard"))
 
         # Existing admin dashboard.
         return redirect(url_for("dashboard"))

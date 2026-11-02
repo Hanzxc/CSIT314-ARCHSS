@@ -4,6 +4,7 @@
 
 from app import app
 from database.db import getConnection
+from database.seedData import TEST_ACCOUNTS
 from entity.userAccount import UserAccount
 from control.searchUserAccountController import SearchUserAccountController
 
@@ -25,7 +26,8 @@ def test_ut12_2_search_capitals():
 
 
 def test_ut12_3_search_emptyKeyword_returnsAll():
-    assert len(SearchUserAccountController().searchUserAccounts("")) == 3
+    assert {account.username for account in SearchUserAccountController().searchUserAccounts("")} == {
+        account[0] for account in TEST_ACCOUNTS}
 
 
 def test_ut12_4_search_noMatch():

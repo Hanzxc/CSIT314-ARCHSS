@@ -1,0 +1,8 @@
+{# Reusable customer-facing IDP content. Designer controls belong outside this partial. #}
+<article class="card" aria-label="Interior design project">
+    <h2>{{ idp.title }}</h2>
+    <p><strong>Category:</strong> {{ idp.categoryName }}</p>
+    {% if idp.location %}<p><strong>Location:</strong> {{ idp.location }}</p>{% endif %}
+    <h3>About this project</h3>
+    <p style="white-space: pre-wrap">{{ idp.description }}</p>
+</article>

@@ -12,15 +12,13 @@ def client():
         cursor.execute("INSERT OR IGNORE INTO user_account (userId, username, password, fullName, profileId, status) VALUES (2, 'cust001', 'pw', 'Customer One', 1, 'Active')")
         cursor.execute("INSERT OR IGNORE INTO idp_category (categoryId, categoryName, status) VALUES (1, 'Living Room', 'Active')")
         cursor.execute("INSERT OR IGNORE INTO idp (idpId, designerId, categoryId, title, description, projectType, status) VALUES (107, 1, 1, 'Bookmarked Project', 'Desc', 'Past', 'Active')")
-        cursor.execute("INSERT OR IGNORE INTO saved_idp (customerId, idpId) VALUES (2, 107)")
+        cursor.execute("INSERT OR IGNORE INTO saved_idp (customerId, idpId) VALUES ((SELECT userId FROM user_account WHERE username='cust001'), 107)")
         conn.commit()
         conn.close()
         yield client
 
 def test_view_saved_list(client):
-    with client.session_transaction() as sess:
-        sess['user_id'] = 2
-        sess['user_role'] = 'Customer'
+    client.post('/customer/login', data=dict(username='cust001', password='Cust@123'))
 
     response = client.get('/customer/saved-list')
     assert response.status_code == 200

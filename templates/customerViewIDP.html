@@ -1,0 +1,25 @@
+{% extends "customerBase.html" %}
+{% block title %}View IDP - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>View IDP</h1>
+    <p class="subtitle">Explore the project and learn about the designer's work.</p>
+    <p><strong>Project type:</strong> {{ idp.projectType }}</p>
+    {% include "idpDetailContent.html" %}
+    <section class="card" style="margin-top: 24px" aria-label="About the designer">
+        <h2>About the designer</h2>
+        {% if companyProfile %}
+            <h3>{{ companyProfile.companyName }}</h3>
+            <p style="white-space: pre-wrap">{{ companyProfile.description }}</p>
+            <p><strong>Services:</strong></p>
+            <p style="white-space: pre-wrap">{{ companyProfile.services }}</p>
+        {% else %}
+            <p class="message info" role="status">Designer information is not currently available.</p>
+        {% endif %}
+    </section>
+    <div class="form-buttons">
+        <form method="POST" action="{{ url_for('save_idp.toggleSaveIDP', idp_id=idp.idpId) }}">
+            <button type="submit" class="btn-small btn-blue">{{ 'Remove from saved list' if isSaved else 'Save IDP' }}</button>
+        </form>
+        <a href="{{ url_for('searchIDPs', keyword=keyword) }}" class="btn-small btn-grey">Back to search</a>
+    </div>
+{% endblock %}

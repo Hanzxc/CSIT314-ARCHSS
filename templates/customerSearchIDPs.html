@@ -1,0 +1,33 @@
+{% extends "customerBase.html" %}
+{% block title %}Search IDPs - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Search IDPs</h1>
+    <p class="subtitle">Find designs by title, description, location or category. Leave the keyword empty to browse all available projects.</p>
+    <form method="GET" action="{{ url_for('searchIDPs') }}" class="search-bar">
+        <label for="keyword" class="hint">Keyword</label>
+        <input type="text" id="keyword" name="keyword" value="{{ keyword }}" placeholder="e.g. kitchen, minimalist, Tampines">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        <a href="{{ url_for('searchIDPs') }}" class="btn-small btn-grey">Clear</a>
+    </form>
+    {% if idps %}
+        <p role="status">{{ idps|length }} IDP{{ 's' if idps|length != 1 else '' }} found</p>
+        <div class="cards">
+            {% for idp in idps %}
+                <article class="card" aria-label="Interior design project">
+                    <h2>{{ idp.title }}</h2>
+                    <p><strong>Category:</strong> {{ idp.categoryName }}</p>
+                    {% if idp.location %}<p><strong>Location:</strong> {{ idp.location }}</p>{% endif %}
+                    <p><strong>Project type:</strong> {{ idp.projectType }}</p>
+                    <p>{{ idp.description|truncate(200, true) }}</p>
+                    <a href="{{ url_for('viewIDP', idpId=idp.idpId, keyword=keyword) }}"
+                       class="btn-outline" aria-label="View {{ idp.title }}">View</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="message info" role="status">{{ noResultsMessage }}</p>
+    {% endif %}
+    <div class="form-buttons">
+        <a href="{{ url_for('customerDashboard') }}" class="btn-small btn-grey">Back to dashboard</a>
+    </div>
+{% endblock %}

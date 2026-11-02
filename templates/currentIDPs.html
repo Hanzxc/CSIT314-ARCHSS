@@ -1,0 +1,15 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}My current IDPs - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>My current IDPs</h1>
+    <p class="subtitle">Your ongoing interior design projects, newest first.</p>
+    <a href="{{ url_for('searchCurrentIDPs') }}" class="btn-small btn-blue">Search current IDPs</a>
+    {% if idps %}
+        {% include "currentIDPCards.html" %}
+    {% else %}
+        <p class="message info" role="status">{{ emptyMessage }}</p>
+    {% endif %}
+    <div class="form-buttons">
+        <a href="{{ url_for('interiorDesignerDashboard') }}" class="btn-small btn-grey">Back to dashboard</a>
+    </div>
+{% endblock %}

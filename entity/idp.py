@@ -1,29 +1,158 @@
-# Entity: IDP - interior design project (used by US20, US42)
-# A designer's project shown to customers. Current = still in progress, Past = completed.
-# One row in the idp table.
+# Entity: IDP - interior design project. Attribute names match the US20 model.
+import sqlite3
+import hashlib
+import json
 
 from database.db import getConnection
 
 
+# A category suspension hides its IDPs without changing the project records.
+VISIBLE_CURRENT_IDPS_SQL = """
+    SELECT idp.*, category.categoryName
+    FROM idp
+    JOIN idp_category AS category ON category.categoryId = idp.categoryId
+    WHERE idp.designerId = ? AND idp.projectType = 'Current'
+      AND idp.status = 'Active' AND category.status = 'Active'
+"""
+
+# US31 searches the customer catalogue across designers and project types.
+VISIBLE_CUSTOMER_IDPS_SQL = """
+    SELECT idp.*, category.categoryName
+    FROM idp
+    JOIN idp_category AS category ON category.categoryId = idp.categoryId
+    WHERE idp.status = 'Active' AND category.status = 'Active'
+"""
+
+
+def _snapshotHash(*values):
+    return hashlib.sha256(json.dumps(values, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
 class IDP:
-    # UC20 Add current IDP
-    # one IDP, new ones start as a Current, Active project
     def __init__(self, idpId=None, designerId=None, categoryId=None, title="", description="",
-                 location="", projectType="Current", status="Active", createdDate=None):
+                 location="", projectType="Current", status="Active", createdDate=None,
+                 categoryName=""):
         self.idpId = idpId
-        self.designerId = designerId      # the owner's userId
+        self.designerId = designerId
         self.categoryId = categoryId
         self.title = title
         self.description = description
         self.location = location
-        self.projectType = projectType    # "Current" or "Past"
-        self.status = status              # "Active" or "Suspended"
+        self.projectType = projectType
+        self.status = status
         self.createdDate = createdDate
+        self.categoryName = categoryName  # joined display value, not an idp table column
 
-    # UC20 Add current IDP
-    # the page has already checked the input - the entity only saves the IDP if its
-    # category is still Active (it could have been suspended meanwhile, US44) and the
-    # owner exists. designerId always comes from the session, never the form
+    def getCurrentIDPs(self, designerId):
+        conn = getConnection()
+        try:
+            rows = conn.execute(VISIBLE_CURRENT_IDPS_SQL + " ORDER BY idp.idpId DESC",
+                                (designerId,)).fetchall()
+            return [IDP(**dict(row)) for row in rows]
+        finally:
+            conn.close()
+
+    def getCurrentIDP(self, designerId, idpId):
+        conn = getConnection()
+        try:
+            row = conn.execute(VISIBLE_CURRENT_IDPS_SQL + " AND idp.idpId = ?",
+                               (designerId, idpId)).fetchone()
+            return IDP(**dict(row)) if row is not None else None
+        finally:
+            conn.close()
+
+    def searchCurrentIDPs(self, designerId, keyword):
+        # Literal substring matching: %, _ and quotes are ordinary search characters.
+        keyword = (keyword or "").strip().casefold()
+        conn = getConnection()
+        try:
+            conn.create_function("casefold", 1, lambda text: (text or "").casefold(), deterministic=True)
+            rows = conn.execute(
+                VISIBLE_CURRENT_IDPS_SQL +
+                " AND (instr(casefold(idp.title), ?) > 0 "
+                "OR instr(casefold(idp.description), ?) > 0 "
+                "OR instr(casefold(idp.location), ?) > 0 "
+                "OR instr(casefold(category.categoryName), ?) > 0) ORDER BY idp.idpId DESC",
+                (designerId, keyword, keyword, keyword, keyword)).fetchall()
+            return [IDP(**dict(row)) for row in rows]
+        finally:
+            conn.close()
+
+    def searchIDPs(self, keyword):
+        keyword = (keyword or "").strip().casefold()
+        conn = getConnection()
+        try:
+            conn.create_function("casefold", 1, lambda text: (text or "").casefold(), deterministic=True)
+            rows = conn.execute(
+                VISIBLE_CUSTOMER_IDPS_SQL +
+                " AND (instr(casefold(idp.title), ?) > 0 "
+                "OR instr(casefold(idp.description), ?) > 0 "
+                "OR instr(casefold(idp.location), ?) > 0 "
+                "OR instr(casefold(category.categoryName), ?) > 0) ORDER BY idp.idpId DESC",
+                (keyword, keyword, keyword, keyword)).fetchall()
+            return [IDP(**dict(row)) for row in rows]
+        finally:
+            conn.close()
+
+    def getIDP(self, idpId):
+        # US32 shares US31 catalogue visibility, including Current and Past IDPs.
+        conn = getConnection()
+        try:
+            row = conn.execute(VISIBLE_CUSTOMER_IDPS_SQL + " AND idp.idpId = ?",
+                               (idpId,)).fetchone()
+            return IDP(**dict(row)) if row is not None else None
+        finally:
+            conn.close()
+
+    def updateCurrentIDP(self, designerId, idpId, idpData):
+        # Guard both the source project and destination category in the write itself.
+        # Owner/type/status/creation date are never editable through this operation.
+        conn = getConnection()
+        try:
+            cursor = conn.execute(
+                "UPDATE idp SET title=?, categoryId=?, description=?, location=? "
+                "WHERE idpId=? AND designerId=? AND projectType='Current' AND status='Active' "
+                "AND EXISTS (SELECT 1 FROM idp_category AS source "
+                "            WHERE source.categoryId=idp.categoryId AND source.status='Active') "
+                "AND EXISTS (SELECT 1 FROM idp_category AS destination "
+                "            WHERE destination.categoryId=? AND destination.status='Active')",
+                (idpData["title"], idpData["categoryId"], idpData["description"], idpData["location"],
+                 idpId, designerId, idpData["categoryId"]))
+            conn.commit()
+            return cursor.rowcount == 1
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+
+    def getSnapshot(self):
+        # Only the compact fingerprint is kept in the signed session cookie.
+        return _snapshotHash(self.title, self.categoryId, self.description, self.location, self.createdDate)
+
+    def suspendCurrentIDP(self, designerId, idpId, expectedSnapshot=None):
+        # US23 Delete follows the company-profile convention: hide, preserve the record.
+        sql = ("UPDATE idp SET status='Suspended' WHERE idpId=? AND designerId=? "
+               "AND projectType='Current' AND status='Active' "
+               "AND EXISTS (SELECT 1 FROM idp_category AS category "
+               "WHERE category.categoryId=idp.categoryId AND category.status='Active')")
+        values = [idpId, designerId]
+        if expectedSnapshot is not None:
+            # Compare exactly the content reviewed in the confirmation, in the same write.
+            if not isinstance(expectedSnapshot, str) or len(expectedSnapshot) != 64:
+                return False
+            sql += " AND idpSnapshot(title, categoryId, description, location, createdDate) = ?"
+            values.append(expectedSnapshot)
+        conn = getConnection()
+        try:
+            conn.create_function("idpSnapshot", 5, _snapshotHash, deterministic=True)
+            cursor = conn.execute(sql, values)
+            conn.commit()
+            return cursor.rowcount == 1
+        finally:
+            conn.close()
+
+
     def addCurrentIDP(self, idp):
         conn = getConnection()
         cursor = conn.execute(
@@ -37,8 +166,6 @@ class IDP:
         conn.close()
         return added
 
-    # UC25 Add past IDP
-    # Saves a new project as 'Past' and 'Active'
     def addPastIDP(self, idp):
         conn = getConnection()
         cursor = conn.execute(
@@ -52,8 +179,6 @@ class IDP:
         conn.close()
         return added
 
-    # UC26 View past IDPs
-    # Retrieves all Active past IDPs owned by the designer
     def getPastIDPsByDesigner(self, designerId):
         conn = getConnection()
         cursor = conn.execute(
@@ -67,7 +192,6 @@ class IDP:
         conn.close()
         return rows
 
-    # Helper method to get single IDP by ID
     def getIDPById(self, idpId):
         conn = getConnection()
         cursor = conn.execute(
@@ -80,7 +204,6 @@ class IDP:
         conn.close()
         return row
 
-    # UC27 Update past IDP
     def updatePastIDP(self, idp):
         conn = getConnection()
         cursor = conn.execute(
@@ -93,7 +216,6 @@ class IDP:
         conn.close()
         return updated
 
-    # UC28 Delete past IDP (Soft-delete / set status to Suspended)
     def deletePastIDP(self, idpId, designerId):
         conn = getConnection()
         cursor = conn.execute(
@@ -106,7 +228,6 @@ class IDP:
         conn.close()
         return deleted
 
-    # UC29 Search past IDPs
     def searchPastIDPs(self, designerId, keyword):
         conn = getConnection()
         search_kw = f"%{keyword}%"
@@ -121,4 +242,3 @@ class IDP:
         rows = cursor.fetchall()
         conn.close()
         return rows
-    

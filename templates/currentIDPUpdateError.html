@@ -1,0 +1,10 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Update unavailable - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Update unavailable</h1>
+    <p class="message error" role="alert">{{ errorMessage }}</p>
+    <div class="form-buttons">
+        <a href="{{ url_for('updateCurrentIDP', idpId=idpId) }}" class="btn-small btn-blue">Reopen update form</a>
+        <a href="{{ url_for('viewCurrentIDPs') }}" class="btn-small btn-grey">Back to list</a>
+    </div>
+{% endblock %}

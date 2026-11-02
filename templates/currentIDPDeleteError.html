@@ -1,0 +1,11 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Delete unavailable - Interior Design Platform{% endblock %}
+{% block content %}
+    <h1>Delete unavailable</h1>
+    <p class="message error" role="alert">{{ errorMessage }}</p>
+    <div class="form-buttons">
+        <a href="{{ url_for('deleteCurrentIDP', idpId=idpId) }}" class="btn-small btn-red">Reopen delete confirmation</a>
+        <a href="{{ url_for('viewCurrentIDP', idpId=idpId) }}" class="btn-small btn-grey">Review current IDP</a>
+        <a href="{{ url_for('viewCurrentIDPs') }}" class="btn-small btn-grey">Back to list</a>
+    </div>
+{% endblock %}
