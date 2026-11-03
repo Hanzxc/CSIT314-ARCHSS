@@ -67,12 +67,15 @@ def loginRequired(routeFunction):
 
 
 def designerLoginRequired(routeFunction):
-    # US14 - US18: being logged in as a designer is the precondition of these use cases (US13),
-    # so the pages don't re-check it. this only stops a crash when there's no session at all
+# US14 – US18: Verify active Interior Designer access before handling company profile requests.
     @wraps(routeFunction)
     def wrapper(*args, **kwargs):
-        if "userId" not in session:
+        userId = session.get("userId")
+        if userId is None:
             return redirect(url_for("interiorDesignerLogin"))
+        designer = InteriorDesignerLoginController().getAuthenticatedDesigner(userId)
+        if designer is None:
+            abort(403)
         return routeFunction(*args, **kwargs)
     return wrapper
 
