@@ -12,6 +12,10 @@
 - Logging out only ends the session in this browser, not on other devices.
 - The User Admin's log out (US2, /logout) and the designer's log out (US19, /designer/logout) are not changed.
 
+## Lecturer feedback changes
+
+- **No change needed.** Logout has no input, no entity and no access check: it reuses the US2 `LogoutController`, the same way US19 does for designers.
+
 ## Repository files
 
 New files for this story:
@@ -26,7 +30,7 @@ Sprint_3/US40 - Platform Manager Log out/...
 
 Existing files with small additions (shared by US20 and US40 - US45; nothing removed):
 
-- `app.py` — imports and routes for US20 and US40 - US45 added (no existing route changed)
+- `app.py` — imports and routes for US20 and US40 - US45, and `managerLoginRequired` (only sends someone with no session to `/manager/login`, like `designerLoginRequired`); no existing route changed
 - `database/schema.sql` — `idp_category` and `idp` tables appended (existing tables unchanged; `initDatabase()` creates them in an existing `archss.db`, no migration needed)
 - `templates/platformManagerDashboard.html` — Log out button (US40) and IDP Categories links (US45)
 - `templates/interiorDesignerDashboard.html` — "Add current IDP" button on the Current IDPs card (US20)

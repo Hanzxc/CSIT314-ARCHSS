@@ -11,6 +11,8 @@ MSG_CANNOT_SUSPEND = "This user profile cannot be suspended"
 
 
 class SuspendUserProfilePage:
+    # UC6 Suspend user profile
+    # profileId gets filled in by the route
     def __init__(self):
         self.suspendUserProfileController = SuspendUserProfileController()
         self.profileId = None
@@ -31,10 +33,14 @@ class SuspendUserProfilePage:
                                profile=profile, showConfirmation=True)
 
     def confirmSuspend(self):
-        # admin clicked OK in the box
-        adminProfileId = session["profileId"]
-        success = self.suspendUserProfileController.suspendUserProfile(self.profileId, adminProfileId)
-        if success:
+        # admin clicked OK in the box.
+        # the page checks this one - the admin can't suspend their own group or
+        # they'd lock themselves out (UT6.3)
+        if self.profileId == session["profileId"]:
+            return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
+
+        # already suspended / no such id -> the entity gives back False (UT6.2, UT6.4)
+        if self.suspendUserProfileController.suspendUserProfile(self.profileId):
             return self.displaySuccessMessage(MSG_SUSPENDED)
         return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
@@ -51,6 +57,8 @@ class SuspendUserProfilePage:
         flash(msg, "success")
         return redirect(url_for("viewUserProfile", profileId=self.profileId))
 
+    # UC6 Suspend user profile
+    # back to the profile details with a red message
     def displayErrorMessage(self, msg):
         flash(msg, "error")
         return redirect(url_for("viewUserProfile", profileId=self.profileId))

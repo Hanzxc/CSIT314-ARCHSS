@@ -4,7 +4,6 @@
 # IDPs are added through US20 by designer42 / Design@123 (Interior Designer, profile 2).
 
 from app import app
-from database.db import getConnection
 from entity.userAccount import UserAccount
 from entity.idp import IDP
 from entity.idpCategory import IDPCategory
@@ -29,14 +28,14 @@ def loginAsManager42(client):
 
 
 def createCategory(name, description=""):
-    IDPCategory().createIDPCategory(name, description)
+    IDPCategory().createIDPCategory(IDPCategory(categoryName=name, description=description))
     return IDPCategory().searchIDPCategories(name)[0].categoryId
 
 
 def addIDP(designerId, categoryId, title):
-    return AddCurrentIDPController().addCurrentIDP(designerId, {
-        "title": title, "description": "Work in progress.", "categoryId": categoryId,
-        "location": "Tampines"})
+    return AddCurrentIDPController().addCurrentIDP(IDP(
+        designerId=designerId, categoryId=categoryId, title=title,
+        description="Work in progress.", location="Tampines"))
 
 
 # ---------- IDPCategory.getIDPCategory() ----------
@@ -52,7 +51,7 @@ def test_ut42_2_getIDPCategory_notFound():
     assert IDPCategory().getIDPCategory(9999) is None
 
 
-# ---------- IDP.getIDPsInCategory() ----------
+# ---------- IDPCategory.getIDPsInCategory() ----------
 
 def test_ut42_3_getIDPsInCategory_onlyThatCategory():
     designerId = createDesigner42()
@@ -60,12 +59,12 @@ def test_ut42_3_getIDPsInCategory_onlyThatCategory():
     bedroom = createCategory("Bedroom")
     addIDP(designerId, kitchen, "Tampines HDB kitchen")
     addIDP(designerId, bedroom, "Master bedroom refresh")
-    idps = IDP().getIDPsInCategory(kitchen)
+    idps = IDPCategory().getIDPsInCategory(kitchen)
     assert [idp.title for idp in idps] == ["Tampines HDB kitchen"]
 
 
 def test_ut42_4_getIDPsInCategory_empty():
-    assert IDP().getIDPsInCategory(createCategory("Kitchen")) == []
+    assert IDPCategory().getIDPsInCategory(createCategory("Kitchen")) == []
 
 
 # ---------- ViewIDPCategoryController ----------
@@ -88,12 +87,6 @@ def test_ut42_7_getIDPsInCategory_passesThrough():
     assert idps[0].designerId == designerId
 
 
-def test_ut42_8_canViewIDPCategory_onlyManager():
-    managerId = createManager42()
-    designerId = createDesigner42()
-    control = ViewIDPCategoryController()
-    assert control.canViewIDPCategory(managerId) is True
-    assert control.canViewIDPCategory(designerId) is False
 
 
 # ---------- ViewIDPCategoryPage via the /manager/categories/<id> route ----------
@@ -142,23 +135,3 @@ def test_ut42_13_viewPage_notLoggedIn_redirects():
     categoryId = createCategory("Kitchen")
     response = app.test_client().get("/manager/categories/" + str(categoryId))
     assert response.headers["Location"].endswith("/manager/login")
-
-
-def test_ut42_14_viewPage_designerForbidden():
-    createDesigner42()
-    categoryId = createCategory("Kitchen")
-    client = app.test_client()
-    client.post("/designer/login", data={"username": "designer42", "password": "Design@123"})
-    assert client.get("/manager/categories/" + str(categoryId)).status_code == 403
-
-
-def test_ut42_15_viewPage_suspendedManagerForbidden():
-    createManager42()
-    categoryId = createCategory("Kitchen")
-    client = app.test_client()
-    loginAsManager42(client)
-    conn = getConnection()
-    conn.execute("UPDATE user_account SET status = 'Suspended' WHERE username = 'manager42'")
-    conn.commit()
-    conn.close()
-    assert client.get("/manager/categories/" + str(categoryId)).status_code == 403

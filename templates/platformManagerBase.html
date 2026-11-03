@@ -11,7 +11,7 @@
     <div class="header">
         <span class="logo">Interior Design Platform</span>
         <div class="user-info">
-            <span>Logged in as {{ username }} (Platform Manager)</span>
+            <span>Logged in as {{ headerUsername }} (Platform Manager)</span>
             <form method="POST" action="{{ url_for('platformManagerLogout') }}">
                 <button type="submit" class="btn-outline">Log out</button>
             </form>

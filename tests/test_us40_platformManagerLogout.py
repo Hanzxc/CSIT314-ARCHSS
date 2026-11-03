@@ -169,3 +169,12 @@ def test_ut40_17_adminLogoutUnchanged():
     assert response.status_code == 200
     assert b"You have logged out successfully" in response.data
     assert b"Platform Manager" not in response.data
+
+
+def test_ut40_18_categoryPages_showLoggedInUsername():
+    # the shared manager header (platformManagerBase.html) names who is logged in next to Log out
+    createManager40()
+    client = app.test_client()
+    loginAsManager40(client)
+    response = client.get("/manager/categories")
+    assert b"Logged in as manager40 (Platform Manager)" in response.data

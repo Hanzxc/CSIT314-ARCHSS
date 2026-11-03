@@ -18,35 +18,38 @@ def countAccountsInProfile(profileId):
 # ---------- SuspendUserProfileController.suspendUserProfile() ----------
 
 def test_ut6_1_suspendUserProfile_valid():
-    assert SuspendUserProfileController().suspendUserProfile(3, 1) is True
+    assert SuspendUserProfileController().suspendUserProfile(3) is True
     assert UserProfile().getUserProfile(3).status == "Suspended"
 
 
 def test_ut6_2_suspendUserProfile_alreadySuspended():
-    SuspendUserProfileController().suspendUserProfile(3, 1)
+    SuspendUserProfileController().suspendUserProfile(3)
     # second time round it's already suspended so it should say no
-    assert SuspendUserProfileController().suspendUserProfile(3, 1) is False
+    assert SuspendUserProfileController().suspendUserProfile(3) is False
 
 
-def test_ut6_3_suspendUserProfile_ownProfile():
-    # admin can't lock themselves out
-    assert SuspendUserProfileController().suspendUserProfile(1, 1) is False
+def test_ut6_3_suspendPage_ownProfile():
+    # admin can't lock themselves out - the page checks this before calling the controller
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    response = client.post("/profiles/1/suspend", data={"choice": "ok"}, follow_redirects=True)
+    assert b"This user profile cannot be suspended" in response.data
     assert UserProfile().getUserProfile(1).status == "Active"
 
 
 def test_ut6_4_suspendUserProfile_notFound():
-    assert SuspendUserProfileController().suspendUserProfile(9999, 1) is False
+    assert SuspendUserProfileController().suspendUserProfile(9999) is False
 
 
 # ---------- after suspending ----------
 
 def test_ut6_5_isActive_afterSuspend():
-    SuspendUserProfileController().suspendUserProfile(3, 1)
+    SuspendUserProfileController().suspendUserProfile(3)
     assert UserProfile().getUserProfile(3).isActive() is False
 
 
 def test_ut6_6_login_afterSuspend():
-    SuspendUserProfileController().suspendUserProfile(3, 1)
+    SuspendUserProfileController().suspendUserProfile(3)
     assert LoginController().login("cust001", "Cust@123") is None
 
 

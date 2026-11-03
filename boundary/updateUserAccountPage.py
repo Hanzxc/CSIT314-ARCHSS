@@ -4,6 +4,7 @@
 from flask import render_template, redirect, url_for, flash
 
 from control.updateUserAccountController import UpdateUserAccountController
+from control.searchUserProfileController import SearchUserProfileController
 
 MSG_UPDATED = "User account updated successfully"
 MSG_REQUIRED = "Please fill in all required fields"
@@ -13,6 +14,8 @@ MSG_FIELD_REQUIRED = "This field is required"
 
 
 class UpdateUserAccountPage:
+    # UC10 Update user account
+    # userId gets filled in by clickUpdate() or submitUpdate()
     def __init__(self):
         self.updateUserAccountController = UpdateUserAccountController()
         self.userId = None
@@ -23,6 +26,8 @@ class UpdateUserAccountPage:
         self.form = {"username": "", "fullName": "", "email": "", "phone": "", "profileId": None}
         self.status = ""
 
+    # UC10 Update user account
+    # admin clicked Update - load the account so the form starts filled in
     def clickUpdate(self, userId):
         self.userId = userId
         account = self.updateUserAccountController.getUserAccount(userId)
@@ -38,12 +43,15 @@ class UpdateUserAccountPage:
                          "profileId": account.profileId}
             self.status = account.status
 
-        profiles = self.updateUserAccountController.getAllUserProfiles()
+        # drop-down = every profile, borrowed from US7 (same as US8)
+        profiles = SearchUserProfileController().searchUserProfiles("")
         return render_template("updateUserAccount.html", activePage="accounts",
                                userId=self.userId, form=self.form, status=self.status,
                                profiles=profiles, fieldErrors=self.fieldErrors,
                                errorMessage=msg)
 
+    # UC10 Update user account
+    # admin clicked Save - the page checks all the input, then the controller just updates it
     def submitUpdate(self, userId, username, fullName, email, phone, profileId):
         self.userId = userId
         # keep what they typed so nothing gets wiped if there's an error
@@ -53,9 +61,9 @@ class UpdateUserAccountPage:
         if not self.validateInput(username, fullName, email, phone, profileId):
             return self.displayErrorMessage(MSG_REQUIRED)
 
-        success = self.updateUserAccountController.updateUserAccount(
-            userId, username, fullName, email, phone, profileId)
-        if success:
+        if self.updateUserAccountController.updateUserAccount(
+                userId, username.strip(), fullName.strip(),
+                (email or "").strip(), (phone or "").strip(), profileId):
             return self.displaySuccessMessage(MSG_UPDATED)
 
         # it failed - either the account is gone, or it's alt flow 5a

@@ -21,9 +21,14 @@ def companyData():
             "phone": "+65 6123 4567", "address": "10 Design Street"}
 
 
+def makeCompany(designerId, data):
+    # create takes a CompanyProfile object now, not a dict
+    return CompanyProfile(designerId=designerId, **data)
+
+
 def createCompanyForDesigner13():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     return userId
 
 
@@ -55,29 +60,6 @@ def test_ut15_2_viewCompanyProfile_noProfile():
 
 def test_ut15_3_viewCompanyProfile_unknownUser():
     assert ViewCompanyProfileController().viewCompanyProfile(9999) is None
-
-
-def test_ut15_4_viewCompanyProfile_adminRejected():
-    assert ViewCompanyProfileController().canViewCompanyProfile(1) is False
-    assert ViewCompanyProfileController().viewCompanyProfile(1) is None
-
-
-def test_ut15_5_viewCompanyProfile_suspendedAccount():
-    userId = createCompanyForDesigner13()
-    conn = getConnection()
-    conn.execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (userId,))
-    conn.commit()
-    conn.close()
-    assert ViewCompanyProfileController().viewCompanyProfile(userId) is None
-
-
-def test_ut15_6_viewCompanyProfile_suspendedProfile():
-    userId = createCompanyForDesigner13()
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert ViewCompanyProfileController().viewCompanyProfile(userId) is None
 
 
 def test_ut15_7_viewCompanyProfile_doesNotChangeData():
@@ -125,13 +107,6 @@ def test_ut15_11_viewPage_notLoggedIn():
     assert response.headers["Location"].endswith("/designer/login")
 
 
-def test_ut15_12_viewPage_adminForbidden():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.get("/designer/company").status_code == 403
-
-
 def test_ut15_13_viewPage_noProfile():
     createDesigner13()
     client = app.test_client()
@@ -147,7 +122,7 @@ def test_ut15_14_viewPage_optionalFieldsEmpty():
     userId = createDesigner13()
     data = companyData()
     data.update(email="", phone="", address="")
-    CompanyProfile().createCompanyProfile(userId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(userId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company")
@@ -161,7 +136,7 @@ def test_ut15_15_viewPage_ignoresForgedOwner():
     otherId = UserAccount().verifyCredentials("designer15", "Design@123").userId
     data = companyData()
     data["companyName"] = "Other Designer Private Company"
-    CompanyProfile().createCompanyProfile(otherId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(otherId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company?designerId=" + str(otherId) + "&companyId=2")
@@ -183,7 +158,7 @@ def test_ut15_17_viewPage_escapeCompanyText():
     userId = createDesigner13()
     data = companyData()
     data["description"] = "<script>alert(1)</script>"
-    CompanyProfile().createCompanyProfile(userId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(userId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company")
@@ -243,17 +218,6 @@ def test_ut15_22_dashboard_noViewLinkBeforeCreation():
     assert b'href="/designer/company/create"' in response.data
 
 
-def test_ut15_23_viewPage_permissionRemovedAfterLogin():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert client.get("/designer/company").status_code == 403
-
-
 def test_ut15_24_createThenView_endToEnd():
     createDesigner13()
     client = app.test_client()
@@ -269,7 +233,7 @@ def test_ut15_24_createThenView_endToEnd():
 
 def test_ut15_suspendedProfile_isUnavailable():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     profile = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
     client = app.test_client()

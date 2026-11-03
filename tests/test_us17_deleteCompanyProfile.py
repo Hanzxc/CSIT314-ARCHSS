@@ -16,6 +16,11 @@ def companyData():
             "phone": "+65 6123 4567", "address": "10 Design Street"}
 
 
+def makeCompany(designerId, data):
+    # the entity takes a CompanyProfile object now, not a dict
+    return CompanyProfile(designerId=designerId, **data)
+
+
 def createDesigner13():
     UserAccount().createUserAccount(
         "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
@@ -24,7 +29,7 @@ def createDesigner13():
 
 def createCompanyForDesigner13():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     return userId
 
 
@@ -62,27 +67,9 @@ def test_ut17_2_deleteCompanyProfile_missing():
     assert DeleteCompanyProfileController().deleteCompanyProfile(userId, 9999) is False
 
 
-def test_ut17_3_deleteCompanyProfile_adminRejected():
-    userId = createCompanyForDesigner13()
-    companyId = CompanyProfile().getCompanyProfile(userId).companyId
-    assert DeleteCompanyProfileController().deleteCompanyProfile(1, companyId) is False
-    assert countCompanies() == 1
-
-
 def test_ut17_4_deleteCompanyProfile_wrongCompanyId():
     userId = createCompanyForDesigner13()
     assert DeleteCompanyProfileController().deleteCompanyProfile(userId, 9999) is False
-    assert countCompanies() == 1
-
-
-def test_ut17_5_deleteCompanyProfile_suspendedAccount():
-    userId = createCompanyForDesigner13()
-    companyId = CompanyProfile().getCompanyProfile(userId).companyId
-    conn = getConnection()
-    conn.execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (userId,))
-    conn.commit()
-    conn.close()
-    assert DeleteCompanyProfileController().deleteCompanyProfile(userId, companyId) is False
     assert countCompanies() == 1
 
 
@@ -102,7 +89,7 @@ def test_ut17_7_entity_suspendsOnlyMatchingOwner():
     userId = createCompanyForDesigner13()
     UserAccount().createUserAccount("designer17", "Design@123", "Daniel Tan", "", "", 2)
     otherId = UserAccount().verifyCredentials("designer17", "Design@123").userId
-    CompanyProfile().createCompanyProfile(otherId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(otherId, companyData()))
     companyId = CompanyProfile().getCompanyProfile(userId).companyId
     assert CompanyProfile().suspendCompanyProfile(otherId, companyId) is False
     assert CompanyProfile().suspendCompanyProfile(userId, companyId) is True
@@ -117,11 +104,13 @@ def test_ut17_8_entity_repeatedDeleteReturnsFalse():
     assert CompanyProfile().suspendCompanyProfile(userId, companyId) is False
 
 
-def test_ut17_9_entity_oldRevisionCannotSuspendReactivatedProfile():
+def test_ut17_9_entity_oldRevisionCannotSuspendRestoredProfile():
+    # create doesn't bring a deleted one back any more (it's a duplicate), restore does
     userId = createCompanyForDesigner13()
     original = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, original.companyId, original.revision) is True
-    assert CompanyProfile().createCompanyProfile(userId, companyData()) is True
+    assert CompanyProfile().createCompanyProfile(makeCompany(userId, companyData())) is False
+    assert CompanyProfile().restoreCompanyProfile(userId, original.companyId, original.revision) is True
     replacement = CompanyProfile().getCompanyProfile(userId)
     assert replacement.companyId == original.companyId
     assert replacement.revision == original.revision + 1
@@ -182,15 +171,6 @@ def test_ut17_14_deletePage_notLoggedIn():
     assert client.post("/designer/company/delete", data={"choice": "delete"}).status_code == 302
 
 
-def test_ut17_15_deletePage_adminForbidden():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.get("/designer/company/delete").status_code == 403
-    assert client.post("/designer/company/delete", data={"choice": "delete"}).status_code == 403
-    assert countCompanies() == 1
-
-
 def test_ut17_16_deletePage_noProfile():
     createDesigner13()
     client = app.test_client()
@@ -233,7 +213,7 @@ def test_ut17_20_deletePage_ignoresForgedOwner():
     userId = createCompanyForDesigner13()
     UserAccount().createUserAccount("designer17", "Design@123", "Daniel Tan", "", "", 2)
     otherId = UserAccount().verifyCredentials("designer17", "Design@123").userId
-    CompanyProfile().createCompanyProfile(otherId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(otherId, companyData()))
     client = app.test_client()
     loginAsDesigner13(client)
     data = openDeleteConfirmation(client)
@@ -241,19 +221,6 @@ def test_ut17_20_deletePage_ignoresForgedOwner():
     client.post("/designer/company/delete?designerId=" + str(otherId), data=data)
     assert CompanyProfile().getCompanyProfile(userId) is None
     assert CompanyProfile().getCompanyProfile(otherId) is not None
-
-
-def test_ut17_21_deletePage_accessRemovedAfterConfirmation():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    data = openDeleteConfirmation(client)
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert client.post("/designer/company/delete", data=data).status_code == 403
-    assert countCompanies() == 1
 
 
 def test_ut17_22_deletePage_keepsLoginSession():
@@ -286,13 +253,15 @@ def test_ut17_24_deletePage_confirmationCannotBeReused():
     assert client.post("/designer/company/delete", data=data).status_code == 400
 
 
-def test_ut17_25_deletePage_staleConfirmationKeepsReplacement():
+def test_ut17_25_deletePage_staleConfirmationKeepsRestoredProfile():
+    # deleted + restored in between -> revision went up, so the old confirmation is useless
     userId = createCompanyForDesigner13()
     client = app.test_client()
     loginAsDesigner13(client)
     data = openDeleteConfirmation(client)
     CompanyProfile().suspendCompanyProfile(userId, int(data["companyId"]))
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    suspended = CompanyProfile().getSuspendedCompanyProfile(userId)
+    CompanyProfile().restoreCompanyProfile(userId, suspended.companyId, suspended.revision)
     replacementId = CompanyProfile().getCompanyProfile(userId).companyId
     response = client.post("/designer/company/delete", data=data)
     assert response.status_code == 400
@@ -313,7 +282,7 @@ def test_ut17_27_deletePage_escapesCompanyName():
     userId = createDesigner13()
     data = companyData()
     data["companyName"] = "<script>alert(1)</script>"
-    CompanyProfile().createCompanyProfile(userId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(userId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company/delete")
@@ -359,7 +328,10 @@ def test_ut17_30_suspend_filtersViewUpdateSearchAndOffersCreate():
     assert client.get("/designer/company/update").status_code == 404
     assert client.post("/designer/company/update", data=companyData()).status_code == 404
     assert client.get("/designer/company/search?keyword=Uda").status_code == 404
-    assert CompanyProfile().updateCompanyProfile(userId, companyData()) is False
+    assert CompanyProfile().updateCompanyProfile(makeCompany(userId, companyData())) is False
     assert CompanyProfile().searchCompanyInformation(userId, "") == []
     assert b'action="/designer/company/restore"' in client.get("/designer/dashboard").data
     assert client.get("/designer/company/create").status_code == 200
+    # but saving the form doesn't make a second one - the deleted row still counts as a duplicate
+    assert b"You already have a company profile" in client.post("/designer/company/create", data=companyData()).data
+    assert countCompanies() == 1

@@ -64,12 +64,20 @@ def test_ut3_6_createUserProfile_nameTaken():
     assert countProfiles() == before       # nothing got added
 
 
-def test_ut3_7_createUserProfile_emptyName():
-    assert CreateUserProfileController().createUserProfile("", "", ["Manage user accounts"]) is False
+def test_ut3_7_createPage_emptyName_nothingSaved():
+    # the page checks the input now, so bad input never reaches the controller
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/profiles/create", data={"profileName": "", "description": "",
+                                          "permissions": ["Manage user accounts"]})
+    assert len(UserProfile().searchUserProfiles("")) == 4
 
 
-def test_ut3_8_createUserProfile_noPermissions():
-    assert CreateUserProfileController().createUserProfile("Guest", "", []) is False
+def test_ut3_8_createPage_noPermissions_nothingSaved():
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/profiles/create", data={"profileName": "Guest", "description": ""})
+    assert UserProfile().isProfileNameTaken("Guest") is False
 
 
 # ---------- CreateUserProfilePage.validateInput() ----------
@@ -123,3 +131,15 @@ def test_ut3_14_createPage_nameTaken_keepsWhatWasTyped():
         "permissions": ["Search, view and save IDPs"]})
     assert b"A user profile with this name already exists" in response.data
     assert b"typed this already" in response.data
+
+
+def test_ut3_15_createPage_keepsHeader():
+    # bug fix: the form's profileName used to replace "(User Admin)" in the header
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/profiles/create")
+    assert b"Logged in as admin01 (User Admin)" in response.data
+    response = client.post("/profiles/create", data={
+        "profileName": "Customer", "description": "",
+        "permissions": ["Search, view and save IDPs"]})
+    assert b"Logged in as admin01 (User Admin)" in response.data

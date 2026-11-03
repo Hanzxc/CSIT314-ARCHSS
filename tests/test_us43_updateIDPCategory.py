@@ -19,8 +19,13 @@ def loginAsManager43(client):
     return client.post("/manager/login", data={"username": "manager43", "password": "Manager@123"})
 
 
+def makeCategory(categoryId, categoryName, description=""):
+    # update takes an IDPCategory object now, not three values
+    return IDPCategory(categoryId=categoryId, categoryName=categoryName, description=description)
+
+
 def createCategory(name, description=""):
-    IDPCategory().createIDPCategory(name, description)
+    IDPCategory().createIDPCategory(IDPCategory(categoryName=name, description=description))
     return IDPCategory().searchIDPCategories(name)[0].categoryId
 
 
@@ -41,7 +46,7 @@ def test_ut43_2_isCategoryNameTaken_otherCategorysName():
 
 def test_ut43_3_updateIDPCategory_valid():
     categoryId = createCategory("Kitchen", "Old text")
-    assert UpdateIDPCategoryController().updateIDPCategory(categoryId, "Kitchens", "New text") is True
+    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(categoryId, "Kitchens", "New text")) is True
     category = IDPCategory().getIDPCategory(categoryId)
     assert category.categoryName == "Kitchens"
     assert category.description == "New text"
@@ -50,28 +55,25 @@ def test_ut43_3_updateIDPCategory_valid():
 def test_ut43_4_updateIDPCategory_nameTaken():
     createCategory("Kitchen")
     bedroom = createCategory("Bedroom")
-    assert UpdateIDPCategoryController().updateIDPCategory(bedroom, "KITCHEN", "") is False
+    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(bedroom, "KITCHEN", "")) is False
     assert IDPCategory().getIDPCategory(bedroom).categoryName == "Bedroom"
 
 
 def test_ut43_5_updateIDPCategory_notFound():
-    assert UpdateIDPCategoryController().updateIDPCategory(9999, "Kitchen", "") is False
+    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(9999, "Kitchen", "")) is False
 
 
-def test_ut43_6_updateIDPCategory_emptyName():
-    categoryId = createCategory("Kitchen")
-    assert UpdateIDPCategoryController().updateIDPCategory(categoryId, "  ", "") is False
 
 
 def test_ut43_7_updateIDPCategory_keepSameName():
     categoryId = createCategory("Kitchen", "Old text")
-    assert UpdateIDPCategoryController().updateIDPCategory(categoryId, "Kitchen", "New text") is True
+    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(categoryId, "Kitchen", "New text")) is True
 
 
 def test_ut43_8_updateIDPCategory_doesNotUnsuspend():
     categoryId = createCategory("Kitchen")
     SuspendIDPCategoryController().suspendIDPCategory(categoryId)
-    assert UpdateIDPCategoryController().updateIDPCategory(categoryId, "Kitchens", "") is True
+    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(categoryId, "Kitchens", "")) is True
     assert IDPCategory().getIDPCategory(categoryId).status == "Suspended"
 
 
@@ -79,9 +81,9 @@ def test_ut43_8_updateIDPCategory_doesNotUnsuspend():
 
 def test_ut43_9_validateInput_sameRulesAsCreate():
     page = UpdateIDPCategoryPage()
-    assert page.validateInput("Kitchen", "") is True
-    assert page.validateInput("Ki", "") is False
-    assert page.validateInput("Kitchen", "x" * 501) is False
+    assert page.validateInput(makeCategory(1, "Kitchen", "")) is True
+    assert page.validateInput(makeCategory(1, "Ki", "")) is False
+    assert page.validateInput(makeCategory(1, "Kitchen", "x" * 501)) is False
 
 
 def test_ut43_10_updatePage_showsFilledForm():
@@ -139,11 +141,21 @@ def test_ut43_14_updatePage_notFound():
     assert b"IDP category not found" in response.data
 
 
-def test_ut43_15_updatePage_adminForbidden():
+def test_ut43_6_submit_emptyName_showsFieldError():
+    # an empty name is now caught by the page, so the controller is never called
+    createManager43()
     categoryId = createCategory("Kitchen")
     client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    loginAsManager43(client)
+    response = client.post("/manager/categories/" + str(categoryId) + "/update",
+                           data={"categoryName": "  ", "description": ""})
+    assert b"Category name must be 3-50 characters" in response.data
+    assert IDPCategory().getIDPCategory(categoryId).categoryName == "Kitchen"
+
+
+def test_ut43_15_updatePage_notLoggedIn_redirects():
+    categoryId = createCategory("Kitchen")
     url = "/manager/categories/" + str(categoryId) + "/update"
-    assert client.get(url).status_code == 403
-    assert client.post(url, data={"categoryName": "Hacked", "description": ""}).status_code == 403
+    response = app.test_client().post(url, data={"categoryName": "Hacked", "description": ""})
+    assert response.headers["Location"].endswith("/manager/login")
     assert IDPCategory().getIDPCategory(categoryId).categoryName == "Kitchen"

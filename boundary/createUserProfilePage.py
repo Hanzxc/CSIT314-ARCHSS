@@ -13,6 +13,8 @@ MSG_NO_PERMISSION = "Tick at least one permission"
 
 
 class CreateUserProfilePage:
+    # UC3 Create user profile
+    # starts with an empty form and no errors
     def __init__(self):
         self.createUserProfileController = CreateUserProfileController()
         self.fieldErrors = {}       # e.g. {"profileName": MSG_NAME_LENGTH, "permissions": MSG_NO_PERMISSION}
@@ -22,10 +24,14 @@ class CreateUserProfilePage:
         self.description = ""
         self.permissions = []
 
+    # UC3 Create user profile
+    # admin clicked "Create user profile" - get the permission tick boxes and show the form
     def clickCreateUserProfile(self):
         permissionList = self.createUserProfileController.getAllPermissions()
         return self.displayCreateForm(permissionList)
 
+    # UC3 Create user profile
+    # shows the form, refilled with what was typed and with any errors highlighted
     def displayCreateForm(self, permissionList, msg=None):
         return render_template("createUserProfile.html", activePage="profiles",
                                permissionList=permissionList,
@@ -45,11 +51,12 @@ class CreateUserProfilePage:
         if not self.validateInput(profileName, permissions):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
 
-        success = self.createUserProfileController.createUserProfile(profileName, description, permissions)
-        if success:
+        # tidy it up here so the controller/entity get clean values
+        if self.createUserProfileController.createUserProfile(
+                profileName.strip(), description.strip(), permissions):
             return self.displaySuccessMessage(MSG_CREATED)
 
-        # the only way it fails now is the name being taken (alt flow 5a)
+        # the only way it fails is the entity finding the name is taken (alt flow 5a)
         self.fieldErrors["profileName"] = MSG_NAME_TAKEN
         return self.displayErrorMessage(MSG_NAME_TAKEN)
 

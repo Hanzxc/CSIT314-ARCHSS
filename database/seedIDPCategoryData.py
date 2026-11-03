@@ -29,9 +29,9 @@ def seedIDPCategoryData():
     initDatabase()
     created = 0
     for categoryName, description in DEFAULT_CATEGORIES:
-        if not IDPCategory().isCategoryNameTaken(categoryName):
-            if IDPCategory().createIDPCategory(categoryName, description):
-                created += 1
+        # the entity skips names that already exist, so re-running doesn't duplicate them
+        if IDPCategory().createIDPCategory(IDPCategory(categoryName=categoryName, description=description)):
+            created += 1
 
     added = 0
     for number, (title, categoryName, description, location) in enumerate(DEMO_IDPS, start=1):
@@ -44,9 +44,9 @@ def seedIDPCategoryData():
             continue
         category = next(c for c in IDPCategory().searchIDPCategories(categoryName)
                         if c.categoryName == categoryName)
-        idpData = {"title": title, "description": description,
-                   "categoryId": category.categoryId, "location": location}
-        if IDP().addCurrentIDP(account["userId"], idpData):
+        idp = IDP(designerId=account["userId"], categoryId=category.categoryId, title=title,
+                  description=description, location=location)
+        if IDP().addCurrentIDP(idp):
             added += 1
     return created, added
 

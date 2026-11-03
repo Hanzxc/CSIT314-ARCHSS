@@ -14,6 +14,8 @@ MSG_NOT_FOUND = "User profile not found"
 
 
 class UpdateUserProfilePage:
+    # UC5 Update user profile
+    # profileId gets filled in by clickUpdate() or the route
     def __init__(self):
         self.updateUserProfileController = UpdateUserProfileController()
         self.profileId = None       # set by clickUpdate() / the route, used by submitUpdate()
@@ -25,6 +27,8 @@ class UpdateUserProfilePage:
         self.permissions = []
         self.status = ""
 
+    # UC5 Update user profile
+    # admin clicked Update - load the profile and the permission list so the form starts filled in
     def clickUpdate(self, profileId):
         self.profileId = profileId
         profile = self.updateUserProfileController.getUserProfile(profileId)
@@ -61,9 +65,8 @@ class UpdateUserProfilePage:
         if not self.validateInput(profileName, permissions):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
 
-        success = self.updateUserProfileController.updateUserProfile(
-            self.profileId, profileName, description, permissions)
-        if success:
+        if self.updateUserProfileController.updateUserProfile(
+                self.profileId, profileName.strip(), description.strip(), permissions):
             return self.displaySuccessMessage(MSG_UPDATED)
 
         # it failed - either the profile is gone or the name is taken, need to tell which

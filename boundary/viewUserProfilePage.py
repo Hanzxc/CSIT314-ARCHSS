@@ -9,9 +9,13 @@ MSG_NOT_FOUND = "User profile not found"
 
 
 class ViewUserProfilePage:
+    # UC4 View user profile
+    # just sets up the controller
     def __init__(self):
         self.viewUserProfileController = ViewUserProfileController()
 
+    # UC4 View user profile
+    # admin clicked View on a profile - show its details, or the not found message
     def selectUserProfile(self, profileId):
         profile = self.viewUserProfileController.getUserProfile(profileId)
         if profile is not None:

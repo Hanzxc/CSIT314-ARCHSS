@@ -22,6 +22,11 @@ def companyData():
             "phone": "+65 6123 4567", "address": "10 Design Street"}
 
 
+def makeCompany(designerId, data):
+    # create/update take a CompanyProfile object now, not a dict
+    return CompanyProfile(designerId=designerId, **data)
+
+
 def countCompanies():
     conn = getConnection()
     total = conn.execute("SELECT COUNT(*) FROM company_profile").fetchone()[0]
@@ -37,7 +42,7 @@ def loginAsDesigner13(client):
 
 def test_ut14_1_createCompanyProfile_valid():
     userId = createDesigner13()
-    assert CreateCompanyProfileController().createCompanyProfile(userId, companyData()) is True
+    assert CreateCompanyProfileController().createCompanyProfile(makeCompany(userId, companyData())) is True
     profile = CompanyProfile().getCompanyProfile(userId)
     assert profile.companyName == "Uda Interiors"
     assert profile.designerId == userId
@@ -47,53 +52,38 @@ def test_ut14_1_createCompanyProfile_valid():
 def test_ut14_2_createCompanyProfile_alreadyExists():
     userId = createDesigner13()
     control = CreateCompanyProfileController()
-    assert control.createCompanyProfile(userId, companyData()) is True
+    assert control.createCompanyProfile(makeCompany(userId, companyData())) is True
     before = countCompanies()
     data = companyData()
     data["companyName"] = "Another Company"
-    assert control.createCompanyProfile(userId, data) is False
+    assert control.createCompanyProfile(makeCompany(userId, data)) is False
     assert countCompanies() == before
     assert CompanyProfile().getCompanyProfile(userId).companyName == "Uda Interiors"
 
 
-def test_ut14_3_createCompanyProfile_adminRejected():
-    assert CreateCompanyProfileController().createCompanyProfile(1, companyData()) is False
-    assert countCompanies() == 0
 
 
-def test_ut14_4_createCompanyProfile_unknownAccount():
-    assert CreateCompanyProfileController().createCompanyProfile(9999, companyData()) is False
 
 
-def test_ut14_5_createCompanyProfile_suspendedAccount():
-    userId = createDesigner13()
-    conn = getConnection()
-    conn.execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (userId,))
-    conn.commit()
-    conn.close()
-    assert CreateCompanyProfileController().createCompanyProfile(userId, companyData()) is False
 
 
-def test_ut14_6_createCompanyProfile_missingRequiredField():
-    userId = createDesigner13()
-    data = companyData()
-    data["services"] = "   "
-    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is False
-    assert countCompanies() == 0
 
 
 def test_ut14_7_createCompanyProfile_optionalFieldsEmpty():
     userId = createDesigner13()
     data = companyData()
     data.update(email="", phone="", address="")
-    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is True
+    assert CreateCompanyProfileController().createCompanyProfile(makeCompany(userId, data)) is True
 
 
 def test_ut14_8_createCompanyProfile_trimsInput():
+    # the page trims now (not the entity), so this goes through the browser
     userId = createDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
     data = companyData()
     data["companyName"] = "  Uda Interiors  "
-    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is True
+    client.post("/designer/company/create", data=data)
     assert CompanyProfile().getCompanyProfile(userId).companyName == "Uda Interiors"
 
 
@@ -106,14 +96,14 @@ def test_ut14_9_getCompanyProfile_notFound():
 def test_ut14_10_hasCompanyProfile():
     userId = createDesigner13()
     assert CreateCompanyProfileController().hasCompanyProfile(userId) is False
-    assert CompanyProfile().createCompanyProfile(userId, companyData()) is True
+    assert CompanyProfile().createCompanyProfile(makeCompany(userId, companyData())) is True
     assert CreateCompanyProfileController().hasCompanyProfile(userId) is True
 
 
 def test_ut14_11_entity_duplicateOwnerRejected():
     userId = createDesigner13()
-    assert CompanyProfile().createCompanyProfile(userId, companyData()) is True
-    assert CompanyProfile().createCompanyProfile(userId, companyData()) is False
+    assert CompanyProfile().createCompanyProfile(makeCompany(userId, companyData())) is True
+    assert CompanyProfile().createCompanyProfile(makeCompany(userId, companyData())) is False
     assert countCompanies() == 1
 
 
@@ -121,48 +111,48 @@ def test_ut14_12_profilesKeptSeparate():
     first = createDesigner13()
     UserAccount().createUserAccount("designer14", "Design@123", "Daniel Tan", "", "", 2)
     second = UserAccount().verifyCredentials("designer14", "Design@123").userId
-    assert CreateCompanyProfileController().createCompanyProfile(first, companyData()) is True
+    assert CreateCompanyProfileController().createCompanyProfile(makeCompany(first, companyData())) is True
     assert CompanyProfile().getCompanyProfile(second) is None
-    assert CreateCompanyProfileController().createCompanyProfile(second, companyData()) is True
+    assert CreateCompanyProfileController().createCompanyProfile(makeCompany(second, companyData())) is True
     assert countCompanies() == 2
 
 
 # ---------- CreateCompanyProfilePage.validateInput() ----------
 
 def test_ut14_13_validateInput_valid():
-    assert CreateCompanyProfilePage().validateInput(companyData()) is True
+    assert CreateCompanyProfilePage().validateInput(makeCompany(None, companyData())) is True
 
 
 def test_ut14_14_validateInput_missingName():
     page = CreateCompanyProfilePage()
     data = companyData()
     data["companyName"] = ""
-    assert page.validateInput(data) is False
+    assert page.validateInput(makeCompany(None, data)) is False
     assert "companyName" in page.fieldErrors
 
 
 def test_ut14_15_validateInput_missingDescription():
     data = companyData()
     data["description"] = ""
-    assert CreateCompanyProfilePage().validateInput(data) is False
+    assert CreateCompanyProfilePage().validateInput(makeCompany(None, data)) is False
 
 
 def test_ut14_16_validateInput_missingServices():
     data = companyData()
     data["services"] = ""
-    assert CreateCompanyProfilePage().validateInput(data) is False
+    assert CreateCompanyProfilePage().validateInput(makeCompany(None, data)) is False
 
 
 def test_ut14_17_validateInput_invalidEmail():
     data = companyData()
     data["email"] = "not-an-email"
-    assert CreateCompanyProfilePage().validateInput(data) is False
+    assert CreateCompanyProfilePage().validateInput(makeCompany(None, data)) is False
 
 
 def test_ut14_18_validateInput_nameTooLong():
     data = companyData()
     data["companyName"] = "A" * 101
-    assert CreateCompanyProfilePage().validateInput(data) is False
+    assert CreateCompanyProfilePage().validateInput(makeCompany(None, data)) is False
 
 
 # ---------- whole page, through the browser (test client) ----------
@@ -202,7 +192,7 @@ def test_ut14_21_createPage_missingRequiredField():
 
 def test_ut14_22_createPage_duplicate():
     userId = createDesigner13()
-    CreateCompanyProfileController().createCompanyProfile(userId, companyData())
+    CreateCompanyProfileController().createCompanyProfile(makeCompany(userId, companyData()))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.post("/designer/company/create", data=companyData())
@@ -218,11 +208,6 @@ def test_ut14_23_createPage_notLoggedIn():
     assert countCompanies() == 0
 
 
-def test_ut14_24_createPage_adminForbidden():
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.post("/designer/company/create", data=companyData()).status_code == 403
-    assert countCompanies() == 0
 
 
 def test_ut14_25_createPage_usesSessionOwner():
@@ -255,7 +240,7 @@ def test_ut14_27_dashboard_showsCreateLink():
 
 def test_ut14_28_dashboard_hidesCreateAfterSuccess():
     userId = createDesigner13()
-    CreateCompanyProfileController().createCompanyProfile(userId, companyData())
+    CreateCompanyProfileController().createCompanyProfile(makeCompany(userId, companyData()))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/dashboard")
@@ -263,16 +248,6 @@ def test_ut14_28_dashboard_hidesCreateAfterSuccess():
     assert b'href="/designer/company/create"' not in response.data
 
 
-def test_ut14_29_createPage_profileSuspendedAfterLogin():
-    createDesigner13()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert client.post("/designer/company/create", data=companyData()).status_code == 403
-    assert countCompanies() == 0
 
 
 def test_ut14_30_entityEscapesOnRedisplay():
@@ -301,61 +276,43 @@ def test_ut14_31_seedCompanyData_has100AndDoesNotDuplicate():
 def test_ut14_32_create_setsActiveAutomatically():
     userId = createDesigner13()
     data = companyData()
-    data["status"] = "Suspended"
-    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is True
+    data["status"] = "Suspended"    # the entity ignores this, new ones are always Active
+    assert CreateCompanyProfileController().createCompanyProfile(makeCompany(userId, data)) is True
     assert CompanyProfile().getCompanyProfile(userId).status == "Active"
 
 
-def test_ut14_33_create_reactivatesSuspendedRowWithNewDetails():
+def test_ut14_33_create_suspendedRowCountsAsDuplicate():
+    # a deleted (Suspended) profile still counts as "already exists" - the designer
+    # uses the Restore button to get it back instead of creating it again
     userId = createDesigner13()
     control = CreateCompanyProfileController()
-    assert control.createCompanyProfile(userId, companyData()) is True
+    assert control.createCompanyProfile(makeCompany(userId, companyData())) is True
     original = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, original.companyId) is True
     assert control.hasCompanyProfile(userId) is False
     data = companyData()
     data["companyName"] = "Uda Interiors Reopened"
-    data["phone"] = ""
-    assert control.createCompanyProfile(userId, data) is True
-    restored = CompanyProfile().getCompanyProfile(userId)
-    assert restored.status == "Active"
-    assert restored.companyId == original.companyId
-    assert restored.createdDate == original.createdDate
-    assert restored.companyName == "Uda Interiors Reopened"
-    assert restored.phone == ""
-    assert restored.revision == original.revision + 1
-    assert countCompanies() == 1
-    assert control.createCompanyProfile(userId, data) is False
-
-
-def test_ut14_34_create_invalidInputDoesNotReactivate():
-    userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
-    original = CompanyProfile().getCompanyProfile(userId)
-    CompanyProfile().suspendCompanyProfile(userId, original.companyId)
-    data = companyData()
-    data["companyName"] = ""
-    assert CreateCompanyProfileController().createCompanyProfile(userId, data) is False
+    assert control.createCompanyProfile(makeCompany(userId, data)) is False
     conn = getConnection()
     row = conn.execute("SELECT * FROM company_profile WHERE designerId=?", (userId,)).fetchone()
     conn.close()
     assert row["status"] == "Suspended"
-    assert row["companyName"] == original.companyName
+    assert row["companyName"] == "Uda Interiors"
+    assert countCompanies() == 1
 
 
-def test_ut14_35_createPage_reactivatesThenViewShowsActive():
+
+
+def test_ut14_35_createPage_suspendedProfileShowsExists():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     original = CompanyProfile().getCompanyProfile(userId)
     CompanyProfile().suspendCompanyProfile(userId, original.companyId)
     client = app.test_client()
     loginAsDesigner13(client)
     data = companyData()
     data["companyName"] = "Reactivated Interiors"
-    response = client.post("/designer/company/create", data=data, follow_redirects=True)
-    assert b"Company profile created successfully" in response.data
-    response = client.get("/designer/company")
-    assert b"Reactivated Interiors" in response.data
-    assert b"Company profile status:" in response.data
-    assert b"Active" in response.data
+    response = client.post("/designer/company/create", data=data)
+    assert b"You already have a company profile" in response.data
+    assert client.get("/designer/company").status_code == 404
     assert countCompanies() == 1

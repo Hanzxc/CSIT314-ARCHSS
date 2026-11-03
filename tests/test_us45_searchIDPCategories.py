@@ -7,6 +7,7 @@ from entity.userAccount import UserAccount
 from entity.idpCategory import IDPCategory
 from control.searchIDPCategoryController import SearchIDPCategoryController
 from control.suspendIDPCategoryController import SuspendIDPCategoryController
+from boundary.searchIDPCategoryPage import SearchIDPCategoryPage
 
 
 def createManager45():
@@ -19,9 +20,10 @@ def loginAsManager45(client):
 
 
 def createSampleCategories():
-    IDPCategory().createIDPCategory("Kitchen", "Cooking and dining spaces")
-    IDPCategory().createIDPCategory("Bedroom", "Calm sleeping spaces")
-    IDPCategory().createIDPCategory("Office", "Work spaces with a kitchenette")
+    for name, description in (("Kitchen", "Cooking and dining spaces"),
+                              ("Bedroom", "Calm sleeping spaces"),
+                              ("Office", "Work spaces with a kitchenette")):
+        IDPCategory().createIDPCategory(IDPCategory(categoryName=name, description=description))
 
 
 def names(categories):
@@ -65,19 +67,37 @@ def test_ut45_6_search_includesSuspended():
 
 # ---------- SearchIDPCategoryController.searchIDPCategories() ----------
 
-def test_ut45_7_control_trimsKeyword():
+def test_ut45_7_control_passesKeywordThrough():
     createSampleCategories()
-    assert names(SearchIDPCategoryController().searchIDPCategories("  Bedroom ")) == ["Bedroom"]
+    assert names(SearchIDPCategoryController().searchIDPCategories("Bedroom")) == ["Bedroom"]
 
 
-def test_ut45_8_control_noneKeywordReturnsAll():
+def test_ut45_8_control_emptyKeywordReturnsAll():
     createSampleCategories()
-    assert len(SearchIDPCategoryController().searchIDPCategories(None)) == 3
+    assert len(SearchIDPCategoryController().searchIDPCategories("")) == 3
 
 
 def test_ut45_9_control_noMatches():
     createSampleCategories()
     assert SearchIDPCategoryController().searchIDPCategories("garage") == []
+
+
+# ---------- SearchIDPCategoryPage.searchIDPCategories() keyword tidy-up ----------
+
+def test_ut45_14_page_trimsKeyword():
+    # the page tidies up the keyword now, the controller just passes it on
+    createSampleCategories()
+    page = SearchIDPCategoryPage()
+    with app.test_request_context():
+        page.searchIDPCategories("  Bedroom ")
+    assert page.keyword == "Bedroom"
+
+
+def test_ut45_16_page_noneKeywordCountsAsEmpty():
+    page = SearchIDPCategoryPage()
+    with app.test_request_context():
+        page.searchIDPCategories(None)
+    assert page.keyword == ""
 
 
 # ---------- SearchIDPCategoryPage via the /manager/categories route ----------
@@ -118,10 +138,6 @@ def test_ut45_13_searchPage_notLoggedIn_redirects():
     assert response.headers["Location"].endswith("/manager/login")
 
 
-def test_ut45_14_searchPage_adminForbidden():
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.get("/manager/categories").status_code == 403
 
 
 def test_ut45_15_dashboard_linksToCategories():

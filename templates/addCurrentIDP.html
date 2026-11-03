@@ -8,7 +8,7 @@
     {% if categories %}
         <form method="POST" action="{{ url_for('addCurrentIDP') }}" class="profile-form" novalidate>
             <label for="title">Project title *</label>
-            <input type="text" id="title" name="title" value="{{ idpData.get('title', '') }}" maxlength="100"
+            <input type="text" id="title" name="title" value="{{ idp.title }}" maxlength="100"
                    class="{% if fieldErrors.get('title') %}field-error{% endif %}">
             {% if fieldErrors.get('title') %}<p class="field-error-text">{{ fieldErrors['title'] }}</p>{% endif %}
 
@@ -16,18 +16,18 @@
             <select id="categoryId" name="categoryId" class="{% if fieldErrors.get('categoryId') %}field-error{% endif %}">
                 <option value="">-- Choose a category --</option>
                 {% for category in categories %}
-                    <option value="{{ category.categoryId }}" {% if idpData.get('categoryId') == category.categoryId %}selected{% endif %}>{{ category.categoryName }}</option>
+                    <option value="{{ category.categoryId }}" {% if idp.categoryId == category.categoryId %}selected{% endif %}>{{ category.categoryName }}</option>
                 {% endfor %}
             </select>
             {% if fieldErrors.get('categoryId') %}<p class="field-error-text">{{ fieldErrors['categoryId'] }}</p>{% endif %}
 
             <label for="description">Project description *</label>
             <textarea id="description" name="description" rows="4" maxlength="2000"
-                      class="{% if fieldErrors.get('description') %}field-error{% endif %}">{{ idpData.get('description', '') }}</textarea>
+                      class="{% if fieldErrors.get('description') %}field-error{% endif %}">{{ idp.description }}</textarea>
             {% if fieldErrors.get('description') %}<p class="field-error-text">{{ fieldErrors['description'] }}</p>{% endif %}
 
             <label for="location">Location (optional)</label>
-            <input type="text" id="location" name="location" value="{{ idpData.get('location', '') }}" maxlength="200"
+            <input type="text" id="location" name="location" value="{{ idp.location }}" maxlength="200"
                    class="{% if fieldErrors.get('location') %}field-error{% endif %}">
             {% if fieldErrors.get('location') %}<p class="field-error-text">{{ fieldErrors['location'] }}</p>{% endif %}
 

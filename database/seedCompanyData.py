@@ -4,6 +4,7 @@
 from database.db import getConnection, initDatabase
 from entity.userAccount import UserAccount
 from control.createCompanyProfileController import CreateCompanyProfileController
+from entity.companyProfile import CompanyProfile
 
 
 def seedCompanyData():
@@ -25,11 +26,12 @@ def seedCompanyData():
         account = conn.execute("SELECT userId FROM user_account WHERE username = ?", (username,)).fetchone()
         conn.close()
         if account and not control.hasCompanyProfile(account["userId"]):
-            companyData = {"companyName": "Demo Interiors " + str(number),
-                           "description": "Residential interior design company " + str(number),
-                           "services": "Space planning, renovation, furniture selection",
-                           "email": username + "@example.com", "phone": "", "address": ""}
-            if control.createCompanyProfile(account["userId"], companyData):
+            company = CompanyProfile(designerId=account["userId"],
+                                     companyName="Demo Interiors " + str(number),
+                                     description="Residential interior design company " + str(number),
+                                     services="Space planning, renovation, furniture selection",
+                                     email=username + "@example.com", phone="", address="")
+            if control.createCompanyProfile(company):
                 created += 1
     return created
 

@@ -1,10 +1,7 @@
 # Entity: CompanyProfile - UC14 Create company profile (US14)
 
-import sqlite3
-
 from database.db import getConnection
 
-COMPANY_FIELDS = ("companyName", "description", "services", "email", "phone", "address")
 COMPANY_SEARCH_LABELS = (
     ("companyName", "Company name"), ("description", "Company description"),
     ("services", "Services offered"), ("email", "Contact email"),
@@ -13,6 +10,8 @@ COMPANY_SEARCH_LABELS = (
 
 
 class CompanyProfile:
+    # used by UC14 - UC18
+    # one company profile = one row in the company_profile table
     def __init__(self, companyId=None, designerId=None, companyName="", description="",
                  services="", email="", phone="", address="", createdDate=None,
                  status="Active", revision=1):
@@ -28,6 +27,8 @@ class CompanyProfile:
         self.status = status
         self.revision = revision
 
+    # used by UC14 - UC18
+    # returns the designer's Active profile, or None if they don't have one
     def getCompanyProfile(self, designerId):
         conn = getConnection()
         row = conn.execute("SELECT * FROM company_profile WHERE designerId = ? AND status = 'Active'", (designerId,)).fetchone()
@@ -36,6 +37,8 @@ class CompanyProfile:
             return None
         return CompanyProfile(**dict(row))
 
+    # UC17 Delete company profile (restore)
+    # returns the designer's deleted (Suspended) profile, or None
     def getSuspendedCompanyProfile(self, designerId):
         conn = getConnection()
         row = conn.execute(
@@ -44,90 +47,78 @@ class CompanyProfile:
         conn.close()
         return CompanyProfile(**dict(row)) if row is not None else None
 
+    # UC17 Delete company profile (restore)
+    # brings back exactly the saved record, nothing from the form is accepted.
+    # revision goes up so an old delete confirmation can't be reused on it
     def restoreCompanyProfile(self, designerId, companyId, expectedRevision):
-        # Restore exactly the saved record; no submitted business fields are accepted.
         conn = getConnection()
-        try:
-            cursor = conn.execute(
-                "UPDATE company_profile SET status = 'Active', revision = revision + 1 "
-                "WHERE designerId = ? AND companyId = ? AND status = 'Suspended' AND revision = ?",
-                (designerId, companyId, expectedRevision))
-            conn.commit()
-            restored = cursor.rowcount == 1
-        except sqlite3.IntegrityError:
-            conn.rollback()
-            restored = False
-        finally:
-            conn.close()
-        return restored
+        cursor = conn.execute(
+            "UPDATE company_profile SET status = 'Active', revision = revision + 1 "
+            "WHERE designerId = ? AND companyId = ? AND status = 'Suspended' AND revision = ?",
+            (designerId, companyId, expectedRevision))
+        conn.commit()
+        conn.close()
+        return cursor.rowcount == 1
 
-    def createCompanyProfile(self, designerId, companyData):
+    # UC14 Create company profile
+    # one company profile per designer - if they already have one (even a deleted/Suspended one)
+    # it's a duplicate, so don't create. otherwise insert all the fields and commit.
+    # the page already checked + tidied the input, so no strip here
+    def createCompanyProfile(self, companyProfile):
         conn = getConnection()
-        try:
-            values = [companyData.get(field, "").strip() for field in COMPANY_FIELDS]
-            # One row per owner. Reactivation preserves its ID and creation date.
-            # A single atomic UPSERT prevents duplicate active profiles.
-            cursor = conn.execute(
-                "INSERT INTO company_profile (designerId, companyName, description, services, email, phone, address) "
-                "SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM user_account WHERE userId = ?) "
-                "ON CONFLICT(designerId) DO UPDATE SET companyName = excluded.companyName, "
-                "description = excluded.description, services = excluded.services, email = excluded.email, "
-                "phone = excluded.phone, address = excluded.address, status = 'Active', "
-                "revision = company_profile.revision + 1 WHERE company_profile.status = 'Suspended'",
-                (designerId, *values, designerId))
-            conn.commit()
-            created = cursor.rowcount == 1
-        except sqlite3.IntegrityError:
-            conn.rollback()
-            created = False
-        finally:
+        existing = conn.execute("SELECT companyId FROM company_profile WHERE designerId = ?",
+                                (companyProfile.designerId,)).fetchone()
+        if existing is not None:
             conn.close()
-        return created
+            return False
 
-    # US16: update only business fields; owner, primary key and creation time stay unchanged.
-    def updateCompanyProfile(self, designerId, companyData):
+        conn.execute(
+            "INSERT INTO company_profile (designerId, companyName, description, services, email, phone, address) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (companyProfile.designerId, companyProfile.companyName, companyProfile.description,
+             companyProfile.services, companyProfile.email, companyProfile.phone, companyProfile.address))
+        conn.commit()
+        conn.close()
+        return True
+
+    # UC16 Update company profile
+    # only the six business fields change - owner, id and created date stay the same.
+    # 0 rows changed means they don't have an Active profile
+    def updateCompanyProfile(self, companyProfile):
         conn = getConnection()
-        try:
-            values = [companyData.get(field, "").strip() for field in COMPANY_FIELDS]
-            cursor = conn.execute(
-                "UPDATE company_profile SET companyName = ?, description = ?, services = ?, "
-                "email = ?, phone = ?, address = ? WHERE designerId = ? AND status = 'Active'",
-                (*values, designerId))
-            conn.commit()
-            updated = cursor.rowcount == 1
-        except sqlite3.IntegrityError:
-            conn.rollback()
-            updated = False
-        finally:
-            conn.close()
-        return updated
+        cursor = conn.execute(
+            "UPDATE company_profile SET companyName = ?, description = ?, services = ?, "
+            "email = ?, phone = ?, address = ? WHERE designerId = ? AND status = 'Active'",
+            (companyProfile.companyName, companyProfile.description, companyProfile.services,
+             companyProfile.email, companyProfile.phone, companyProfile.address,
+             companyProfile.designerId))
+        conn.commit()
+        conn.close()
+        return cursor.rowcount == 1
 
-    # US17: preserve the row and suspend only an active, exact owner/record match.
+    # UC17 Delete company profile
+    # the row is kept and just marked Suspended - only if it's this owner's Active record
     def suspendCompanyProfile(self, designerId, companyId, expectedRevision=None):
-        conn = getConnection()
-        try:
-            sql = ("UPDATE company_profile SET status = 'Suspended' "
-                   "WHERE designerId = ? AND companyId = ? AND status = 'Active'")
-            params = [designerId, companyId]
-            if expectedRevision is not None:
-                sql += " AND revision = ?"
-                params.append(expectedRevision)
-            cursor = conn.execute(sql, params)
-            conn.commit()
-            suspended = cursor.rowcount == 1
-        except sqlite3.IntegrityError:
-            conn.rollback()
-            suspended = False
-        finally:
-            conn.close()
-        return suspended
+        sql = ("UPDATE company_profile SET status = 'Suspended' "
+               "WHERE designerId = ? AND companyId = ? AND status = 'Active'")
+        params = [designerId, companyId]
+        if expectedRevision is not None:
+            sql += " AND revision = ?"
+            params.append(expectedRevision)
 
-    # US18: search only the owner's six business fields; no wildcard interpretation.
+        conn = getConnection()
+        cursor = conn.execute(sql, params)
+        conn.commit()
+        conn.close()
+        return cursor.rowcount == 1
+
+    # UC18 Search company information
+    # only looks in the owner's six business fields, capitals don't matter
     def searchCompanyInformation(self, designerId, keyword):
         profile = self.getCompanyProfile(designerId)
         if profile is None:
             return []
-        query = (keyword or "").strip().casefold()
+        query = keyword.casefold()
         results = []
         for field, label in COMPANY_SEARCH_LABELS:
             value = getattr(profile, field) or ""

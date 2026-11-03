@@ -1,16 +1,11 @@
 # Control: SearchUserProfileController - UC1.7 Search user profiles (US7)
+# US8 and US10 also use it for the profile drop-down (empty keyword = every profile)
 
 from entity.userProfile import UserProfile
 
 
 class SearchUserProfileController:
     # UT7.9 to UT7.11
+    # the page already tidied the keyword (spaces trimmed), so just pass it on
     def searchUserProfiles(self, keyword):
-        # tidy up the keyword first - "  Customer " should work the same as "Customer"
-        # and just spaces counts as empty (shows everything)
-        if keyword is None:
-            keyword = ""
-        keyword = keyword.strip()
-
-        profiles = UserProfile().searchUserProfiles(keyword)
-        return profiles
+        return UserProfile().searchUserProfiles(keyword)

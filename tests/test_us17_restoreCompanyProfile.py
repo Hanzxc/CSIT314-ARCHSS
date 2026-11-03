@@ -17,7 +17,7 @@ def companyData():
 def createSuspendedCompany():
     UserAccount().createUserAccount("designer13", "Design@123", "Tengku Uda Designer", "", "", 2)
     userId = UserAccount().verifyCredentials("designer13", "Design@123").userId
-    assert CompanyProfile().createCompanyProfile(userId, companyData()) is True
+    assert CompanyProfile().createCompanyProfile(CompanyProfile(designerId=userId, **companyData())) is True
     profile = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
     return userId
@@ -86,21 +86,6 @@ def test_ut17r_6_controller_restoreValid():
     assert control.getSuspendedCompanyProfile(userId) is None
 
 
-def test_ut17r_7_controller_adminRejected():
-    userId = createSuspendedCompany()
-    profile = CompanyProfile().getSuspendedCompanyProfile(userId)
-    control = RestoreCompanyProfileController()
-    assert control.getSuspendedCompanyProfile(1) is None
-    assert control.restoreCompanyProfile(1, profile.companyId, profile.revision) is False
-
-
-def test_ut17r_8_controller_suspendedAccountRejected():
-    userId = createSuspendedCompany()
-    profile = CompanyProfile().getSuspendedCompanyProfile(userId)
-    UserAccount().suspendUserAccount(userId)
-    assert RestoreCompanyProfileController().restoreCompanyProfile(userId, profile.companyId, profile.revision) is False
-
-
 def test_ut17r_9_controller_missingAccountRejected():
     assert RestoreCompanyProfileController().getSuspendedCompanyProfile(9999) is None
     assert RestoreCompanyProfileController().restoreCompanyProfile(9999, 1, 1) is False
@@ -149,14 +134,6 @@ def test_ut17r_13_restorePage_getNotAllowed():
     assert readCompanyRow(userId)["status"] == "Suspended"
 
 
-def test_ut17r_14_restorePage_adminForbidden():
-    userId = createSuspendedCompany()
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.post("/designer/company/restore").status_code == 403
-    assert readCompanyRow(userId)["status"] == "Suspended"
-
-
 def test_ut17r_15_restorePage_missingTokenRejected():
     userId = createSuspendedCompany()
     client = app.test_client()
@@ -197,19 +174,6 @@ def test_ut17r_18_restorePage_ignoresForgedOwnerAndBusinessDetails():
     assert b"Company profile restored successfully" in response.data
     assert readCompanyRow(userId)["companyName"] == "Modena"
     assert readCompanyRow(userId)["status"] == "Active"
-
-
-def test_ut17r_19_restorePage_accessRevokedAfterDashboard():
-    userId = createSuspendedCompany()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    data = restoreData(client)
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert client.post("/designer/company/restore", data=data).status_code == 403
-    assert readCompanyRow(userId)["status"] == "Suspended"
 
 
 def test_ut17r_20_dashboard_otherDesignerCannotSeeOrRestoreCompany():

@@ -74,16 +74,41 @@ def loginRequired(routeFunction):
     return wrapper
 
 
+def designerLoginRequired(routeFunction):
+    # US14 - US18: being logged in as a designer is the precondition of these use cases (US13),
+    # so the pages don't re-check it. this only stops a crash when there's no session at all
+    @wraps(routeFunction)
+    def wrapper(*args, **kwargs):
+        if "userId" not in session:
+            return redirect(url_for("interiorDesignerLogin"))
+        return routeFunction(*args, **kwargs)
+    return wrapper
+
+
+def managerLoginRequired(routeFunction):
+    # US41 - US45: being logged in as a platform manager is the precondition of these use cases (US39),
+    # so the pages don't re-check it. this only stops a crash when there's no session at all
+    @wraps(routeFunction)
+    def wrapper(*args, **kwargs):
+        if "userId" not in session:
+            return redirect(url_for("platformManagerLogin"))
+        return routeFunction(*args, **kwargs)
+    return wrapper
+
+
 @app.context_processor
 def headerInfo():
     # base.html shows "Logged in as ..." on every admin page, this saves passing it in every time
+    # "header..." names so a page's own form fields (username, profileName) can't overwrite them
     if "userId" not in session:
         return {}
     profile = UserProfile().getUserProfile(session["profileId"])
-    return {"username": session["username"],
-            "profileName": profile.profileName if profile else ""}
+    return {"headerUsername": session["username"],
+            "headerProfileName": profile.profileName if profile else ""}
 
 
+# UC1 Log in
+# opening the bare site just sends you to the login page
 @app.route("/")
 def home():
     return redirect(url_for("login"))
@@ -107,6 +132,8 @@ def interiorDesignerLogin():
     return page.openLoginPage()
 
 
+# UC13 Interior designer log in
+# the designer's home page after logging in (the page class checks the login itself)
 @app.route("/designer/dashboard")
 def interiorDesignerDashboard():
     return InteriorDesignerLoginPage().openDashboard()
@@ -114,34 +141,44 @@ def interiorDesignerDashboard():
 
 # US14 Create company profile. Ownership is taken from the session in the boundary.
 @app.route("/designer/company/create", methods=["GET", "POST"])
+@designerLoginRequired
 def createCompanyProfile():
     page = CreateCompanyProfilePage()
     if request.method == "POST":
-        companyData = {field: request.form.get(field, "") for field in
-                       ("companyName", "description", "services", "email", "phone", "address")}
-        return page.submitCompanyProfile(companyData)
+        return page.submitCompanyProfile(request.form.get("companyName", ""),
+                                         request.form.get("description", ""),
+                                         request.form.get("services", ""),
+                                         request.form.get("email", ""),
+                                         request.form.get("phone", ""),
+                                         request.form.get("address", ""))
     return page.clickCreateCompanyProfile()
 
 
 # US15 View the company profile owned by the authenticated designer.
 @app.route("/designer/company", methods=["GET"])
+@designerLoginRequired
 def viewCompanyProfile():
     return ViewCompanyProfilePage().clickView()
 
 
 # US16 Update the existing company profile owned by the authenticated designer.
 @app.route("/designer/company/update", methods=["GET", "POST"])
+@designerLoginRequired
 def updateCompanyProfile():
     page = UpdateCompanyProfilePage()
     if request.method == "POST":
-        companyData = {field: request.form.get(field, "") for field in
-                       ("companyName", "description", "services", "email", "phone", "address")}
-        return page.submitUpdate(companyData)
+        return page.submitUpdate(request.form.get("companyName", ""),
+                                 request.form.get("description", ""),
+                                 request.form.get("services", ""),
+                                 request.form.get("email", ""),
+                                 request.form.get("phone", ""),
+                                 request.form.get("address", ""))
     return page.clickUpdate()
 
 
 # US17 GET opens confirmation; only an explicit, validated POST can delete.
 @app.route("/designer/company/delete", methods=["GET", "POST"])
+@designerLoginRequired
 def deleteCompanyProfile():
     page = DeleteCompanyProfilePage()
     if request.method == "POST":
@@ -153,6 +190,7 @@ def deleteCompanyProfile():
 
 # US18 Search only the authenticated designer's company information.
 @app.route("/designer/company/search", methods=["GET"])
+@designerLoginRequired
 def searchCompanyInformation():
     return SearchCompanyInformationPage().searchCompanyInformation(request.args.get("keyword", ""))
 
@@ -303,6 +341,8 @@ def platformManagerLogin():
     return page.openLoginPage()
 
 
+# UC39 Platform manager log in
+# the platform manager's home page after logging in
 @app.route("/manager/dashboard")
 def platformManagerDashboard():
     return PlatformManagerLoginPage().openDashboard()
@@ -310,6 +350,7 @@ def platformManagerDashboard():
 
 # US17 recovery: restore saved company details without re-entering them.
 @app.route("/designer/company/restore", methods=["POST"])
+@designerLoginRequired
 def restoreCompanyProfile():
     return RestoreCompanyProfilePage().submitRestore(request.form.get("confirmationToken", ""))
 
@@ -317,14 +358,14 @@ def restoreCompanyProfile():
 # US20 Add current IDP. Ownership is taken from the session in the boundary.
 # categoryId comes from the drop-down as text, type=int turns it into a number (None if nothing picked)
 @app.route("/designer/idps/add", methods=["GET", "POST"])
+@designerLoginRequired
 def addCurrentIDP():
     page = AddCurrentIDPPage()
     if request.method == "POST":
-        idpData = {"title": request.form.get("title", ""),
-                   "description": request.form.get("description", ""),
-                   "categoryId": request.form.get("categoryId", type=int),
-                   "location": request.form.get("location", "")}
-        return page.submitCurrentIDP(idpData)
+        return page.submitCurrentIDP(request.form.get("title", ""),
+                                     request.form.get("categoryId", type=int),
+                                     request.form.get("description", ""),
+                                     request.form.get("location", ""))
     return page.clickAddCurrentIDP()
 
 
@@ -337,12 +378,14 @@ def platformManagerLogout():
 # US45 Search IDP categories - this is also the IDP Categories list page
 # /manager/categories shows everything, /manager/categories?keyword=kit only shows the matches
 @app.route("/manager/categories")
+@managerLoginRequired
 def idpCategories():
     return SearchIDPCategoryPage().searchIDPCategories(request.args.get("keyword", ""))
 
 
 # US41 Create IDP category
 @app.route("/manager/categories/create", methods=["GET", "POST"])
+@managerLoginRequired
 def createIDPCategory():
     page = CreateIDPCategoryPage()
     if request.method == "POST":
@@ -353,12 +396,14 @@ def createIDPCategory():
 
 # US42 View IDP category and the IDPs in it
 @app.route("/manager/categories/<int:categoryId>")
+@managerLoginRequired
 def viewIDPCategory(categoryId):
     return ViewIDPCategoryPage().selectIDPCategory(categoryId)
 
 
 # US43 Update IDP category
 @app.route("/manager/categories/<int:categoryId>/update", methods=["GET", "POST"])
+@managerLoginRequired
 def updateIDPCategory(categoryId):
     page = UpdateIDPCategoryPage()
     if request.method == "POST":
@@ -372,6 +417,7 @@ def updateIDPCategory(categoryId):
 # GET  = manager clicked Suspend -> show the "Are you sure?" box
 # POST = manager clicked OK or Cancel in the box
 @app.route("/manager/categories/<int:categoryId>/suspend", methods=["GET", "POST"])
+@managerLoginRequired
 def suspendIDPCategory(categoryId):
     page = SuspendIDPCategoryPage()
     if request.method == "GET":

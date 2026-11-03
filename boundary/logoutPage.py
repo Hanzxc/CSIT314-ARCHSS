@@ -10,12 +10,15 @@ MSG_SESSION_ENDED = "Your session has already ended"
 
 
 class LogoutPage:
+    # UC2 Log out
+    # just sets up the controller
     def __init__(self):
         self.logoutController = LogoutController()
 
+    # UC2 Log out
+    # user clicked Log out - the message depends on whether they were still logged in
     def clickLogout(self):
-        loggedOut = self.logoutController.logout()
-        if loggedOut:
+        if self.logoutController.logout():
             return self.displayLoginPage(MSG_LOGGED_OUT)
         return self.displayLoginPage(MSG_SESSION_ENDED)
 

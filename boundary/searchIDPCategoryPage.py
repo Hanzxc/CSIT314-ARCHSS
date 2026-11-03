@@ -1,8 +1,9 @@
 # Boundary: SearchIDPCategoryPage - UC45 Search IDP categories (US45)
 # template: templates/idpCategories.html
 # this is the IDP Categories list page too - empty search just lists everything (alt flow 1a)
+# precondition: the manager is already logged in (US39), so there's no extra access check here
 
-from flask import redirect, render_template, session, url_for
+from flask import render_template
 
 from control.searchIDPCategoryController import SearchIDPCategoryController
 
@@ -10,36 +11,33 @@ MSG_NO_RESULTS = "No IDP categories found"
 
 
 class SearchIDPCategoryPage:
+    # UC45 Search IDP categories
+    # the keyword is kept so it stays in the search box after searching
     def __init__(self):
         self.searchIDPCategoryController = SearchIDPCategoryController()
-        self.keyword = ""       # kept so it stays in the search box after searching
+        self.keyword = ""
 
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("platformManagerLogin"))
-        if not self.searchIDPCategoryController.canSearchIDPCategories(session["userId"]):
-            return render_template("platformManagerAccessDenied.html"), 403
-        return None
-
+    # UC45 Search IDP categories
+    # manager clicked Search - tidy up the keyword ("  Kitchen " works the same as "Kitchen",
+    # just spaces counts as empty) then just call search
     def searchIDPCategories(self, keyword):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        self.keyword = keyword
-        categories = self.searchIDPCategoryController.searchIDPCategories(keyword)
+        self.keyword = (keyword or "").strip()
+        categories = self.searchIDPCategoryController.searchIDPCategories(self.keyword)
 
         # alt box in the seq diagram - found something or not
         if categories:
             return self.displayResults(categories)
         return self.displayNoResultsMessage()
 
+    # UC45 Search IDP categories
+    # name, description and status for each one, + a View link (wireframe 4a)
     def displayResults(self, categories):
-        # name, description and status for each one, + a View link (wireframe 4a)
         return render_template("idpCategories.html", activePage="categories",
                                categories=categories, keyword=self.keyword)
 
+    # UC45 Search IDP categories
+    # alt flow 3a - manager can just type something else and search again (wireframe 4c)
     def displayNoResultsMessage(self):
-        # alt flow 3a - manager can just type something else and search again (wireframe 4c)
         return render_template("idpCategories.html", activePage="categories",
                                categories=[], keyword=self.keyword,
                                noResultsMessage=MSG_NO_RESULTS)

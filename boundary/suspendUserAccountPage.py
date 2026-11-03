@@ -11,6 +11,8 @@ MSG_CANNOT_SUSPEND = "This user account cannot be suspended"
 
 
 class SuspendUserAccountPage:
+    # UC11 Suspend user account
+    # userId gets filled in by the route
     def __init__(self):
         self.suspendUserAccountController = SuspendUserAccountController()
         self.userId = None
@@ -32,10 +34,14 @@ class SuspendUserAccountPage:
                                showConfirmation=True)
 
     def confirmSuspend(self):
-        # admin clicked Suspend in the box
-        adminUserId = session["userId"]
-        success = self.suspendUserAccountController.suspendUserAccount(self.userId, adminUserId)
-        if success:
+        # admin clicked Suspend in the box.
+        # the page checks this one - the admin can't suspend their own account or
+        # they'd lock themselves out (UT11.3)
+        if self.userId == session["userId"]:
+            return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
+
+        # already suspended / no such id -> the entity gives back False (UT11.2, UT11.4)
+        if self.suspendUserAccountController.suspendUserAccount(self.userId):
             return self.displaySuccessMessage(MSG_SUSPENDED)
         return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
@@ -43,6 +49,8 @@ class SuspendUserAccountPage:
         # alt flow 3a - nothing changes, just close the box
         return self.closeConfirmation()
 
+    # UC11 Suspend user account
+    # close the box and go back to the account details
     def closeConfirmation(self):
         return redirect(url_for("viewUserAccount", userId=self.userId))
 
@@ -51,6 +59,8 @@ class SuspendUserAccountPage:
         flash(msg, "success")
         return redirect(url_for("viewUserAccount", userId=self.userId))
 
+    # UC11 Suspend user account
+    # back to the account details with a red message
     def displayErrorMessage(self, msg):
         flash(msg, "error")
         return redirect(url_for("viewUserAccount", userId=self.userId))

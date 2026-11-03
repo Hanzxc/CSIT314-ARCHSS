@@ -7,9 +7,10 @@ from control.logoutController import LogoutController
 
 
 class PlatformManagerLogoutController:
-    # UT40.1 to UT40.3
+    # UC40 Platform manager log out
+    # reuses the normal log out (US2), then clears anything left in the session
     def logout(self):
         loggedOut = LogoutController().logout()
-        # Also discard any leftover data if authentication has already ended.
+        # Also discard orphaned data if authentication has already ended.
         session.clear()
         return loggedOut

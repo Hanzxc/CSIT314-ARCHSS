@@ -9,6 +9,7 @@ from entity.idp import IDP
 from entity.idpCategory import IDPCategory
 from control.suspendIDPCategoryController import SuspendIDPCategoryController
 from control.addCurrentIDPController import AddCurrentIDPController
+from boundary.addCurrentIDPPage import AddCurrentIDPPage
 
 
 def createManager44():
@@ -27,13 +28,13 @@ def loginAsManager44(client):
 
 
 def createCategory(name, description=""):
-    IDPCategory().createIDPCategory(name, description)
+    IDPCategory().createIDPCategory(IDPCategory(categoryName=name, description=description))
     return IDPCategory().searchIDPCategories(name)[0].categoryId
 
 
-def idpData(categoryId):
-    return {"title": "Tampines HDB kitchen", "description": "Work in progress.",
-            "categoryId": categoryId, "location": ""}
+def makeIDP(designerId, categoryId):
+    return IDP(designerId=designerId, categoryId=categoryId, title="Tampines HDB kitchen",
+               description="Work in progress.")
 
 
 # ---------- SuspendIDPCategoryController.suspendIDPCategory() ----------
@@ -57,9 +58,9 @@ def test_ut44_3_suspendIDPCategory_notFound():
 def test_ut44_4_suspendIDPCategory_keepsIDPs():
     designerId = createDesigner44()
     categoryId = createCategory("Kitchen")
-    AddCurrentIDPController().addCurrentIDP(designerId, idpData(categoryId))
+    AddCurrentIDPController().addCurrentIDP(makeIDP(designerId, categoryId))
     SuspendIDPCategoryController().suspendIDPCategory(categoryId)
-    assert len(IDP().getIDPsInCategory(categoryId)) == 1
+    assert len(IDPCategory().getIDPsInCategory(categoryId)) == 1
 
 
 # ---------- IDPCategory.isActive() / suspendIDPCategory() ----------
@@ -81,7 +82,7 @@ def test_ut44_7_suspended_notOfferedInAddIDPDropDown():
     kitchen = createCategory("Kitchen")
     createCategory("Bedroom")
     SuspendIDPCategoryController().suspendIDPCategory(kitchen)
-    names = [c.categoryName for c in AddCurrentIDPController().getActiveIDPCategories()]
+    names = [c.categoryName for c in AddCurrentIDPPage().getAvailableCategories()]
     assert names == ["Bedroom"]
 
 
@@ -89,8 +90,8 @@ def test_ut44_8_suspended_cannotBeSelectedForNewIDP():
     designerId = createDesigner44()
     categoryId = createCategory("Kitchen")
     SuspendIDPCategoryController().suspendIDPCategory(categoryId)
-    assert AddCurrentIDPController().addCurrentIDP(designerId, idpData(categoryId)) is False
-    assert IDP().getIDPsInCategory(categoryId) == []
+    assert AddCurrentIDPController().addCurrentIDP(makeIDP(designerId, categoryId)) is False
+    assert IDPCategory().getIDPsInCategory(categoryId) == []
 
 
 def test_ut44_9_suspended_notShownOnDesignerForm():
@@ -161,12 +162,20 @@ def test_ut44_14_suspendedCategory_hasNoSuspendButton():
     assert ("/manager/categories/" + str(categoryId) + "/suspend").encode() not in response.data
 
 
-def test_ut44_15_suspend_designerForbidden():
-    createDesigner44()
+def test_ut44_15_suspend_notLoggedIn_redirects():
     categoryId = createCategory("Kitchen")
-    client = app.test_client()
-    client.post("/designer/login", data={"username": "designer44", "password": "Design@123"})
     url = "/manager/categories/" + str(categoryId) + "/suspend"
-    assert client.get(url).status_code == 403
-    assert client.post(url, data={"choice": "ok"}).status_code == 403
+    response = app.test_client().post(url, data={"choice": "ok"})
+    assert response.headers["Location"].endswith("/manager/login")
     assert IDPCategory().getIDPCategory(categoryId).status == "Active"
+
+
+def test_ut44_16_confirmationBox_pageBehindShowsNoIDPsMessage():
+    # the details page behind the box looks the same as US42's, including the empty-list message
+    createManager44()
+    categoryId = createCategory("Bathroom")
+    client = app.test_client()
+    loginAsManager44(client)
+    response = client.get("/manager/categories/" + str(categoryId) + "/suspend")
+    assert b"Suspend IDP category?" in response.data
+    assert b"No IDPs are in this category yet" in response.data

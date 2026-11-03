@@ -25,7 +25,8 @@ def companyData():
 
 def createCompanyForDesigner13():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    # the entity takes a CompanyProfile object now, not a dict
+    CompanyProfile().createCompanyProfile(CompanyProfile(designerId=userId, **companyData()))
     return userId
 
 

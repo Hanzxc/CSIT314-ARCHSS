@@ -2,6 +2,10 @@
 # conftest.py creates a fresh database for every test.
 # Designer tests add designer13 / Design@123 (Tengku Uda Designer, profile 2).
 
+import sqlite3
+
+import pytest
+
 from app import app
 from database.db import getConnection
 from entity.userAccount import UserAccount
@@ -22,6 +26,11 @@ def updatedData():
             "phone": "+65 6987 6543", "address": "20 Studio Street"}
 
 
+def makeCompany(designerId, data):
+    # create/update take a CompanyProfile object now, not a dict
+    return CompanyProfile(designerId=designerId, **data)
+
+
 def createDesigner13():
     UserAccount().createUserAccount(
         "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
@@ -30,7 +39,7 @@ def createDesigner13():
 
 def createCompanyForDesigner13():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     return userId
 
 
@@ -49,7 +58,7 @@ def companyRows():
 
 def test_ut16_1_updateCompanyProfile_valid():
     userId = createCompanyForDesigner13()
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, updatedData()) is True
+    assert UpdateCompanyProfileController().updateCompanyProfile(makeCompany(userId, updatedData())) is True
     profile = CompanyProfile().getCompanyProfile(userId)
     for field, value in updatedData().items():
         assert getattr(profile, field) == value
@@ -58,7 +67,7 @@ def test_ut16_1_updateCompanyProfile_valid():
 def test_ut16_2_updateCompanyProfile_keepsIdentity():
     userId = createCompanyForDesigner13()
     before = CompanyProfile().getCompanyProfile(userId)
-    UpdateCompanyProfileController().updateCompanyProfile(userId, updatedData())
+    UpdateCompanyProfileController().updateCompanyProfile(makeCompany(userId, updatedData()))
     after = CompanyProfile().getCompanyProfile(userId)
     assert after.companyId == before.companyId
     assert after.designerId == before.designerId
@@ -68,35 +77,35 @@ def test_ut16_2_updateCompanyProfile_keepsIdentity():
 
 def test_ut16_3_updateCompanyProfile_noProfile():
     userId = createDesigner13()
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, updatedData()) is False
+    assert UpdateCompanyProfileController().updateCompanyProfile(makeCompany(userId, updatedData())) is False
     assert companyRows() == []
 
 
-def test_ut16_4_updateCompanyProfile_adminRejected():
-    createCompanyForDesigner13()
-    before = companyRows()
-    assert UpdateCompanyProfileController().updateCompanyProfile(1, updatedData()) is False
-    assert companyRows() == before
-
-
 def test_ut16_5_updateCompanyProfile_unknownUser():
-    assert UpdateCompanyProfileController().updateCompanyProfile(9999, updatedData()) is False
+    assert UpdateCompanyProfileController().updateCompanyProfile(makeCompany(9999, updatedData())) is False
 
 
 def test_ut16_6_updateCompanyProfile_missingRequired():
-    userId = createCompanyForDesigner13()
+    # the page checks the input now, so this goes through the browser
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
     data = updatedData()
     data["services"] = "   "
     before = companyRows()
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, data) is False
+    response = client.post("/designer/company/update", data=data)
+    assert b"Please fix the highlighted fields" in response.data
     assert companyRows() == before
 
 
 def test_ut16_7_updateCompanyProfile_invalidEmail():
     userId = createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
     data = updatedData()
     data["email"] = "not-an-email"
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, data) is False
+    response = client.post("/designer/company/update", data=data)
+    assert b"Enter a valid email address" in response.data
     assert CompanyProfile().getCompanyProfile(userId).email == "hello@udainteriors.com"
 
 
@@ -104,7 +113,7 @@ def test_ut16_8_updateCompanyProfile_clearOptionalFields():
     userId = createCompanyForDesigner13()
     data = updatedData()
     data.update(email="", phone="", address="")
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, data) is True
+    assert UpdateCompanyProfileController().updateCompanyProfile(makeCompany(userId, data)) is True
     profile = CompanyProfile().getCompanyProfile(userId)
     assert profile.email == ""
     assert profile.phone == ""
@@ -112,20 +121,14 @@ def test_ut16_8_updateCompanyProfile_clearOptionalFields():
 
 
 def test_ut16_9_updateCompanyProfile_trimsInput():
+    # the page trims now (not the entity), so this goes through the browser
     userId = createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
     data = updatedData()
     data["companyName"] = "  Uda Interiors Studio  "
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, data) is True
+    client.post("/designer/company/update", data=data)
     assert CompanyProfile().getCompanyProfile(userId).companyName == "Uda Interiors Studio"
-
-
-def test_ut16_10_updateCompanyProfile_suspendedAccount():
-    userId = createCompanyForDesigner13()
-    conn = getConnection()
-    conn.execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (userId,))
-    conn.commit()
-    conn.close()
-    assert UpdateCompanyProfileController().updateCompanyProfile(userId, updatedData()) is False
 
 
 # ---------- CompanyProfile.updateCompanyProfile() ----------
@@ -134,43 +137,46 @@ def test_ut16_11_entity_updatesOnlyOwner():
     userId = createCompanyForDesigner13()
     UserAccount().createUserAccount("designer16", "Design@123", "Daniel Tan", "", "", 2)
     otherId = UserAccount().verifyCredentials("designer16", "Design@123").userId
-    CompanyProfile().createCompanyProfile(otherId, companyData())
-    assert CompanyProfile().updateCompanyProfile(userId, updatedData()) is True
+    CompanyProfile().createCompanyProfile(makeCompany(otherId, companyData()))
+    assert CompanyProfile().updateCompanyProfile(makeCompany(userId, updatedData())) is True
     assert CompanyProfile().getCompanyProfile(otherId).companyName == "Uda Interiors"
 
 
 def test_ut16_12_entity_missingOwnerDoesNotInsert():
-    assert CompanyProfile().updateCompanyProfile(9999, updatedData()) is False
+    assert CompanyProfile().updateCompanyProfile(makeCompany(9999, updatedData())) is False
     assert companyRows() == []
 
 
 def test_ut16_13_entity_invalidWriteRollsBack():
+    # the entity doesn't validate any more (the page does), but the table's CHECK
+    # still stops a blank description getting in as a backup
     userId = createCompanyForDesigner13()
     data = updatedData()
     data["description"] = ""
     before = companyRows()
-    assert CompanyProfile().updateCompanyProfile(userId, data) is False
+    with pytest.raises(sqlite3.IntegrityError):
+        CompanyProfile().updateCompanyProfile(makeCompany(userId, data))
     assert companyRows() == before
 
 
 # ---------- UpdateCompanyProfilePage.validateInput() ----------
 
 def test_ut16_14_validateInput_valid():
-    assert UpdateCompanyProfilePage().validateInput(updatedData()) is True
+    assert UpdateCompanyProfilePage().validateInput(makeCompany(None, updatedData())) is True
 
 
 def test_ut16_15_validateInput_blankName():
     page = UpdateCompanyProfilePage()
     data = updatedData()
     data["companyName"] = ""
-    assert page.validateInput(data) is False
+    assert page.validateInput(makeCompany(None, data)) is False
     assert "companyName" in page.fieldErrors
 
 
 def test_ut16_16_validateInput_nameTooLong():
     data = updatedData()
     data["companyName"] = "A" * 101
-    assert UpdateCompanyProfilePage().validateInput(data) is False
+    assert UpdateCompanyProfilePage().validateInput(makeCompany(None, data)) is False
 
 
 # ---------- whole page, through the browser (test client) ----------
@@ -232,16 +238,6 @@ def test_ut16_21_updatePage_notLoggedIn():
     assert companyRows() == []
 
 
-def test_ut16_22_updatePage_adminForbidden():
-    createCompanyForDesigner13()
-    before = companyRows()
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.get("/designer/company/update").status_code == 403
-    assert client.post("/designer/company/update", data=updatedData()).status_code == 403
-    assert companyRows() == before
-
-
 def test_ut16_23_updatePage_noProfile():
     createDesigner13()
     client = app.test_client()
@@ -257,7 +253,7 @@ def test_ut16_24_updatePage_ignoresForgedOwner():
     userId = createCompanyForDesigner13()
     UserAccount().createUserAccount("designer16", "Design@123", "Daniel Tan", "", "", 2)
     otherId = UserAccount().verifyCredentials("designer16", "Design@123").userId
-    CompanyProfile().createCompanyProfile(otherId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(otherId, companyData()))
     client = app.test_client()
     loginAsDesigner13(client)
     data = updatedData()
@@ -267,24 +263,11 @@ def test_ut16_24_updatePage_ignoresForgedOwner():
     assert CompanyProfile().getCompanyProfile(otherId).companyName == "Uda Interiors"
 
 
-def test_ut16_25_updatePage_accessRemovedAfterLogin():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    before = companyRows()
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert client.post("/designer/company/update", data=updatedData()).status_code == 403
-    assert companyRows() == before
-
-
 def test_ut16_26_updatePage_escapesPrefilledText():
     userId = createDesigner13()
     data = companyData()
     data["description"] = "<script>alert(1)</script>"
-    CompanyProfile().createCompanyProfile(userId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(userId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company/update")
@@ -314,7 +297,7 @@ def test_ut16_28_createUpdateView_endToEnd():
 
 def test_ut16_suspendedProfile_isUnavailable():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     profile = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
     client = app.test_client()
@@ -322,4 +305,4 @@ def test_ut16_suspendedProfile_isUnavailable():
     data = companyData()
     data["companyName"] = "Must not save"
     assert client.post("/designer/company/update", data=data).status_code == 404
-    assert CompanyProfile().updateCompanyProfile(userId, data) is False
+    assert CompanyProfile().updateCompanyProfile(makeCompany(userId, data)) is False
