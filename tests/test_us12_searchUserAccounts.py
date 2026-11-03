@@ -39,9 +39,13 @@ def test_ut12_5_search_includesSuspended():
     assert accounts[0].status == "Suspended"
 
 
-def test_ut12_6_search_trimsKeyword():
-    accounts = SearchUserAccountController().searchUserAccounts("  chloe  ")
-    assert usernamesOf(accounts) == ["cust001"]
+def test_ut12_6_searchPage_trimsKeyword():
+    # the page trims the keyword now, not the controller
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    response = client.get("/accounts?keyword=%20%20chloe%20%20")
+    assert b"cust001" in response.data
+    assert b"admin02" not in response.data
 
 
 # ---------- UserAccount.searchUserAccounts() ----------
@@ -61,9 +65,13 @@ def test_ut12_8_search_doesNotChangeData():
     assert [tuple(r) for r in before] == [tuple(r) for r in after]
 
 
-def test_ut12_9_controller_spacesOnly_returnsAll():
+def test_ut12_9_searchPage_spacesOnly_returnsAll():
     # extra: just hitting space then Search should still show everything
-    assert len(SearchUserAccountController().searchUserAccounts("   ")) == 3
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    response = client.get("/accounts?keyword=%20%20%20")
+    assert b"admin02" in response.data
+    assert b"cust001" in response.data
 
 
 # ---------- whole page, through the browser (test client) ----------

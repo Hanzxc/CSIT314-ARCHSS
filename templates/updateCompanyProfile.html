@@ -8,9 +8,9 @@
         {% for field, label, limit in [("companyName", "Company name *", 100), ("description", "Company description *", 2000), ("services", "Services offered *", 1000), ("email", "Contact email (optional)", 254), ("phone", "Contact phone (optional)", 30), ("address", "Company address (optional)", 300)] %}
             <label for="{{ field }}">{{ label }}</label>
             {% if field in ("description", "services", "address") %}
-                <textarea id="{{ field }}" name="{{ field }}" rows="{% if field == 'address' %}2{% else %}3{% endif %}" maxlength="{{ limit }}" class="{% if fieldErrors.get(field) %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get(field) else 'false' }}">{{ companyData.get(field, '') }}</textarea>
+                <textarea id="{{ field }}" name="{{ field }}" rows="{% if field == 'address' %}2{% else %}3{% endif %}" maxlength="{{ limit }}" class="{% if fieldErrors.get(field) %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get(field) else 'false' }}">{{ company[field] }}</textarea>
             {% else %}
-                <input type="{{ 'email' if field == 'email' else 'text' }}" id="{{ field }}" name="{{ field }}" value="{{ companyData.get(field, '') }}" maxlength="{{ limit }}" class="{% if fieldErrors.get(field) %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get(field) else 'false' }}">
+                <input type="{{ 'email' if field == 'email' else 'text' }}" id="{{ field }}" name="{{ field }}" value="{{ company[field] }}" maxlength="{{ limit }}" class="{% if fieldErrors.get(field) %}field-error{% endif %}" aria-invalid="{{ 'true' if fieldErrors.get(field) else 'false' }}">
             {% endif %}
             {% if fieldErrors.get(field) %}<p class="field-error-text">{{ fieldErrors[field] }}</p>{% endif %}
         {% endfor %}

@@ -34,10 +34,14 @@ class SuspendUserAccountPage:
                                showConfirmation=True)
 
     def confirmSuspend(self):
-        # admin clicked Suspend in the box
-        adminUserId = session["userId"]
-        success = self.suspendUserAccountController.suspendUserAccount(self.userId, adminUserId)
-        if success:
+        # admin clicked Suspend in the box.
+        # the page checks this one - the admin can't suspend their own account or
+        # they'd lock themselves out (UT11.3)
+        if self.userId == session["userId"]:
+            return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
+
+        # already suspended / no such id -> the entity gives back False (UT11.2, UT11.4)
+        if self.suspendUserAccountController.suspendUserAccount(self.userId):
             return self.displaySuccessMessage(MSG_SUSPENDED)
         return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 

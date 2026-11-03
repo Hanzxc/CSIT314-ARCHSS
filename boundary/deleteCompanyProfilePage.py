@@ -1,4 +1,5 @@
 # Boundary: DeleteCompanyProfilePage - UC17 Delete company profile (US17)
+# precondition: the designer is already logged in (US13), so there's no extra access check here
 
 from secrets import compare_digest, token_urlsafe
 
@@ -19,20 +20,8 @@ class DeleteCompanyProfilePage:
         self.deleteCompanyProfileController = DeleteCompanyProfileController()
 
     # UC17 Delete company profile
-    # not logged in -> back to the designer login, not a designer -> access denied page
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("interiorDesignerLogin"))
-        if not self.deleteCompanyProfileController.canDeleteCompanyProfile(session["userId"]):
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return None
-
-    # UC17 Delete company profile
     # designer clicked Delete - show the "are you sure?" box if they have a profile
     def clickDelete(self):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
         profile = self.deleteCompanyProfileController.getCompanyProfile(session["userId"])
         if profile is None:
             session.pop("companyDeleteConfirmation", None)
@@ -51,9 +40,6 @@ class DeleteCompanyProfilePage:
     # UC17 Delete company profile
     # works out if they clicked Delete or Cancel in the confirmation box
     def submitDelete(self, choice, companyId, confirmationToken):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
         if choice == "cancel":
             return self.cancelDelete()
         if choice == "delete":
@@ -75,8 +61,7 @@ class DeleteCompanyProfilePage:
         if self.deleteCompanyProfileController.deleteCompanyProfile(
                 designerId, companyId, confirmation["revision"]):
             return self.displaySuccessMessage(MSG_DELETED)
-        if self.deleteCompanyProfileController.getCompanyProfile(designerId) is None:
-            return self.displayNotFoundMessage()
+        # entity didn't find a matching Active record (already gone or an old confirmation)
         return self.displayErrorMessage(MSG_FAILED)
 
     # UC17 Delete company profile

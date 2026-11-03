@@ -65,9 +65,8 @@ class UpdateUserProfilePage:
         if not self.validateInput(profileName, permissions):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
 
-        success = self.updateUserProfileController.updateUserProfile(
-            self.profileId, profileName, description, permissions)
-        if success:
+        if self.updateUserProfileController.updateUserProfile(
+                self.profileId, profileName.strip(), description.strip(), permissions):
             return self.displaySuccessMessage(MSG_UPDATED)
 
         # it failed - either the profile is gone or the name is taken, need to tell which

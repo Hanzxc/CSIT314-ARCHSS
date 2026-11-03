@@ -15,6 +15,11 @@ def companyData():
             "phone": "+65 6123 4567", "address": "10 Design Street"}
 
 
+def makeCompany(designerId, data):
+    # the entity takes a CompanyProfile object now, not a dict
+    return CompanyProfile(designerId=designerId, **data)
+
+
 def createDesigner13():
     UserAccount().createUserAccount(
         "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
@@ -23,7 +28,7 @@ def createDesigner13():
 
 def createCompanyForDesigner13():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     return userId
 
 
@@ -68,13 +73,24 @@ def test_ut18_4_search_noMatch():
 
 
 def test_ut18_5_search_trimsKeyword():
-    userId = createCompanyForDesigner13()
-    assert fieldNamesOf(SearchCompanyInformationController().searchCompanyInformation(userId, "  renovation  ")) == ["services"]
+    # the page trims the keyword now, not the controller
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search", query_string={"keyword": "  renovation  "})
+    assert b"Space planning, renovation" in response.data
+    assert b"hello@udainteriors.com" not in response.data
+    assert b'value="renovation"' in response.data
 
 
 def test_ut18_6_search_spacesOnly_returnsAll():
-    userId = createCompanyForDesigner13()
-    assert len(SearchCompanyInformationController().searchCompanyInformation(userId, "   ")) == 6
+    # just spaces -> page trims it to "" -> everything shows
+    createCompanyForDesigner13()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/search", query_string={"keyword": "   "})
+    for text in companyData().values():
+        assert text.encode() in response.data
 
 
 def test_ut18_7_search_fieldLabel():
@@ -82,12 +98,6 @@ def test_ut18_7_search_fieldLabel():
     results = SearchCompanyInformationController().searchCompanyInformation(userId, "phone")
     assert fieldNamesOf(results) == ["phone"]
     assert results[0]["value"] == "+65 6123 4567"
-
-
-def test_ut18_8_search_adminRejected():
-    createCompanyForDesigner13()
-    assert SearchCompanyInformationController().canSearchCompanyInformation(1) is False
-    assert SearchCompanyInformationController().searchCompanyInformation(1, "") == []
 
 
 def test_ut18_9_search_noProfile():
@@ -120,7 +130,7 @@ def test_ut18_13_entity_treatsPercentAsLiteral():
     assert CompanyProfile().searchCompanyInformation(userId, "%") == []
     data = companyData()
     data["description"] = "Save 20% on design"
-    CompanyProfile().updateCompanyProfile(userId, data)
+    CompanyProfile().updateCompanyProfile(makeCompany(userId, data))
     assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "%")) == ["description"]
 
 
@@ -177,13 +187,6 @@ def test_ut18_19_searchPage_notLoggedIn():
     assert response.headers["Location"].endswith("/designer/login")
 
 
-def test_ut18_20_searchPage_adminForbidden():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.get("/designer/company/search").status_code == 403
-
-
 def test_ut18_21_searchPage_noProfile():
     createDesigner13()
     client = app.test_client()
@@ -200,7 +203,7 @@ def test_ut18_22_searchPage_ignoresForgedOwner():
     otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
     data = companyData()
     data["services"] = "Other designer confidential service"
-    CompanyProfile().createCompanyProfile(otherId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(otherId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company/search?keyword=confidential&designerId=" + str(otherId))
@@ -212,7 +215,7 @@ def test_ut18_23_searchPage_optionalFieldsEmpty():
     userId = createDesigner13()
     data = companyData()
     data.update(email="", phone="", address="")
-    CompanyProfile().createCompanyProfile(userId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(userId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company/search")
@@ -223,7 +226,7 @@ def test_ut18_24_searchPage_escapesKeywordAndValue():
     userId = createDesigner13()
     data = companyData()
     data["description"] = "<script>alert(1)</script>"
-    CompanyProfile().createCompanyProfile(userId, data)
+    CompanyProfile().createCompanyProfile(makeCompany(userId, data))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/company/search", query_string={"keyword": "<script>"})
@@ -239,17 +242,6 @@ def test_ut18_25_searchPage_doesNotChangeData():
     client.get("/designer/company/search?keyword=design")
     client.get("/designer/company/search?keyword=zzzz")
     assert companyRows() == before
-
-
-def test_ut18_26_searchPage_accessRemovedAfterLogin():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    conn.commit()
-    conn.close()
-    assert client.get("/designer/company/search").status_code == 403
 
 
 def test_ut18_27_viewPage_showsSearchLink():
@@ -280,7 +272,7 @@ def test_ut18_28_search_afterUpdateAndDelete():
 
 def test_ut18_suspendedProfile_isUnavailable():
     userId = createDesigner13()
-    CompanyProfile().createCompanyProfile(userId, companyData())
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     profile = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
     client = app.test_client()

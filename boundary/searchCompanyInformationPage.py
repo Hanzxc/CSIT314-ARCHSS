@@ -1,6 +1,7 @@
 # Boundary: SearchCompanyInformationPage - UC18 Search company information (US18)
+# precondition: the designer is already logged in (US13), so there's no extra access check here
 
-from flask import redirect, render_template, session, url_for
+from flask import render_template, session
 
 from control.searchCompanyInformationController import SearchCompanyInformationController
 
@@ -16,20 +17,9 @@ class SearchCompanyInformationPage:
         self.keyword = ""
 
     # UC18 Search company information
-    # not logged in -> back to the designer login, not a designer -> access denied page
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("interiorDesignerLogin"))
-        if not self.searchCompanyInformationController.canSearchCompanyInformation(session["userId"]):
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return None
-
-    # UC18 Search company information
     # searches the designer's own company profile for the keyword
     def searchCompanyInformation(self, keyword):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
+        # spaces around the keyword are ignored
         self.keyword = (keyword or "").strip()
         designerId = session["userId"]
         if not self.searchCompanyInformationController.hasCompanyProfile(designerId):

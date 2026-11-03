@@ -3,7 +3,6 @@
 # One row in the user_profile table.
 
 import json
-import sqlite3
 
 from database.db import getConnection
 
@@ -57,7 +56,7 @@ class UserProfile:
     def isProfileNameTaken(self, profileName, profileId=None):
         # LOWER() on both sides so "cUSTOMER" still counts as "Customer"
         sql = "SELECT profileId FROM user_profile WHERE LOWER(profileName) = LOWER(?)"
-        params = [profileName.strip()]
+        params = [profileName]
 
         # for US5 - skip the profile being edited, otherwise it clashes with its own name
         if profileId is not None:
@@ -71,57 +70,57 @@ class UserProfile:
 
     # US3
     def createUserProfile(self, profileName, description, permissions):
-        # new profiles always start as Active
+        # the page already checked + tidied the input, this only checks for a duplicate name
+        if self.isProfileNameTaken(profileName):
+            return False
+
+        # no duplicate -> save it. new profiles always start as Active
         conn = getConnection()
-        try:
-            conn.execute(
-                "INSERT INTO user_profile (profileName, description, permissions, status) "
-                "VALUES (?, ?, ?, 'Active')",
-                (profileName.strip(), description.strip(), json.dumps(permissions)),
-            )
-            conn.commit()
-            created = True
-        except sqlite3.IntegrityError:
-            # the UNIQUE on profileName stopped it (backup in case the name check was skipped)
-            created = False
+        conn.execute(
+            "INSERT INTO user_profile (profileName, description, permissions, status) "
+            "VALUES (?, ?, ?, 'Active')",
+            (profileName, description, json.dumps(permissions)),
+        )
+        conn.commit()
         conn.close()
-        return created
+        return True
 
     # US5
     def updateUserProfile(self, profileId, profileName, description, permissions):
+        # pass profileId in so it doesn't count its OWN name as taken
+        if self.isProfileNameTaken(profileName, profileId):
+            return False
+
         # status is left alone on purpose - updating shouldn't un-suspend a profile (UT5.8)
         conn = getConnection()
-        try:
-            cursor = conn.execute(
-                "UPDATE user_profile SET profileName = ?, description = ?, permissions = ? "
-                "WHERE profileId = ?",
-                (profileName.strip(), description.strip(), json.dumps(permissions), profileId),
-            )
-            conn.commit()
-            updated = cursor.rowcount > 0      # 0 rows means that id doesn't exist
-        except sqlite3.IntegrityError:
-            updated = False
+        cursor = conn.execute(
+            "UPDATE user_profile SET profileName = ?, description = ?, permissions = ? "
+            "WHERE profileId = ?",
+            (profileName, description, json.dumps(permissions), profileId),
+        )
+        conn.commit()
         conn.close()
-        return updated
+        return cursor.rowcount > 0      # 0 rows means that id doesn't exist
 
     # US6 - UT6.7
     def suspendUserProfile(self, profileId):
         # only the profile row changes, the accounts in it stay where they are.
-        # login (US1) already checks the profile status so they get blocked anyway
+        # login (US1) already checks the profile status so they get blocked anyway.
+        # only an Active one can be suspended - already suspended or no such id -> 0 rows -> False
         conn = getConnection()
         cursor = conn.execute(
-            "UPDATE user_profile SET status = 'Suspended' WHERE profileId = ?", (profileId,))
+            "UPDATE user_profile SET status = 'Suspended' WHERE profileId = ? AND status = 'Active'",
+            (profileId,))
         conn.commit()
-        suspended = cursor.rowcount > 0
         conn.close()
-        return suspended
+        return cursor.rowcount > 0
 
     # US7 - UT7.1 to UT7.8
     def searchUserProfiles(self, keyword):
         # looks in the name and the description, capitals don't matter.
         # empty keyword -> "%%" which matches everything, so that's alt flow 1a sorted
         # suspended ones are NOT filtered out, the admin might still need them
-        pattern = "%" + keyword.strip().lower() + "%"
+        pattern = "%" + keyword.lower() + "%"
 
         conn = getConnection()
         rows = conn.execute(

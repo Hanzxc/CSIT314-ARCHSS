@@ -76,13 +76,22 @@ def test_ut7_9_controller_search():
     assert namesOf(SearchUserProfileController().searchUserProfiles("Customer")) == ["Customer"]
 
 
-def test_ut7_10_controller_search_spacesOnly():
-    # someone just hitting space then Search should still see everything
-    assert len(SearchUserProfileController().searchUserProfiles("   ")) == 4
+def test_ut7_10_searchPage_spacesOnly():
+    # someone just hitting space then Search should still see everything (the page trims it)
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    response = client.get("/profiles?keyword=%20%20%20")
+    assert b"Interior Designer" in response.data
+    assert b"Platform Manager" in response.data
 
 
-def test_ut7_11_controller_search_trimsKeyword():
-    assert namesOf(SearchUserProfileController().searchUserProfiles("  Customer  ")) == ["Customer"]
+def test_ut7_11_searchPage_trimsKeyword():
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    response = client.get("/profiles?keyword=%20%20Customer%20%20")
+    assert b"Customer" in response.data
+    assert b"No user profiles found" not in response.data
+    assert b"Platform Manager" not in response.data
 
 
 # ---------- whole page, through the browser (test client) ----------

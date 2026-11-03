@@ -10,8 +10,7 @@ class PlatformManagerLoginController:
     # UC39 Platform manager log in
     # returns the account if the username/password is right AND it's an active platform manager, else None
     def login(self, username, password):
-        if not username or not username.strip() or not password:
-            return None
+        # the page already made sure both boxes are filled in
         account = UserAccount().verifyCredentials(username, password)
         return account if self.isPlatformManager(account) else None
 

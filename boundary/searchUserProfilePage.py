@@ -19,8 +19,10 @@ class SearchUserProfilePage:
     # UC1.7 Search user profiles
     # admin clicked Search - ask the controller for matching profiles
     def searchUserProfiles(self, keyword):
-        self.keyword = keyword
-        profiles = self.searchUserProfileController.searchUserProfiles(keyword)
+        # tidy up the keyword first - "  Customer " should work the same as "Customer"
+        # and just spaces counts as empty (shows everything)
+        self.keyword = (keyword or "").strip()
+        profiles = self.searchUserProfileController.searchUserProfiles(self.keyword)
 
         # alt box in the seq diagram - found something or not
         if profiles:

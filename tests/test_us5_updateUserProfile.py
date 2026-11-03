@@ -54,12 +54,20 @@ def test_ut5_5_updateUserProfile_notFound():
     assert UpdateUserProfileController().updateUserProfile(9999, "Ghost", "", ["Generate reports"]) is False
 
 
-def test_ut5_6_updateUserProfile_emptyName():
-    assert UpdateUserProfileController().updateUserProfile(2, "", "", ["Manage own IDPs"]) is False
+def test_ut5_6_updatePage_emptyName_nothingChanged():
+    # the page checks the input now, so bad input never reaches the controller
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/profiles/2/update", data={"profileName": "", "description": "",
+                                            "permissions": ["Manage own IDPs"]})
+    assert UserProfile().getUserProfile(2).profileName == "Interior Designer"
 
 
-def test_ut5_7_updateUserProfile_noPermissions():
-    assert UpdateUserProfileController().updateUserProfile(2, "Interior Designer", "", []) is False
+def test_ut5_7_updatePage_noPermissions_nothingChanged():
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/profiles/2/update", data={"profileName": "Designer", "description": ""})
+    assert UserProfile().getUserProfile(2).profileName == "Interior Designer"
 
 
 def test_ut5_8_updateUserProfile_keepsStatus():

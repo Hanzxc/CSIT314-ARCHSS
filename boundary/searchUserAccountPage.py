@@ -19,8 +19,9 @@ class SearchUserAccountPage:
     # UC12 Search user account
     # admin clicked Search - ask the controller for matching accounts
     def searchUserAccounts(self, keyword):
-        self.keyword = keyword
-        accounts = self.searchUserAccountController.searchUserAccounts(keyword)
+        # same as US7 - "  chloe  " works like "chloe", and just spaces counts as empty
+        self.keyword = (keyword or "").strip()
+        accounts = self.searchUserAccountController.searchUserAccounts(self.keyword)
 
         # alt box in the seq diagram - found something or not
         if accounts:

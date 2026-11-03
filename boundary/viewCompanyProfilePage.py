@@ -1,7 +1,8 @@
 # Boundary: ViewCompanyProfilePage - UC15 View company profile (US15)
 # templates: viewCompanyProfile.html, companyProfileNotFound.html
+# precondition: the designer is already logged in (US13), so there's no extra access check here
 
-from flask import redirect, render_template, session, url_for
+from flask import render_template, session
 
 from control.viewCompanyProfileController import ViewCompanyProfileController
 
@@ -15,20 +16,8 @@ class ViewCompanyProfilePage:
         self.viewCompanyProfileController = ViewCompanyProfileController()
 
     # UC15 View company profile
-    # not logged in -> back to the designer login, not a designer -> access denied page
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("interiorDesignerLogin"))
-        if not self.viewCompanyProfileController.canViewCompanyProfile(session["userId"]):
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return None
-
-    # UC15 View company profile
     # designer opened their company profile
     def clickView(self):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
         # No companyId/designerId from the URL: the logged-in user owns the lookup.
         profile = self.viewCompanyProfileController.viewCompanyProfile(session["userId"])
         if profile is None:

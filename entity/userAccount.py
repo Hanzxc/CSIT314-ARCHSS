@@ -2,10 +2,10 @@
 # One row in the user_account table. Every account belongs to one UserProfile.
 
 import hashlib
-import sqlite3
 from datetime import datetime
 
 from database.db import getConnection
+from entity.userProfile import UserProfile
 
 
 def hashPassword(password):
@@ -72,7 +72,7 @@ class UserAccount:
     def isUsernameTaken(self, username, userId=None):
         # capitals don't matter, so you can't have "admin01" and "Admin01" as 2 different people
         sql = "SELECT userId FROM user_account WHERE LOWER(username) = LOWER(?)"
-        params = [username.strip()]
+        params = [username]
 
         # for US10 - skip the account being edited, otherwise keeping its own name fails
         if userId is not None:
@@ -86,60 +86,61 @@ class UserAccount:
 
     # US8 - UT8.8
     def createUserAccount(self, username, password, fullName, email, phone, profileId):
-        # new accounts always start as Active. password is NOT stripped, spaces could be on purpose
-        createdDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")     # same format as the seed data
+        # the page already checked + tidied the input, this only checks for duplicates:
+        # the group has to exist and be active, and the username can't be taken
+        profile = UserProfile().getUserProfile(profileId)
+        if profile is None or not profile.isActive() or self.isUsernameTaken(username):
+            return False
 
+        # no duplicate -> save it. new accounts always start as Active
+        createdDate = datetime.now().strftime("%Y-%m-%d %H:%M:%S")     # same format as the seed data
         conn = getConnection()
-        try:
-            conn.execute(
-                "INSERT INTO user_account "
-                "(username, password, fullName, email, phone, profileId, status, createdDate) "
-                "VALUES (?, ?, ?, ?, ?, ?, 'Active', ?)",
-                (username.strip(), hashPassword(password), fullName.strip(),
-                 email.strip(), phone.strip(), profileId, createdDate),
-            )
-            conn.commit()
-            created = True
-        except sqlite3.IntegrityError:
-            # UNIQUE on username stopped it (backup in case the check was skipped)
-            created = False
+        conn.execute(
+            "INSERT INTO user_account "
+            "(username, password, fullName, email, phone, profileId, status, createdDate) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'Active', ?)",
+            (username, hashPassword(password), fullName, email, phone, profileId, createdDate),
+        )
+        conn.commit()
         conn.close()
-        return created
+        return True
 
     # US10 - UT10.8
     def updateUserAccount(self, userId, username, fullName, email, phone, profileId):
+        # same duplicate checks as create, but its OWN username is fine (pass userId in)
+        profile = UserProfile().getUserProfile(profileId)
+        if profile is None or not profile.isActive() or self.isUsernameTaken(username, userId):
+            return False
+
         # password, status and createdDate are left alone on purpose (US10 assumptions)
         conn = getConnection()
-        try:
-            cursor = conn.execute(
-                "UPDATE user_account SET username = ?, fullName = ?, email = ?, phone = ?, profileId = ? "
-                "WHERE userId = ?",
-                (username.strip(), fullName.strip(), email.strip(), phone.strip(), profileId, userId),
-            )
-            conn.commit()
-            updated = cursor.rowcount > 0      # 0 rows means that id doesn't exist
-        except sqlite3.IntegrityError:
-            updated = False
+        cursor = conn.execute(
+            "UPDATE user_account SET username = ?, fullName = ?, email = ?, phone = ?, profileId = ? "
+            "WHERE userId = ?",
+            (username, fullName, email, phone, profileId, userId),
+        )
+        conn.commit()
         conn.close()
-        return updated
+        return cursor.rowcount > 0      # 0 rows means that id doesn't exist
 
     # US11 - UT11.7
     def suspendUserAccount(self, userId):
-        # just flips the status, nothing gets deleted. login (US1) checks isActive() so they're blocked
+        # just flips the status, nothing gets deleted. login (US1) checks isActive() so they're blocked.
+        # only an Active one can be suspended - already suspended or no such id -> 0 rows -> False
         conn = getConnection()
         cursor = conn.execute(
-            "UPDATE user_account SET status = 'Suspended' WHERE userId = ?", (userId,))
+            "UPDATE user_account SET status = 'Suspended' WHERE userId = ? AND status = 'Active'",
+            (userId,))
         conn.commit()
-        suspended = cursor.rowcount > 0
         conn.close()
-        return suspended
+        return cursor.rowcount > 0
 
     # US12 - UT12.7
     def searchUserAccounts(self, keyword):
         # looks in username, full name and email, capitals don't matter.
         # empty keyword -> "%%" which matches everything (alt flow 1a)
         # suspended accounts are NOT filtered out, the admin might still need them
-        pattern = "%" + keyword.strip().lower() + "%"
+        pattern = "%" + keyword.lower() + "%"
 
         conn = getConnection()
         rows = conn.execute(

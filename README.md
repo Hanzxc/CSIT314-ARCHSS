@@ -33,6 +33,16 @@ Log in pages: User Admin `/login`, Interior Designer `/designer/login`, Platform
 
 The actor only talks to the **boundary**, the boundary only talks to the **controller**, and the controller works with the **entity** classes. One controller per use case.
 
+**Who checks what** (from the lecturer's feedback):
+
+| Layer | Its job |
+|---|---|
+| Boundary | checks **all** the input (required fields, lengths, email format, the admin not suspending themselves) and trims spaces before passing anything on |
+| Control | just calls the entity and returns the result straight back - no re-checking, no `success` variable |
+| Entity | checks for duplicates / the database state (username or profile name taken, profile not Active, company profile already exists, only suspending Active rows), then inserts / updates and commits. No `.strip()` here |
+
+Being logged in as the right role is a **precondition** of each use case, so it isn't checked again inside the B-C-E flow. `app.py` only has small route decorators (`loginRequired` for admin pages, `designerLoginRequired` for US14 - US18) so a page doesn't crash when nobody is logged in.
+
 ```
 CSIT314-ARCHSS/
 ├── app.py                      Flask app - links each URL to its boundary class
@@ -56,10 +66,11 @@ CSIT314-ARCHSS/
 │   ├── viewCompanyProfilePage.py       US15
 │   ├── updateCompanyProfilePage.py     US16
 │   ├── deleteCompanyProfilePage.py     US17
+│   ├── restoreCompanyProfilePage.py    US17 (restore)
 │   ├── searchCompanyInformationPage.py US18
 │   ├── interiorDesignerLogoutPage.py   US19
 │   └── platformManagerLoginPage.py     US39 (also the manager dashboard)
-├── control/                    one controller per use case (business rules)
+├── control/                    one controller per use case (just calls the entity)
 │   ├── loginController.py              US1
 │   ├── logoutController.py             US2
 │   ├── createUserProfileController.py  US3
@@ -72,11 +83,12 @@ CSIT314-ARCHSS/
 │   ├── updateUserAccountController.py  US10
 │   ├── suspendUserAccountController.py US11
 │   ├── searchUserAccountController.py  US12
-│   ├── interiorDesignerLoginController.py    US13 (its access check is reused by US14 - US18)
+│   ├── interiorDesignerLoginController.py    US13
 │   ├── createCompanyProfileController.py     US14
 │   ├── viewCompanyProfileController.py       US15
 │   ├── updateCompanyProfileController.py     US16
 │   ├── deleteCompanyProfileController.py     US17
+│   ├── restoreCompanyProfileController.py    US17 (restore)
 │   ├── searchCompanyInformationController.py US18
 │   ├── interiorDesignerLogoutController.py   US19
 │   └── platformManagerLoginController.py     US39
@@ -129,9 +141,9 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 | `isActive()` | bool | US1, US11 |
 | `getUserAccount(userId)` | UserAccount or None | US9, US10, US11 |
 | `isUsernameTaken(username, userId=None)` | bool | US8 (no id), US10 (with id) |
-| `createUserAccount(username, password, fullName, email, phone, profileId)` | bool | US8 |
-| `updateUserAccount(userId, username, fullName, email, phone, profileId)` | bool | US10 |
-| `suspendUserAccount(userId)` | bool | US11 |
+| `createUserAccount(username, password, fullName, email, phone, profileId)` | bool (False if the profile isn't Active or the username is taken) | US8 |
+| `updateUserAccount(userId, username, fullName, email, phone, profileId)` | bool (same duplicate checks, its own username is fine) | US10 |
+| `suspendUserAccount(userId)` | bool (only an Active account) | US11 |
 | `searchUserAccounts(keyword)` | list of UserAccount (empty list if nothing matches) | US12 |
 | `hashPassword(password)` (helper, not in a class) | str | US1, US8, test data |
 
@@ -143,14 +155,14 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 
 | Method | Returns | Used in |
 |---|---|---|
-| `getUserProfile(profileId)` | UserProfile or None | US1, US4, US5, US6 |
+| `getUserProfile(profileId)` | UserProfile or None | US1, US4, US5, US6, US8, US10 |
 | `isActive()` | bool | US1, US6 |
 | `getAllPermissions()` | list of str | US3, US5 |
 | `isProfileNameTaken(profileName, profileId=None)` | bool | US3 (no id), US5 (with id) |
-| `createUserProfile(profileName, description, permissions)` | bool | US3 |
-| `updateUserProfile(profileId, profileName, description, permissions)` | bool | US5 |
-| `suspendUserProfile(profileId)` | bool | US6 |
-| `searchUserProfiles(keyword)` | list of UserProfile (empty list if nothing matches) | US7 |
+| `createUserProfile(profileName, description, permissions)` | bool (False if the name is taken) | US3 |
+| `updateUserProfile(profileId, profileName, description, permissions)` | bool (False if the name is taken) | US5 |
+| `suspendUserProfile(profileId)` | bool (only an Active profile) | US6 |
+| `searchUserProfiles(keyword)` | list of UserProfile (empty list if nothing matches) | US7, and the profile drop-down in US8 / US10 |
 
 `ALL_PERMISSIONS` - the 8 fixed permissions: Manage user accounts, Manage user profiles, Manage company profile, Manage own IDPs, View IDP statistics, Search, view and save IDPs, Manage IDP categories, Generate reports.
 
@@ -158,27 +170,29 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 
 | Attributes | |
 |---|---|
-| `companyId` int, `designerId` int (the owner's userId), `companyName` str, `description` str, `services` str, `email` str, `phone` str, `address` str, `createdDate` str | |
+| `companyId` int, `designerId` int (the owner's userId), `companyName` str, `description` str, `services` str, `email` str, `phone` str, `address` str, `createdDate` str, `status` str, `revision` int | |
 
 | Method | Returns | Used in |
 |---|---|---|
 | `getCompanyProfile(designerId)` | CompanyProfile or None | US14, US15, US16, US17, US18 |
-| `createCompanyProfile(designerId, companyData)` | bool | US14 |
-| `updateCompanyProfile(designerId, companyData)` | bool (False if there's no row - it never inserts) | US16 |
-| `deleteCompanyProfile(designerId, companyId)` | bool (both must match) | US17 |
+| `createCompanyProfile(companyProfile)` | bool (False if the designer already has a row, Active or Suspended) | US14 |
+| `updateCompanyProfile(companyProfile)` | bool (False if there's no Active row - it never inserts) | US16 |
+| `suspendCompanyProfile(designerId, companyId, expectedRevision=None)` | bool (owner, id and revision must match) | US17 |
+| `getSuspendedCompanyProfile(designerId)` | CompanyProfile or None | US17 (restore) |
+| `restoreCompanyProfile(designerId, companyId, expectedRevision)` | bool | US17 (restore) |
 | `searchCompanyInformation(designerId, keyword)` | list of dicts `{"field", "label", "value"}` | US18 |
 
-`companyData` is a dict with the keys `companyName`, `description`, `services`, `email`, `phone`, `address`.
+`companyProfile` is a CompanyProfile object the page builds from the form (owner = `session["userId"]`), not a dict.
 
-**Who can do what** - access is decided by the profile's permissions, not its name, and is checked again from the database on every page:
+**Who can do what** - decided at login by the profile's permissions, not its name:
 
 | Role | Needs these permissions | Checked by |
 |---|---|---|
 | User Admin | Manage user accounts + Manage user profiles | `loginRequired` in `app.py` |
-| Interior Designer | Manage company profile + Manage own IDPs | `InteriorDesignerLoginController.getAuthenticatedDesigner(userId)` |
-| Platform Manager | Manage IDP categories + Generate reports | `PlatformManagerLoginController.getAuthenticatedManager(userId)` |
+| Interior Designer | Manage company profile + Manage own IDPs | `InteriorDesignerLoginController` at login (US13) and on the dashboard |
+| Platform Manager | Manage IDP categories + Generate reports | `PlatformManagerLoginController` at login (US39) and on the dashboard |
 
-The account and its profile must both be Active. A designer or manager who opens a User Admin page gets HTTP 403, and so does anyone who opens a designer or manager page without the right permissions. Someone who isn't logged in is sent to that role's login page.
+The account and its profile must both be Active to log in. US14 - US18 don't check the designer again (logged in as a designer is their precondition) - `designerLoginRequired` only sends someone with no session back to `/designer/login`.
 
 ### Control
 
@@ -192,34 +206,27 @@ The account and its profile must both be Active. A designer or manager who opens
 | `UpdateUserProfileController` | `getUserProfile(profileId)` | UserProfile or None |
 | | `getAllPermissions()` | list of str |
 | | `updateUserProfile(profileId, profileName, description, permissions)` | bool |
-| `SuspendUserProfileController` | `suspendUserProfile(profileId, adminProfileId)` | bool |
-| `SearchUserProfileController` | `searchUserProfiles(keyword)` | list of UserProfile |
-| `CreateUserAccountController` | `getAllUserProfiles()` (for the drop-down) | list of UserProfile |
-| | `createUserAccount(username, password, fullName, email, phone, profileId)` | bool |
+| `SuspendUserProfileController` | `suspendUserProfile(profileId)` | bool |
+| `SearchUserProfileController` | `searchUserProfiles(keyword)` (US8 / US10 also call it with `""` for the drop-down) | list of UserProfile |
+| `CreateUserAccountController` | `createUserAccount(username, password, fullName, email, phone, profileId)` | bool |
 | `ViewUserAccountController` | `viewUserAccount(userId)` - also sets `self.profile` to the account's profile | UserAccount or None |
 | `UpdateUserAccountController` | `getUserAccount(userId)` | UserAccount or None |
-| | `getAllUserProfiles()` (for the drop-down) | list of UserProfile |
 | | `updateUserAccount(userId, username, fullName, email, phone, profileId)` | bool |
-| `SuspendUserAccountController` | `suspendUserAccount(userId, adminUserId)` | bool |
+| `SuspendUserAccountController` | `suspendUserAccount(userId)` | bool |
 | `SearchUserAccountController` | `searchUserAccounts(keyword)` | list of UserAccount |
 | `InteriorDesignerLoginController` | `login(username, password)` | UserAccount or None |
 | | `isInteriorDesigner(account)` | bool |
-| | `getAuthenticatedDesigner(userId)` (access check used by US14 - US18) | UserAccount or None |
-| `CreateCompanyProfileController` | `canCreateCompanyProfile(designerId)` | bool |
-| | `hasCompanyProfile(designerId)` | bool |
-| | `getFieldErrors(companyData)` (field rules, reused by US16) | dict |
-| | `createCompanyProfile(designerId, companyData)` | bool |
-| `ViewCompanyProfileController` | `canViewCompanyProfile(designerId)` | bool |
-| | `viewCompanyProfile(designerId)` | CompanyProfile or None |
-| `UpdateCompanyProfileController` | `canUpdateCompanyProfile(designerId)` | bool |
-| | `getCompanyProfile(designerId)` | CompanyProfile or None |
-| | `getFieldErrors(companyData)` | dict |
-| | `updateCompanyProfile(designerId, companyData)` | bool |
-| `DeleteCompanyProfileController` | `canDeleteCompanyProfile(designerId)` | bool |
-| | `getCompanyProfile(designerId)` | CompanyProfile or None |
-| | `deleteCompanyProfile(designerId, companyId)` | bool |
-| `SearchCompanyInformationController` | `canSearchCompanyInformation(designerId)` | bool |
-| | `hasCompanyProfile(designerId)` | bool |
+| | `getAuthenticatedDesigner(userId)` (used by the designer dashboard) | UserAccount or None |
+| `CreateCompanyProfileController` | `hasCompanyProfile(designerId)` | bool |
+| | `createCompanyProfile(companyProfile)` | bool |
+| `ViewCompanyProfileController` | `viewCompanyProfile(designerId)` | CompanyProfile or None |
+| `UpdateCompanyProfileController` | `getCompanyProfile(designerId)` | CompanyProfile or None |
+| | `updateCompanyProfile(companyProfile)` | bool |
+| `DeleteCompanyProfileController` | `getCompanyProfile(designerId)` | CompanyProfile or None |
+| | `deleteCompanyProfile(designerId, companyId, expectedRevision=None)` | bool |
+| `RestoreCompanyProfileController` | `getSuspendedCompanyProfile(designerId)` | CompanyProfile or None |
+| | `restoreCompanyProfile(designerId, companyId, expectedRevision)` | bool |
+| `SearchCompanyInformationController` | `hasCompanyProfile(designerId)` | bool |
 | | `searchCompanyInformation(designerId, keyword)` | list of dicts |
 | `InteriorDesignerLogoutController` | `logout()` (calls the US2 `LogoutController`, then clears the whole session) | bool |
 | `PlatformManagerLoginController` | `login(username, password)` | UserAccount or None |
@@ -243,11 +250,12 @@ The account and its profile must both be Active. A designer or manager who opens
 | `SuspendUserAccountPage` | `clickSuspend(userId)`, `displayConfirmation()`, `confirmSuspend()`, `cancelSuspend()`, `closeConfirmation()`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)` |
 | `SearchUserAccountPage` | `searchUserAccounts(keyword)`, `displayResults(accounts)`, `displayNoResultsMessage()` |
 | `InteriorDesignerLoginPage` | `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password)` -> bool, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` |
-| `CreateCompanyProfilePage` | `checkAccess()`, `clickCreateCompanyProfile()`, `displayCreateForm(msg=None)`, `validateInput(companyData)` -> bool, `submitCompanyProfile(companyData)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)` |
-| `ViewCompanyProfilePage` | `checkAccess()`, `clickView()`, `displayCompanyProfile(profile)`, `displayErrorMessage(msg)` |
-| `UpdateCompanyProfilePage` | `checkAccess()`, `clickUpdate()`, `displayUpdateForm(msg=None)`, `validateInput(companyData)` -> bool, `submitUpdate(companyData)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
-| `DeleteCompanyProfilePage` | `checkAccess()`, `clickDelete()`, `displayConfirmation(profile)`, `submitDelete(choice, companyId, confirmationToken)`, `confirmDelete(companyId, confirmationToken)`, `cancelDelete()`, `closeConfirmation()`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
-| `SearchCompanyInformationPage` | `checkAccess()`, `searchCompanyInformation(keyword)`, `displayResults(results)`, `displayNoResultsMessage()`, `displayNotFoundMessage()` |
+| `CreateCompanyProfilePage` | `clickCreateCompanyProfile()`, `displayCreateForm(msg=None)`, `validateInput(companyProfile)` -> bool, `submitCompanyProfile(companyName, description, services, email, phone, address)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`. The field rules are the module function `getFieldErrors(companyProfile)`, reused by US16 |
+| `ViewCompanyProfilePage` | `clickView()`, `displayCompanyProfile(profile)`, `displayErrorMessage(msg)` |
+| `UpdateCompanyProfilePage` | `clickUpdate()`, `displayUpdateForm(msg=None)`, `validateInput(companyProfile)` -> bool, `submitUpdate(companyName, description, services, email, phone, address)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
+| `DeleteCompanyProfilePage` | `clickDelete()`, `displayConfirmation(profile)`, `submitDelete(choice, companyId, confirmationToken)`, `confirmDelete(companyId, confirmationToken)`, `cancelDelete()`, `closeConfirmation()`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
+| `RestoreCompanyProfilePage` | `prepareRestore(designerId)`, `submitRestore(confirmationToken)`, `displayFailure()` |
+| `SearchCompanyInformationPage` | `searchCompanyInformation(keyword)`, `displayResults(results)`, `displayNoResultsMessage()`, `displayNotFoundMessage()` |
 | `InteriorDesignerLogoutPage` | `clickLogout()`, `displayLoginPage(msg)` |
 | `PlatformManagerLoginPage` | `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password)` -> bool, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` |
 
@@ -264,21 +272,16 @@ Use these names for the same things everywhere (they come from the sequence diag
 | `accountActive` / `profileActive` | result of `isActive()` in login |
 | `permissionList` | all 8 permissions, for the tick boxes |
 | `permissions` | the permissions a profile has / that were ticked |
-| `nameTaken` | result of `isProfileNameTaken()` |
-| `success` | what a controller returns to the page (True / False) |
 | `loggedOut` | result of `logout()` |
-| `adminProfileId` | profileId of the admin who is logged in |
 | `fieldErrors` | dict of form errors, keys `"profileName"` and `"permissions"` (US3, US5), or the company field names (US14, US16) |
 | `msg` | the message passed to a display...Message() method |
 | `keyword` | what was typed in the search box (US7, US12, US18) |
 | `profiles` | list of UserProfile from a search (US7), or for the profile drop-down (US8, US10) |
 | `accounts` | list of UserAccount from a search (US12) |
-| `adminUserId` | userId of the admin who is logged in (US11) |
-| `usernameTaken` | result of `isUsernameTaken()` (US8, US10) |
 | `form` | dict of what's in the account form (US8, US10) - not `username`, because base.html already uses `{{ username }}` for "Logged in as ..." |
 | `designerId` | userId of the designer who owns the company profile - always `session["userId"]` (US14 - US18) |
-| `companyData` | dict of what's in the company form (US14, US16) |
-| `company` | a CompanyProfile, passed to the company templates (US15 - US17) |
+| `companyProfile` | the CompanyProfile the page builds from the company form (US14, US16) |
+| `company` | a CompanyProfile, passed to the company templates (US14 - US17) |
 | `results` | list of matching company fields from a search (US18) |
 | `confirmationToken` | random token that proves the delete box was opened (US17) |
 

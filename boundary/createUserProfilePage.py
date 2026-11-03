@@ -51,11 +51,12 @@ class CreateUserProfilePage:
         if not self.validateInput(profileName, permissions):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
 
-        success = self.createUserProfileController.createUserProfile(profileName, description, permissions)
-        if success:
+        # tidy it up here so the controller/entity get clean values
+        if self.createUserProfileController.createUserProfile(
+                profileName.strip(), description.strip(), permissions):
             return self.displaySuccessMessage(MSG_CREATED)
 
-        # the only way it fails now is the name being taken (alt flow 5a)
+        # the only way it fails is the entity finding the name is taken (alt flow 5a)
         self.fieldErrors["profileName"] = MSG_NAME_TAKEN
         return self.displayErrorMessage(MSG_NAME_TAKEN)
 

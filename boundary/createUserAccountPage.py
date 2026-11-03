@@ -4,6 +4,7 @@
 from flask import render_template, redirect, url_for, flash
 
 from control.createUserAccountController import CreateUserAccountController
+from control.searchUserProfileController import SearchUserProfileController
 
 MSG_CREATED = "User account created successfully"
 MSG_REQUIRED = "Please fill in all required fields"
@@ -28,15 +29,17 @@ class CreateUserAccountPage:
         return self.displayCreateForm()
 
     def displayCreateForm(self, msg=None):
+        # the profile drop-down is a list of every profile, which is US7's job (search with
+        # an empty keyword) - so we borrow that controller instead of adding it to this one.
         # passed as "form" not "username" etc. - base.html already uses {{ username }}
         # for "Logged in as ..." and we don't want to overwrite it
-        profiles = self.createUserAccountController.getAllUserProfiles()
+        profiles = SearchUserProfileController().searchUserProfiles("")
         return render_template("createUserAccount.html", activePage="accounts",
                                form=self.form, profiles=profiles,
                                fieldErrors=self.fieldErrors, errorMessage=msg)
 
     # UC8 Create user account
-    # admin clicked Create - check the input first, then let the controller save it
+    # admin clicked Create - the page checks all the input, then the controller just creates it
     def submitCreateAccount(self, username, password, fullName, email, phone, profileId):
         self.form = {"username": username, "fullName": fullName, "email": email,
                      "phone": phone, "profileId": profileId}
@@ -45,12 +48,14 @@ class CreateUserAccountPage:
         if not self.validateInput(username, password, fullName, email, phone, profileId):
             return self.displayErrorMessage(MSG_REQUIRED)
 
-        success = self.createUserAccountController.createUserAccount(
-            username, password, fullName, email, phone, profileId)
-        if success:
+        # tidy it up here so the controller/entity get clean values.
+        # password is NOT stripped, spaces could be on purpose
+        if self.createUserAccountController.createUserAccount(
+                username.strip(), password, fullName.strip(),
+                (email or "").strip(), (phone or "").strip(), profileId):
             return self.displaySuccessMessage(MSG_CREATED)
 
-        # alt flow 5a - suspended profile or username taken
+        # alt flow 5a - suspended profile or username taken (the entity found a duplicate)
         return self.displayErrorMessage(MSG_INVALID)
 
     # UT8.7 - only checks the required ones are filled in, email and phone are optional

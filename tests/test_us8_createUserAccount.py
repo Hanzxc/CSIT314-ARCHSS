@@ -71,10 +71,24 @@ def test_ut8_4b_createUserAccount_optionalFieldsEmpty():
         "des002", "Des@123", "Dana Lee", "", "", 2) is True
 
 
-def test_ut8_4c_createUserAccount_emptyRequired():
-    # extra: the controller shouldn't trust that the page checked it
-    assert CreateUserAccountController().createUserAccount(
-        "des001", "", "Daniel Koh", "", "", 2) is False
+def test_ut8_4c_createPage_emptyRequired_nothingSaved():
+    # extra: the page checks the input, so a missing password never reaches the controller
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/accounts/create", data={
+        "username": "des001", "password": "", "fullName": "Daniel Koh",
+        "email": "", "phone": "", "profileId": "2"})
+    assert getAccountRow("des001") is None
+
+
+def test_ut8_4d_createPage_trimsInput():
+    # extra: spaces get trimmed by the page before it's saved
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/accounts/create", data={
+        "username": "  des001  ", "password": "Des@123", "fullName": "  Daniel Koh ",
+        "email": "", "phone": "", "profileId": "2"})
+    assert getAccountRow("des001")["fullName"] == "Daniel Koh"
 
 
 # ---------- UserAccount.isUsernameTaken() ----------
