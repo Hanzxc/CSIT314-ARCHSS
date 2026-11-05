@@ -18,6 +18,7 @@
 - **The entity checks for duplicates / still-Active rows** (e.g. a taken category name, a category suspended meanwhile).
 - **An entity object is passed around, not a `{}` dict.**
 - **One entity per B-C-E diagram.**
+- **No reload before saving.** `submitUpdate()` goes straight to update instead of loading the category again first - categories can't be deleted, so the only way the update fails is the name being taken. The status badge is shown on the first form only (status isn't part of the form).
 - **Precondition, no double check.** Being logged in is the precondition, so the B-C-E and sequence diagrams no longer re-check the user with the US13 / US39 login controller. `designerLoginRequired` and `managerLoginRequired` in `app.py` only send someone with no session to the login page.
 
 ## Repository files

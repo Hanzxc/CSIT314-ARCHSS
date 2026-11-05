@@ -5,7 +5,7 @@
 ## Behaviour
 
 - Every Platform Manager page has a "Log out" button in the header (the dashboard and the IDP category pages). It sends a POST to /manager/logout. Opening /manager/logout with GET is not allowed and doesn't log anyone out.
-- PlatformManagerLogoutController reuses the US2 LogoutController.logout(), then clears anything left in the session - the same way US19 does it for designers.
+- PlatformManagerLogoutController just returns the US2 LogoutController.logout() result (True if a session was ended, False if it had already ended).
 - No entity class is needed. Logging out only ends the browser session - it doesn't change the user account or any IDP category.
 - After logging out the manager goes to the manager login page with "You have logged out successfully". If the session had already ended, the message is "Your session has already ended". The message is shown once only.
 - A manager can always log out, even if their account or profile was suspended after they logged in.
@@ -14,7 +14,7 @@
 
 ## Lecturer feedback changes
 
-- **No change needed.** Logout has no input, no entity and no access check: it reuses the US2 `LogoutController`, the same way US19 does for designers.
+- **Return directly, no double clear.** The control used to call the US2 `logout()` and then clear the session a second time; it now just returns the US2 result. The US2 `logout()` returns `True` / `False` directly instead of storing it in a `loggedOut` variable first. The B-C-E and sequence diagrams were redrawn to match (no Flask session lifeline, no second `clear()`).
 
 ## Repository files
 

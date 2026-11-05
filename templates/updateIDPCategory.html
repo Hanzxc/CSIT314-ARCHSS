@@ -11,8 +11,10 @@
     {% endif %}
 
     {% if categoryId %}
+        {% if status %}
         <p>Status: <span class="badge {{ status|lower }}">{{ status }}</span>
            <span class="hint">(use Suspend on the details page to change this)</span></p>
+        {% endif %}
 
         <form method="POST" action="{{ url_for('updateIDPCategory', categoryId=categoryId) }}" class="profile-form">
             <label for="categoryName">Category name *</label>

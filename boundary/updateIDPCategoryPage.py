@@ -51,20 +51,17 @@ class UpdateIDPCategoryPage:
     # UC43 Update IDP category
     # manager pressed Save - put the form into an IDPCategory, check it, then just call update
     def submitUpdate(self, categoryName, description):
-        saved = self.updateIDPCategoryController.getIDPCategory(self.categoryId)
-        if saved is None:
-            return self.displayNotFoundMessage()
-
-        # keep what they typed so nothing gets wiped if there's an error
+        # keep what they typed so nothing gets wiped if there's an error.
+        # status isn't in the form (only US44 changes it), so it's left as None and the badge is hidden
         self.idpCategory = IDPCategory(categoryId=self.categoryId, categoryName=categoryName.strip(),
-                                       description=description.strip(), status=saved.status)
+                                       description=description.strip(), status=None)
 
         if not self.validateInput(self.idpCategory):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
         if self.updateIDPCategoryController.updateIDPCategory(self.idpCategory):
             return self.displaySuccessMessage(MSG_UPDATED)
 
-        # the category exists (checked above), so the only way update fails is the name being taken
+        # categories can't be deleted (no such use case), so the only way update fails is the name being taken
         self.fieldErrors["categoryName"] = MSG_NAME_TAKEN
         return self.displayErrorMessage(MSG_NAME_TAKEN)
 
