@@ -157,3 +157,6 @@ textarea { width: 100%; padding: 10px; font-size: 15px; font-family: inherit; bo
 }
 .confirm-box { max-width: 420px; padding: 24px; background: #fff; border-radius: 8px; }
 .confirm-box h2 { margin-top: 0; }
+
+/* US46-48 date picker matching existing form inputs */
+input[type="date"] { width:100%; padding:10px; font-size:15px; border:1px solid #999; }

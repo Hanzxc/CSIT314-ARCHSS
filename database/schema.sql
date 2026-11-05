@@ -78,3 +78,13 @@ CREATE TABLE IF NOT EXISTS saved_idp (
     UNIQUE(customerId, idpId) -- Prevents duplicate saves
 );
 
+
+
+-- US37 and category popularity reporting: every public IDP detail page view.
+CREATE TABLE IF NOT EXISTS idp_view (
+    viewId INTEGER PRIMARY KEY AUTOINCREMENT,
+    idpId INTEGER NOT NULL REFERENCES idp(idpId) ON DELETE CASCADE,
+    viewedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_idp_view_project_date ON idp_view(idpId, viewedAt);
+CREATE INDEX IF NOT EXISTS idx_saved_idp_project_date ON saved_idp(idpId, savedDate);

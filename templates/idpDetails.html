@@ -1,0 +1,8 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ idp.title }} - Interior Design Platform</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head>
+<body><div class="header"><span class="logo">Interior Design Platform</span></div>
+<main class="content"><a href="{{ url_for('publicIDPGallery') }}">&larr; Back to projects</a><h1 style="margin-top:24px">{{ idp.title }}</h1>
+<p class="subtitle">{{ idp.categoryName }} · {{ idp.projectType }} · By {{ idp.designerName }}</p>
+<div class="card"><p>{{ idp.description }}</p><p><strong>Location:</strong> {{ idp.location or 'Not specified' }}</p></div>
+<p class="hint">Opening this page registers one project view. Saved-project actions remain in the Customer module.</p>
+</main></body></html>
