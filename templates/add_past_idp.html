@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Past IDP</title>
+    <style>
+        *{box-sizing:border-box}
+        body{margin:0;padding:24px 12px;background:#f5f6f9;color:#202124;font-family:Arial,Helvetica,sans-serif}
+        .page{max-width:760px;margin:auto;background:#fff;border:1px solid #dfe3eb;border-radius:20px;box-shadow:0 3px 12px #1c2b461a;overflow:hidden}
+        .navbar{min-height:64px;padding:0 26px;display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #e1e5ed;color:#263653}
+        .brand{font-size:17px;font-weight:700}
+        .navlinks{display:flex;gap:28px}
+        .navlinks a{color:#35415a;text-decoration:none;font-size:15px}
+        .navlinks .active{font-weight:700}
+        main{padding:26px 28px 24px}
+        h1{margin:0 0 14px;color:#1d376d;font-size:29px;font-weight:500}
+        .subtitle{margin:0 0 24px;color:#58647b;font-size:17px}
+        .field{margin-bottom:19px}
+        label{display:block;margin-bottom:10px;font-size:16px;font-weight:700}
+        input[type=text],select,textarea{width:100%;border:1.5px solid #cbd2df;border-radius:9px;padding:14px 13px;color:#34415a;font:inherit;font-size:16px;background:#fff;outline:none}
+        input[type=text],select{height:52px}
+        textarea{min-height:80px;resize:vertical}
+        input::placeholder,textarea::placeholder{color:#9ba5b5}
+        input:focus,select:focus,textarea:focus{border-color:#496de0;box-shadow:0 0 0 3px #496de01f}
+        .upload-box{min-height:148px;border:2px dashed #aebbd0;border-radius:10px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:18px;color:#334260;cursor:pointer}
+        .upload-box:hover{background:#f8faff;border-color:#5475df}
+        .upload-icon{font-size:31px;margin-bottom:13px}
+        .upload-title{font-size:16px;margin-bottom:8px}
+        .upload-hint{font-size:14px;color:#748097}
+        #projectImages{display:none}
+        #preview{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+        #preview img{width:76px;height:76px;object-fit:cover;border-radius:7px;border:1px solid #d9deea}
+        .actions{display:flex;justify-content:flex-end;gap:12px;margin-top:20px}
+        button, .actions a{border:0;border-radius:9px;padding:15px 21px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none}
+        .cancel{background:#eef0f5;color:#34415a;display:inline-block;text-align:center}
+        .submit{background:#4568df;color:white}
+        .note{margin-top:8px;color:#7a8497;font-size:12px}
+        .flash{padding:11px 14px;margin-bottom:16px;border-radius:8px}
+        .success{background:#eaf7ee;color:#21633a}
+        .error,.danger{background:#fff0f0;color:#a32c2c}
+        @media(max-width:560px){
+            body{padding:10px 7px}
+            .navbar{padding:15px 17px;align-items:flex-start;flex-direction:column}
+            .navlinks{gap:18px;flex-wrap:wrap}
+            main{padding:23px 18px}
+            h1{font-size:26px}
+            .actions button, .actions a{flex:1}
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="navbar">
+            <div class="brand">Interior Design Platform</div>
+            <nav class="navlinks">
+                <a href="/designer/dashboard">Dashboard</a>
+                <a class="active" href="/designer/past-idps">Past IDPs</a>
+                <a href="/designer/company">Profile</a>
+            </nav>
+        </header>
+
+        <main>
+            <h1>Add Past IDP</h1>
+            <p class="subtitle">Add a completed interior design project to your portfolio.</p>
+
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/designer/past-idps/add" enctype="multipart/form-data" id="pastIdpForm">
+                
+                <div class="field">
+                    <label for="title">Project Title *</label>
+                    <input id="title" name="title" type="text" placeholder="Enter project title" value="{{ request.form.get('title', '') }}">
+                </div>
+
+                <div class="field">
+                    <label for="categoryId">IDP Category *</label>
+                    <select id="categoryId" name="categoryId">
+                        <option value="">Select category</option>
+                        {% if categories %}
+                            {% for category in categories %}
+                                {% set category_value = category[0] if category is sequence and not category is mapping else (category.categoryId if category.categoryId is defined else category.id) %}
+                                {% set category_label = category[1] if category is sequence and not category is mapping else (category.categoryName if category.categoryName is defined else category.name) %}
+                                <option value="{{ category_value }}" {% if request.form.get('categoryId', '')|string == category_value|string %}selected{% endif %}>
+                                    {{ category_label }}
+                                </option>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="description">Project Description *</label>
+                    <textarea id="description" name="description" placeholder="Describe the project...">{{ request.form.get('description', '') }}</textarea>
+                </div>
+
+                <div class="field">
+                    <label for="location">Project Location</label>
+                    <input id="location" name="location" type="text" placeholder="Enter project location" value="{{ request.form.get('location', '') }}">
+                </div>
+
+                <div class="field">
+                    <label for="projectImages">Project Images</label>
+                    <label class="upload-box" for="projectImages">
+                        <span class="upload-icon">▧</span>
+                        <span class="upload-title">Upload Images</span>
+                        <span class="upload-hint">Choose files or drag and drop</span>
+                    </label>
+                    <input id="projectImages" name="projectImages" type="file" accept="image/*" multiple>
+                    <div id="preview"></div>
+                </div>
+
+                <div class="actions">
+                    <a href="/designer/past-idps" class="cancel" style="line-height: 20px;">Cancel</a>
+                    <button class="submit" type="submit">Add Project</button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script>
+        const input = document.getElementById('projectImages');
+        const preview = document.getElementById('preview');
+        if (input) {
+            input.addEventListener('change', () => {
+                preview.innerHTML = '';
+                Array.from(input.files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+                    const img = document.createElement('img');
+                    img.alt = file.name;
+                    img.src = URL.createObjectURL(file);
+                    preview.appendChild(img);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

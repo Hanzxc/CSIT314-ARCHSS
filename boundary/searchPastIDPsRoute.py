@@ -1,20 +1,17 @@
-# Boundary: Route handler for UC29 Search Past IDPs
-from flask import Blueprint, request, render_template, redirect, session
+# boundary/searchPastIDPsRoute.py
+from flask import Blueprint, render_template, request, session, redirect, url_for
 from control.searchPastIDPsController import SearchPastIDPsController
 
 search_past_idp_bp = Blueprint('search_past_idp', __name__)
+controller = SearchPastIDPsController()
 
 @search_past_idp_bp.route('/designer/past-idps/search', methods=['GET'])
 def searchPastIDPs():
-    # Session access & role check
-    if session.get('user_role') != 'Interior Designer':
-        return redirect('/designer/login')
+    if 'userId' not in session:
+        return redirect(url_for('interiorDesignerLogin'))
 
-    controller = SearchPastIDPsController()
-    designer_id = session.get('user_id')
-    keyword = request.args.get('keyword', '').strip()
+    designer_id = session.get('userId')
+    query = request.args.get('query', '').strip()
 
-    # Execute search query
-    past_idps = controller.searchPastIDPs(designer_id, keyword)
-
-    return render_template('view_past_idps.html', past_idps=past_idps, keyword=keyword) 
+    past_idps = controller.searchPastIDPs(designer_id, query)
+    return render_template('view_past_idps.html', past_idps=past_idps, query=query)

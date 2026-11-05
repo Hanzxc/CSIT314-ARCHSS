@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Past IDPs</title>
+    <style>
+        *{box-sizing:border-box}
+        body{margin:0;padding:24px 12px;background:#f5f6f9;color:#202124;font-family:Arial,Helvetica,sans-serif}
+        .page{max-width:900px;margin:auto;background:#fff;border:1px solid #dfe3eb;border-radius:20px;box-shadow:0 3px 12px #1c2b461a;overflow:hidden}
+        .navbar{min-height:64px;padding:0 26px;display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #e1e5ed;color:#263653}
+        .brand{font-size:17px;font-weight:700}
+        .navlinks{display:flex;gap:28px}
+        .navlinks a{color:#35415a;text-decoration:none;font-size:15px}
+        .navlinks .active{font-weight:700}
+        main{padding:26px 28px 24px}
+        .header-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+        h1{margin:0;color:#1d376d;font-size:29px;font-weight:500}
+        .btn{padding:10px 16px;border-radius:8px;font-weight:bold;text-decoration:none;cursor:pointer;border:none}
+        .btn-primary{background:#4568df;color:#fff}
+        .btn-danger{background:#e04949;color:#fff}
+        .btn-secondary{background:#eef0f5;color:#34415a}
+        .search-bar{display:flex;gap:10px;margin-bottom:24px}
+        .search-bar input{flex:1;height:44px;border:1.5px solid #cbd2df;border-radius:8px;padding:0 14px}
+        .card{border:1px solid #dfe3eb;border-radius:12px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+        .card-content h3{margin:0 0 6px;color:#1d376d}
+        .card-content p{margin:0 0 6px;color:#58647b}
+        .card-actions{display:flex;gap:8px}
+        .flash{padding:11px 14px;margin-bottom:16px;border-radius:8px}
+        .success{background:#eaf7ee;color:#21633a}
+        .error,.danger{background:#fff0f0;color:#a32c2c}
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="navbar">
+            <div class="brand">Interior Design Platform</div>
+            <nav class="navlinks">
+                <a href="/designer/dashboard">Dashboard</a>
+                <a class="active" href="/designer/past-idps">Past IDPs</a>
+                <a href="/designer/company">Profile</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="header-actions">
+                <h1>Past IDPs Portfolio</h1>
+                <a href="{{ url_for('add_past_idp.addPastIDP') }}" class="btn btn-primary">+ Add Past IDP</a>
+            </div>
+
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="flash {{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- US29: Search Form -->
+            <form action="{{ url_for('search_past_idp.searchPastIDPs') }}" method="GET" class="search-bar">
+                <input type="text" name="query" placeholder="Search by title, description or location..." value="{{ query if query else '' }}">
+                <button type="submit" class="btn btn-secondary">Search</button>
+            </form>
+
+            <!-- US26: View List -->
+            {% if past_idps %}
+                {% for idp in past_idps %}
+                    {% set idp_id = idp.idpId if idp.idpId is defined else idp[0] %}
+                    {% set title = idp.title if idp.title is defined else idp[3] %}
+                    {% set desc = idp.description if idp.description is defined else idp[4] %}
+                    {% set loc = idp.location if idp.location is defined else idp[6] %}
+                    
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>{{ title }}</h3>
+                            <p>{{ desc }}</p>
+                            <small style="color:#748097">Location: {{ loc if loc else 'N/A' }}</small>
+                        </div>
+                        <div class="card-actions">
+                            <!-- US27: Update Route -->
+                            <a href="{{ url_for('update_past_idp.updatePastIDP', idp_id=idp_id) }}" class="btn btn-secondary">Edit</a>
+                            <!-- US28: Delete Form -->
+                            <form action="{{ url_for('delete_past_idp.deletePastIDP', idp_id=idp_id) }}" method="POST" style="margin:0" onsubmit="return confirm('Delete this IDP?');">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align:center;color:#748097;padding:40px 0;">No past IDPs found.</p>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>

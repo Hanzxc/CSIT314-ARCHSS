@@ -5,7 +5,7 @@ class AddPastIDPController:
     def __init__(self):
         self.idpEntity = IDP()
 
-    def addPastIDP(self, designerId, categoryId, title, description, location=None):
+    def addPastIDP(self, title, categoryId, description, location=None, designerId=None):
         if not title or not categoryId or not description:
             return False, "Please fill in all required fields."
             

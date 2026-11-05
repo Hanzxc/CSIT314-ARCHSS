@@ -28,6 +28,15 @@ TEST_ACCOUNTS = [
     ("admin01", "Admin@123", "Alice Tan", "admin01@archss.com", "91234567", 1, "Active"),
     ("admin02", "Admin@123", "Ben Lim", "admin02@archss.com", "92345678", 1, "Suspended"),
     ("cust001", "Cust@123", "Chloe Ng", "cust001@archss.com", "93456789", 3, "Active"),
+    ("designer1", "Pass@123", "David Designer", "designer1@archss.com", "94567890", 2, "Active"),
+]
+
+# Default IDP categories for testing and manual UI demo
+DEFAULT_CATEGORIES = [
+    ("Living Room", "Living room and lounge interior designs"),
+    ("Bedroom", "Master and guest bedroom interior designs"),
+    ("Kitchen", "Modern kitchen remodels and dining spaces"),
+    ("Bathroom", "Bathroom and en-suite renovations"),
 ]
 
 # only insert a row if it isn't there already. we used INSERT OR IGNORE before, but sqlite
@@ -35,6 +44,7 @@ TEST_ACCOUNTS = [
 # (e.g. the next profile made in the app got id 201 instead of 101)
 PROFILE_NOT_THERE_YET = "WHERE NOT EXISTS (SELECT 1 FROM user_profile WHERE profileName = ?)"
 ACCOUNT_NOT_THERE_YET = "WHERE NOT EXISTS (SELECT 1 FROM user_account WHERE username = ?)"
+CATEGORY_NOT_THERE_YET = "WHERE NOT EXISTS (SELECT 1 FROM idp_category WHERE categoryName = ?)"
 
 
 def seedDefaultData(conn):
@@ -49,6 +59,12 @@ def seedDefaultData(conn):
             "INSERT INTO user_account (username, password, fullName, email, phone, profileId, status) "
             "SELECT ?, ?, ?, ?, ?, ?, ? " + ACCOUNT_NOT_THERE_YET,
             (username, hashPassword(password), fullName, email, phone, profileId, status, username),
+        )
+    for catName, description in DEFAULT_CATEGORIES:
+        conn.execute(
+            "INSERT INTO idp_category (categoryName, description, status) "
+            "SELECT ?, ?, 'Active' " + CATEGORY_NOT_THERE_YET,
+            (catName, description, catName),
         )
     conn.commit()
 
@@ -230,6 +246,7 @@ if __name__ == "__main__":
     seedSampleData(conn)
     profileCount = conn.execute("SELECT COUNT(*) FROM user_profile").fetchone()[0]
     accountCount = conn.execute("SELECT COUNT(*) FROM user_account").fetchone()[0]
+    categoryCount = conn.execute("SELECT COUNT(*) FROM idp_category").fetchone()[0]
     conn.close()
-    print("Test data added -", profileCount, "user profiles,", accountCount, "user accounts")
+    print("Test data added -", profileCount, "user profiles,", accountCount, "user accounts,", categoryCount, "categories")
     print("Log in with admin01 / Admin@123  (sample accounts use " + SAMPLE_PASSWORD + ")")

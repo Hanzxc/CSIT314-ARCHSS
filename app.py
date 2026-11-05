@@ -31,6 +31,18 @@ from boundary.updateUserAccountPage import UpdateUserAccountPage
 from boundary.suspendUserAccountPage import SuspendUserAccountPage
 from boundary.searchUserAccountPage import SearchUserAccountPage
 from entity.userProfile import UserProfile
+
+# --- Sprint 4 Boundary Imports (US25 - US29: Past IDPs & US33 - US35: Customer Saved List) ---
+from boundary.addPastIDPRoute import add_past_idp_bp
+from boundary.viewPastIDPRoute import view_past_idp_bp
+from boundary.updatePastIDPRoute import update_past_idp_bp
+from boundary.deletePastIDPRoute import delete_past_idp_bp
+from boundary.searchPastIDPsRoute import search_past_idp_bp
+
+from boundary.saveIDPRoute import save_idp_bp
+from boundary.searchSaveListRoute import search_saved_list_bp
+from boundary.viewSaveListRoute import view_saved_list_bp
+
 from database.db import initDatabase
 
 from boundary.addCurrentIDPPage import AddCurrentIDPPage
@@ -428,9 +440,18 @@ def suspendIDPCategory(categoryId):
         return page.cancelSuspend()
     return page.confirmSuspend()
 
+# --- Register Sprint 4 Blueprints (Before app execution) ---
+app.register_blueprint(add_past_idp_bp)
+app.register_blueprint(view_past_idp_bp)
+app.register_blueprint(update_past_idp_bp)
+app.register_blueprint(delete_past_idp_bp)
+app.register_blueprint(search_past_idp_bp)
+
+app.register_blueprint(save_idp_bp)
+app.register_blueprint(search_saved_list_bp)
+app.register_blueprint(view_saved_list_bp)
+
 
 if __name__ == "__main__":
     initDatabase()
     app.run(debug=True)
-
-

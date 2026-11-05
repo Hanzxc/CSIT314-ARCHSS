@@ -17,4 +17,4 @@ def searchSavedList():
     # Execute search query
     saved_idps = controller.searchSavedList(customer_id, keyword)
 
-    return render_template('view_saved_list.html', saved_idps=saved_idps, keyword=keyword) 
+    return render_template('view_saved_list.html', saved_idps=saved_idps, keyword=keyword)
