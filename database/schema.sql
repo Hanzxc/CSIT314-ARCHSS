@@ -57,3 +57,17 @@ CREATE TABLE IF NOT EXISTS idp (
     status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
     createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- IDP Table (Used by US20, US25-US29, US42)
+CREATE TABLE IF NOT EXISTS idp (
+    idpId INTEGER PRIMARY KEY AUTOINCREMENT,
+    designerId INTEGER NOT NULL,
+    categoryId INTEGER NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    location VARCHAR(100),
+    projectType VARCHAR(20) NOT NULL DEFAULT 'Current', -- 'Current' or 'Past'
+    status VARCHAR(20) NOT NULL DEFAULT 'Active',       -- 'Active' or 'Suspended'
+    createdDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (designerId) REFERENCES user_account(userId) ON DELETE CASCADE,
+    FOREIGN KEY (categoryId) REFERENCES idp_category(categoryId) ON DELETE CASCADE
+);
