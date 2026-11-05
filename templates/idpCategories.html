@@ -1,0 +1,40 @@
+{% extends "platformManagerBase.html" %}
+
+{% block title %}IDP Categories - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- IDP Categories list (US41/US42 wireframe 4a) + the search box for US45 -->
+    <div class="page-top">
+        <h1>IDP Categories</h1>
+        <a href="{{ url_for('createIDPCategory') }}" class="btn-small btn-blue">+ Create IDP category</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('idpCategories') }}" class="search-bar">
+        <input type="text" name="keyword" value="{{ keyword }}" placeholder="Search by name or description">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        {% if keyword %}
+            <a href="{{ url_for('idpCategories') }}" class="btn-small btn-grey">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if noResultsMessage %}
+        <div class="message info">&#8505; {{ noResultsMessage }}</div>
+    {% else %}
+        <table class="list-table">
+            <tr>
+                <th>Category name</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+            {% for category in categories %}
+                <tr>
+                    <td><strong>{{ category.categoryName }}</strong></td>
+                    <td>{{ category.description }}</td>
+                    <td><span class="badge {{ category.status|lower }}">{{ category.status }}</span></td>
+                    <td><a href="{{ url_for('viewIDPCategory', categoryId=category.categoryId) }}">View</a></td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+{% endblock %}

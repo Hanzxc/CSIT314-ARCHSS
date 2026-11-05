@@ -1,0 +1,63 @@
+{% extends "platformManagerBase.html" %}
+
+{% block title %}IDP category - Interior Design Platform{% endblock %}
+
+{% block content %}
+    {% if category %}
+        <!-- US42 details page (wireframes 4b, 4c), with the Update (US43) and Suspend (US44) buttons -->
+        <div class="page-top">
+            <h1>{{ category.categoryName }} <span class="badge {{ category.status|lower }}">{{ category.status }}</span></h1>
+            <div class="form-buttons">
+                <a href="{{ url_for('updateIDPCategory', categoryId=category.categoryId) }}" class="btn-small btn-blue">Update</a>
+                {% if category.status == 'Active' %}
+                    <a href="{{ url_for('suspendIDPCategory', categoryId=category.categoryId) }}" class="btn-small btn-red">Suspend</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <h3>Description</h3>
+        <p>{{ category.description or "(no description)" }}</p>
+
+        <h3>IDPs in this category</h3>
+        {% if idps %}
+            <table class="list-table">
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                </tr>
+                {% for idp in idps %}
+                    <tr>
+                        <td><strong>{{ idp.title }}</strong></td>
+                        <td>{{ idp.projectType }}</td>
+                        <td>{{ idp.location or "Not provided" }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <div class="message info">&#8505; {{ noIDPsMessage }}</div>
+        {% endif %}
+
+        <p><a href="{{ url_for('idpCategories') }}">&larr; Back to IDP Categories</a></p>
+
+        {% if showConfirmation %}
+            <!-- US44 wireframe 4b - the "Are you sure?" box -->
+            <div class="overlay">
+                <div class="confirm-box">
+                    <h2>Suspend IDP category?</h2>
+                    <p>Are you sure you want to suspend <strong>{{ category.categoryName }}</strong>?
+                       Users will no longer be able to see or select it.</p>
+                    <form method="POST" action="{{ url_for('suspendIDPCategory', categoryId=category.categoryId) }}">
+                        <button type="submit" name="choice" value="ok" class="btn-small btn-red">OK</button>
+                        <button type="submit" name="choice" value="cancel" class="btn-small btn-grey">Cancel</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- US42 wireframe 4d - not found -->
+        <h1>IDP category</h1>
+        <div class="message error">{{ errorMessage }}</div>
+        <a href="{{ url_for('idpCategories') }}" class="btn-small btn-grey">Back to IDP Categories</a>
+    {% endif %}
+{% endblock %}

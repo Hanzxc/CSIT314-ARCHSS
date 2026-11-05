@@ -33,6 +33,14 @@ from boundary.searchUserAccountPage import SearchUserAccountPage
 from entity.userProfile import UserProfile
 from database.db import initDatabase
 
+from boundary.addCurrentIDPPage import AddCurrentIDPPage
+from boundary.platformManagerLogoutPage import PlatformManagerLogoutPage
+from boundary.createIDPCategoryPage import CreateIDPCategoryPage
+from boundary.viewIDPCategoryPage import ViewIDPCategoryPage
+from boundary.updateIDPCategoryPage import UpdateIDPCategoryPage
+from boundary.suspendIDPCategoryPage import SuspendIDPCategoryPage
+from boundary.searchIDPCategoryPage import SearchIDPCategoryPage
+
 app = Flask(__name__)
 app.secret_key = "change-this-later"     # TODO: move to an environment variable
 
@@ -76,6 +84,17 @@ def designerLoginRequired(routeFunction):
         designer = InteriorDesignerLoginController().getAuthenticatedDesigner(userId)
         if designer is None:
             abort(403)
+        return routeFunction(*args, **kwargs)
+    return wrapper
+
+
+def managerLoginRequired(routeFunction):
+    # US41 - US45: being logged in as a platform manager is the precondition of these use cases (US39),
+    # so the pages don't re-check it. this only stops a crash when there's no session at all
+    @wraps(routeFunction)
+    def wrapper(*args, **kwargs):
+        if "userId" not in session:
+            return redirect(url_for("platformManagerLogin"))
         return routeFunction(*args, **kwargs)
     return wrapper
 
@@ -337,6 +356,80 @@ def platformManagerDashboard():
 @designerLoginRequired
 def restoreCompanyProfile():
     return RestoreCompanyProfilePage().submitRestore(request.form.get("confirmationToken", ""))
+
+
+# US20 Add current IDP. Ownership is taken from the session in the boundary.
+# categoryId comes from the drop-down as text, type=int turns it into a number (None if nothing picked)
+@app.route("/designer/idps/add", methods=["GET", "POST"])
+@designerLoginRequired
+def addCurrentIDP():
+    page = AddCurrentIDPPage()
+    if request.method == "POST":
+        return page.submitCurrentIDP(request.form.get("title", ""),
+                                     request.form.get("categoryId", type=int),
+                                     request.form.get("description", ""),
+                                     request.form.get("location", ""))
+    return page.clickAddCurrentIDP()
+
+
+# US40 End the current manager browser session; no active-role guard is required to log out.
+@app.route("/manager/logout", methods=["POST"])
+def platformManagerLogout():
+    return PlatformManagerLogoutPage().clickLogout()
+
+
+# US45 Search IDP categories - this is also the IDP Categories list page
+# /manager/categories shows everything, /manager/categories?keyword=kit only shows the matches
+@app.route("/manager/categories")
+@managerLoginRequired
+def idpCategories():
+    return SearchIDPCategoryPage().searchIDPCategories(request.args.get("keyword", ""))
+
+
+# US41 Create IDP category
+@app.route("/manager/categories/create", methods=["GET", "POST"])
+@managerLoginRequired
+def createIDPCategory():
+    page = CreateIDPCategoryPage()
+    if request.method == "POST":
+        return page.submitIDPCategory(request.form.get("categoryName", ""),
+                                      request.form.get("description", ""))
+    return page.clickCreateIDPCategory()
+
+
+# US42 View IDP category and the IDPs in it
+@app.route("/manager/categories/<int:categoryId>")
+@managerLoginRequired
+def viewIDPCategory(categoryId):
+    return ViewIDPCategoryPage().selectIDPCategory(categoryId)
+
+
+# US43 Update IDP category
+@app.route("/manager/categories/<int:categoryId>/update", methods=["GET", "POST"])
+@managerLoginRequired
+def updateIDPCategory(categoryId):
+    page = UpdateIDPCategoryPage()
+    if request.method == "POST":
+        page.categoryId = categoryId
+        return page.submitUpdate(request.form.get("categoryName", ""),
+                                 request.form.get("description", ""))
+    return page.clickUpdate(categoryId)
+
+
+# US44 Suspend IDP category
+# GET  = manager clicked Suspend -> show the "Are you sure?" box
+# POST = manager clicked OK or Cancel in the box
+@app.route("/manager/categories/<int:categoryId>/suspend", methods=["GET", "POST"])
+@managerLoginRequired
+def suspendIDPCategory(categoryId):
+    page = SuspendIDPCategoryPage()
+    if request.method == "GET":
+        return page.clickSuspend(categoryId)
+
+    page.categoryId = categoryId
+    if request.form.get("choice") == "cancel":
+        return page.cancelSuspend()
+    return page.confirmSuspend()
 
 
 if __name__ == "__main__":

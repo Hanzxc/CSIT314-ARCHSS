@@ -1,0 +1,33 @@
+{% extends "platformManagerBase.html" %}
+
+{% block title %}Create IDP category - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- US41 Create IDP category - wireframes 4b (form) and 4c (with errors) -->
+    <h1>Create IDP category</h1>
+
+    {% if errorMessage %}
+        <div class="message error" role="alert">{{ errorMessage }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('createIDPCategory') }}" class="profile-form">
+        <label for="categoryName">Category name *</label>
+        <input type="text" id="categoryName" name="categoryName" value="{{ categoryName }}"
+               class="{% if fieldErrors.categoryName %}field-error{% endif %}">
+        {% if fieldErrors.categoryName %}
+            <p class="field-error-text">{{ fieldErrors.categoryName }}</p>
+        {% endif %}
+
+        <label for="description">Description (optional)</label>
+        <textarea id="description" name="description" rows="3"
+                  class="{% if fieldErrors.description %}field-error{% endif %}">{{ description }}</textarea>
+        {% if fieldErrors.description %}
+            <p class="field-error-text">{{ fieldErrors.description }}</p>
+        {% endif %}
+
+        <div class="form-buttons">
+            <button type="submit" class="btn-small btn-blue">Create</button>
+            <a href="{{ url_for('idpCategories') }}" class="btn-small btn-grey">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

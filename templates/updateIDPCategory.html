@@ -1,0 +1,41 @@
+{% extends "platformManagerBase.html" %}
+
+{% block title %}Update IDP category - Interior Design Platform{% endblock %}
+
+{% block content %}
+    <!-- US43 Update IDP category - wireframes 4b (filled-in form) and 4c (name already used) -->
+    <h1>Update IDP category</h1>
+
+    {% if errorMessage %}
+        <div class="message error" role="alert">{{ errorMessage }}</div>
+    {% endif %}
+
+    {% if categoryId %}
+        <p>Status: <span class="badge {{ status|lower }}">{{ status }}</span>
+           <span class="hint">(use Suspend on the details page to change this)</span></p>
+
+        <form method="POST" action="{{ url_for('updateIDPCategory', categoryId=categoryId) }}" class="profile-form">
+            <label for="categoryName">Category name *</label>
+            <input type="text" id="categoryName" name="categoryName" value="{{ categoryName }}"
+                   class="{% if fieldErrors.categoryName %}field-error{% endif %}">
+            {% if fieldErrors.categoryName %}
+                <p class="field-error-text">{{ fieldErrors.categoryName }}</p>
+            {% endif %}
+
+            <label for="description">Description (optional)</label>
+            <textarea id="description" name="description" rows="3"
+                      class="{% if fieldErrors.description %}field-error{% endif %}">{{ description }}</textarea>
+            {% if fieldErrors.description %}
+                <p class="field-error-text">{{ fieldErrors.description }}</p>
+            {% endif %}
+
+            <div class="form-buttons">
+                <button type="submit" class="btn-small btn-blue">Save changes</button>
+                <a href="{{ url_for('viewIDPCategory', categoryId=categoryId) }}" class="btn-small btn-grey">Cancel</a>
+            </div>
+        </form>
+    {% else %}
+        <!-- the category doesn't exist (anymore) -->
+        <a href="{{ url_for('idpCategories') }}" class="btn-small btn-grey">Back to IDP Categories</a>
+    {% endif %}
+{% endblock %}
