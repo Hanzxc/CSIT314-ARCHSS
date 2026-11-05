@@ -6,7 +6,6 @@ class AddPastIDPController:
         self.idpEntity = IDP()
 
     def addPastIDP(self, designerId, categoryId, title, description, location=None):
-        # Validation checks
         if not title or not categoryId or not description:
             return False, "Please fill in all required fields."
             
@@ -17,7 +16,6 @@ class AddPastIDPController:
         if len(title_clean) < 3 or len(title_clean) > 100:
             return False, "Project title must be between 3 and 100 characters."
 
-        # Create temporary IDP domain object matching entity __init__
         new_idp = IDP(
             designerId=designerId,
             categoryId=int(categoryId),
@@ -28,7 +26,6 @@ class AddPastIDPController:
             status="Active"
         )
 
-        # Call entity method
         success = self.idpEntity.addPastIDP(new_idp)
         if success:
             return True, "Past IDP added successfully."

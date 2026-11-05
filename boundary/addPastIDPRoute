@@ -7,7 +7,6 @@ add_past_idp_bp = Blueprint('add_past_idp', __name__)
 
 @add_past_idp_bp.route('/designer/past-idps/add', methods=['GET', 'POST'])
 def addPastIDP():
-    # Session access check
     if session.get('user_role') != 'Interior Designer':
         return redirect('/designer/login')
 
@@ -30,10 +29,9 @@ def addPastIDP():
 
         if success:
             flash(message, "success")
-            return redirect(url_for('view_past_idp.viewPastIDPs'))
+            return redirect('/designer/past-idps')
         else:
             flash(message, "error")
 
-    # GET request: fetch active categories for the drop-down menu
     active_categories = category_entity.getActiveCategories()
     return render_template('add_past_idp.html', categories=active_categories)

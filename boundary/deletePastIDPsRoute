@@ -1,0 +1,24 @@
+# Boundary: Route handler for UC28 Delete Past IDP
+from flask import Blueprint, request, redirect, flash, session
+from control.deletePastIDPController import DeletePastIDPController
+
+delete_past_idp_bp = Blueprint('delete_past_idp', __name__)
+
+@delete_past_idp_bp.route('/designer/past-idps/delete/<int:idp_id>', methods=['POST'])
+def deletePastIDP(idp_id):
+    # Session access & role check
+    if session.get('user_role') != 'Interior Designer':
+        return redirect('/designer/login')
+
+    controller = DeletePastIDPController()
+    designer_id = session.get('user_id')
+
+    # Execute deletion logic
+    success, message = controller.deletePastIDP(idp_id, designer_id)
+
+    if success:
+        flash(message, "success")
+    else:
+        flash(message, "error")
+
+    return redirect('/designer/past-idps')

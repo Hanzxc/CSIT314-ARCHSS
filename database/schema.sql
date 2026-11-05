@@ -57,17 +57,24 @@ CREATE TABLE IF NOT EXISTS idp (
     status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
     createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
--- IDP Table (Used by US20, US25-US29, US42)
+-- US20, US25 - US29: Interior Design Projects (IDPs)
 CREATE TABLE IF NOT EXISTS idp (
-    idpId INTEGER PRIMARY KEY AUTOINCREMENT,
-    designerId INTEGER NOT NULL,
-    categoryId INTEGER NOT NULL,
-    title VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    location VARCHAR(100),
-    projectType VARCHAR(20) NOT NULL DEFAULT 'Current', -- 'Current' or 'Past'
-    status VARCHAR(20) NOT NULL DEFAULT 'Active',       -- 'Active' or 'Suspended'
-    createdDate DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (designerId) REFERENCES user_account(userId) ON DELETE CASCADE,
-    FOREIGN KEY (categoryId) REFERENCES idp_category(categoryId) ON DELETE CASCADE
+    idpId        INTEGER PRIMARY KEY AUTOINCREMENT,
+    designerId   INTEGER NOT NULL REFERENCES user_account(userId) ON DELETE CASCADE,
+    categoryId   INTEGER NOT NULL REFERENCES idp_category(categoryId) ON DELETE CASCADE,
+    title        TEXT NOT NULL CHECK(length(trim(title)) BETWEEN 3 AND 100),
+    description  TEXT NOT NULL CHECK(length(trim(description)) BETWEEN 1 AND 2000),
+    location     TEXT NOT NULL DEFAULT '' CHECK(length(location) <= 200),
+    projectType  TEXT NOT NULL DEFAULT 'Current' CHECK(projectType IN ('Current', 'Past')),
+    status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
+    createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- US33 - US35: Saved List / Favourites (Customer)
+CREATE TABLE IF NOT EXISTS saved_idp (
+    savedId      INTEGER PRIMARY KEY AUTOINCREMENT,
+    customerId   INTEGER NOT NULL REFERENCES user_account(userId) ON DELETE CASCADE,
+    idpId        INTEGER NOT NULL REFERENCES idp(idpId) ON DELETE CASCADE,
+    savedDate    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(customerId, idpId) -- Prevents duplicate saves
+);
+
