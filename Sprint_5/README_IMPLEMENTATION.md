@@ -1,49 +1,48 @@
-# User Stories 37, 38, 46, 47 and 48
+# Sprint 5 - US37, US38, US46, US47, US48
 
-## What changed
-- US37: /designer/idps/statistics/views, counts actual visits to IDP details.
-- US38: /designer/idps/statistics/saves, shows distinct customers currently saving each designer-owned IDP.
-- US46: /manager/reports/daily?date=YYYY-MM-DD
-- US47: /manager/reports/weekly?date=YYYY-MM-DD (Monday to Sunday)
-- US48: /manager/reports/monthly?date=YYYY-MM-DD
-- /idps and /idps/<id> public listing/detail route to capture view events until the Customer viewing story is merged.
-- Uses the existing `idp`, `saved_idp`, `idp_category`, `user_account` tables.
-- One added `idp_view` table in `database/schema.sql`. Run `initDatabase()` or `python app.py` before using.
+Rewritten on 6 Nov 2026 to follow the same pattern as US20 / US41 - US45: one boundary page and one
+controller per user story, camelCase names, and no extra login re-check inside the use case (being
+logged in is the precondition - lecturer feedback). The first version (one shared `IDPAnalyticsPage` /
+`IDPAnalyticsController` for all five stories) is in commit `c12e75f`.
 
-## How to run
-1. Install dependencies: `python -m pip install -r requirements.txt`
-2. Initialize or seed as you ordinarily do (`python -m database.seedData`).
-3. Start: `python app.py`
-4. Open the designer and manager dashboards. New links appear in the sidebars.
-5. To create real view counts, open an active IDP through `/idps`.
-6. Saves are based on entries your teammate's US33 implementation adds to `saved_idp`.
+| Story | Page (boundary) | Controller | Route |
+|---|---|---|---|
+| US37 View IDP view statistics | `ViewIDPViewStatisticsPage` | `ViewIDPViewStatisticsController` | `/designer/idps/statistics/views` |
+| US38 View IDP save statistics | `ViewIDPSaveStatisticsPage` | `ViewIDPSaveStatisticsController` | `/designer/idps/statistics/saves` |
+| US46 Generate daily report | `GenerateDailyReportPage` | `GenerateDailyReportController` | `/manager/reports/daily?date=YYYY-MM-DD` |
+| US47 Generate weekly report | `GenerateWeeklyReportPage` | `GenerateWeeklyReportController` | `/manager/reports/weekly?date=...` |
+| US48 Generate monthly report | `GenerateMonthlyReportPage` | `GenerateMonthlyReportController` | `/manager/reports/monthly?date=...` |
 
-## Important integration caveats
-- This repository has no customer-facing detail-view route or customer-facing login.
-  `/idps` and `/idps/<id>` are standalone interim viewer routes and currently public.
-  Integrate the `record_project_view()` call into the actual IDP detail page when available.
-  The viewer counts page loads, not unique humans, and refreshes count as additional views.
-- US38 is **current bookmarks** only. If customers unsave projects, saved_idp deletes
-  the row. Past save events cannot be reconstructed from this table.
-- US46-48 show views during the chosen period and **currently existing saves that
-  were created during that period**. These are not lifetime engagement or historical
-  unsave records. Rankings are based on views, followed by saves.
-- All reporting timestamps use SQLite UTC CURRENT_TIMESTAMP. The selected date
-  is consequently interpreted as a UTC day/week/month, not Singapore local time.
-- Category 'Active IDPs' means the currently active portfolio count, not projects
-  created during that period. Suspended categories remain visible for reporting.
-- Both statistics and manager reports check the authenticated user's role against
-  existing login controllers, rather than blindly trusting session contents.
-- Do not claim integration or manual UI tests passed until they are run on the team's environment.
+All five use one entity, `IDPAnalytics` (`entity/idpAnalytics.py`), the same way `IDP` is shared by
+US20 - US29: `getViewStatistics`, `getSaveStatistics`, `getCategoryReport(startDate, endDate)` and
+`recordView(idpId)`.
 
-## Changed files
-- app.py
-- database/schema.sql
-- entity/idpAnalytics.py
-- control/idpAnalyticsController.py
-- boundary/idpAnalyticsPage.py
-- templates/idpStatistics.html, idpCategoryReport.html, idpGallery.html, idpDetails.html
-- templates/interiorDesignerBase.html, interiorDesignerDashboard.html
-- templates/platformManagerBase.html, platformManagerDashboard.html
-- static/style.css
-- tests/test_us37_38_46_47_48.py
+## How the numbers are counted
+- **Views (US37, US46 - US48):** every time a customer opens an IDP in US32 View IDP,
+  `ViewIDPController.viewIDP()` calls `IDPAnalytics.recordView()`, which adds one row to `idp_view`.
+  Only Active IDPs in Active categories are counted. Refreshing counts again.
+- **Saves (US38, US46 - US48):** read from `saved_idp`, which US33 Save IDP fills. Unsaving deletes the
+  row, so it's "customers who have it saved now", not a history of every save.
+- **Report periods:** daily = that day, weekly = Monday to Sunday of that week, monthly = 1st to last day.
+  The controller works out the period; the page only checks the date (real date, not in the future).
+- **Time zone:** the database stores UTC (`CURRENT_TIMESTAMP`); the report compares local dates
+  (`date(..., 'localtime')`), so a Singapore "today" report includes views from before 8am.
+
+## Files
+- Code: `boundary/viewIDP*StatisticsPage.py`, `boundary/generate*ReportPage.py`, matching controllers in
+  `control/`, `entity/idpAnalytics.py`, templates `idpStatistics.html` and `idpCategoryReport.html`.
+- Tests: `tests/test_us37_viewIDPViewStatistics.py`, `test_us38_...`, `test_us46_...`, `test_us47_...`,
+  `test_us48_...` (one per story; US47/US48 reuse the helpers in the US46 file).
+- Diagrams: `Sprint_5/US37 - .../` to `US48 - .../` - each has the `.drawio` (Use Case, BCE and
+  Sequence pages) and the exported PNGs in `diagrams/`. They were drawn from this code.
+- `User story diagram/` is the original first-draft diagrams, kept for reference only.
+
+## Changed outside Sprint 5
+- `control/viewIDPController.py` (US32): one line to record the view. US32's sequence diagram needs a
+  `recordView(idpId)` call added after `getIDP(idpId)`.
+- `tests/test_us32_viewIDP.py`: `test_ut32_26_readOnly` now allows the new `idp_view` row (and checks
+  exactly one is added per visible IDP).
+- Dashboards and side menus link to the new pages.
+
+## Still to do
+- The `.docx` write-ups and wireframes (4a, 4b, ...) for each story, like the other sprints.

@@ -1,115 +1,72 @@
-"""Persistence methods for US37, US38 and US46-48. Uses the team's real tables."""
-from datetime import date, timedelta
+# Entity: IDPAnalytics - IDP views and saves (used by US37, US38, US46, US47, US48)
+# reads the idp, idp_category, idp_view and saved_idp tables.
+# one row in idp_view = one time a customer opened an IDP (US32 View IDP records it)
+
 from database.db import getConnection
 
+
 class IDPAnalytics:
-    @staticmethod
-    def period_bounds(period, selected_date):
-        """Return inclusive start and exclusive end, as date values."""
-        try:
-            chosen = date.fromisoformat(selected_date)
-        except (TypeError, ValueError):
-            raise ValueError("Choose a valid date in YYYY-MM-DD format") from None
-        if period == "daily":
-            start = chosen
-            end = chosen + timedelta(days=1)
-        elif period == "weekly":
-            start = chosen - timedelta(days=chosen.weekday())
-            end = start + timedelta(days=7)
-        elif period == "monthly":
-            start = chosen.replace(day=1)
-            end = date(start.year + 1, 1, 1) if start.month == 12 else date(start.year, start.month + 1, 1)
-        else:
-            raise ValueError("Invalid reporting period")
-        return start.isoformat(), end.isoformat()
-
-    def get_designer_statistics(self, designer_id):
-        """Include active current and past IDPs with zero counts, scoped to the owner."""
+    # UC32 View IDP (records the view that US37 and US46 - US48 count)
+    # only counts a view of an IDP customers can actually see (Active IDP + Active category).
+    # true if a view was saved
+    def recordView(self, idpId):
         conn = getConnection()
-        try:
-            rows = conn.execute("""
-                SELECT p.idpId, p.title, p.projectType, p.createdDate,
-                       c.categoryName,
-                       (SELECT COUNT(*) FROM idp_view v WHERE v.idpId = p.idpId) AS views,
-                       (SELECT COUNT(DISTINCT s.customerId) FROM saved_idp s
-                        WHERE s.idpId = p.idpId) AS saves
-                FROM idp p
-                JOIN idp_category c ON c.categoryId = p.categoryId
-                WHERE p.designerId = ? AND p.status = 'Active'
-                ORDER BY p.createdDate DESC, p.idpId DESC
-            """, (designer_id,)).fetchall()
-            return [dict(r) for r in rows]
-        finally:
-            conn.close()
+        cursor = conn.execute(
+            "INSERT INTO idp_view (idpId) "
+            "SELECT idp.idpId FROM idp JOIN idp_category c ON c.categoryId = idp.categoryId "
+            "WHERE idp.idpId = ? AND idp.status = 'Active' AND c.status = 'Active'",
+            (idpId,))
+        conn.commit()
+        recorded = cursor.rowcount == 1
+        conn.close()
+        return recorded
 
-    def get_category_report(self, period, selected_date):
-        """Category views and currently saved items saved within the chosen period.
-
-        View history is recorded in idp_view. Deleting a bookmark removes its
-        saved_idp row, so these save figures are NOT historical save events.
-        """
-        start, end = self.period_bounds(period, selected_date)
-        start_ts, end_ts = start + ' 00:00:00', end + ' 00:00:00'
+    # UC37 View IDP view statistics
+    # each of the designer's Active IDPs with how many times it was viewed (0 if never)
+    def getViewStatistics(self, designerId):
         conn = getConnection()
-        try:
-            rows = conn.execute("""
-                SELECT c.categoryId, c.categoryName, c.status,
-                    (SELECT COUNT(*) FROM idp p
-                     WHERE p.categoryId = c.categoryId AND p.status = 'Active') AS totalIDPs,
-                    (SELECT COUNT(*) FROM idp_view v
-                     JOIN idp p ON p.idpId = v.idpId
-                     WHERE p.categoryId = c.categoryId AND p.status = 'Active'
-                     AND v.viewedAt >= ? AND v.viewedAt < ?) AS views,
-                    (SELECT COUNT(*) FROM saved_idp s
-                     JOIN idp p ON p.idpId = s.idpId
-                     WHERE p.categoryId = c.categoryId AND p.status = 'Active'
-                     AND s.savedDate >= ? AND s.savedDate < ?) AS saves
-                FROM idp_category c
-                ORDER BY views DESC, saves DESC, c.categoryName COLLATE NOCASE
-            """, (start_ts, end_ts, start_ts, end_ts)).fetchall()
-            return {'period': period, 'date': selected_date,
-                    'start': start, 'end_exclusive': end,
-                    'categories': [dict(r) for r in rows]}
-        finally:
-            conn.close()
+        rows = conn.execute(
+            "SELECT idp.idpId, idp.title, idp.projectType, c.categoryName, "
+            "(SELECT COUNT(*) FROM idp_view v WHERE v.idpId = idp.idpId) AS views "
+            "FROM idp LEFT JOIN idp_category c ON c.categoryId = idp.categoryId "
+            "WHERE idp.designerId = ? AND idp.status = 'Active' "
+            "ORDER BY views DESC, idp.title COLLATE NOCASE",
+            (designerId,)).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
 
-    def list_public_idps(self):
+    # UC38 View IDP save statistics
+    # each of the designer's Active IDPs with how many different customers have it saved
+    def getSaveStatistics(self, designerId):
         conn = getConnection()
-        try:
-            return [dict(r) for r in conn.execute("""
-                SELECT p.idpId, p.title, p.description, p.projectType,
-                       c.categoryName, u.fullName AS designerName
-                FROM idp p
-                JOIN idp_category c ON c.categoryId = p.categoryId
-                JOIN user_account u ON u.userId = p.designerId
-                WHERE p.status = 'Active' AND c.status = 'Active'
-                ORDER BY p.createdDate DESC, p.idpId DESC
-            """).fetchall()]
-        finally:
-            conn.close()
+        rows = conn.execute(
+            "SELECT idp.idpId, idp.title, idp.projectType, c.categoryName, "
+            "(SELECT COUNT(DISTINCT s.customerId) FROM saved_idp s WHERE s.idpId = idp.idpId) AS saves "
+            "FROM idp LEFT JOIN idp_category c ON c.categoryId = idp.categoryId "
+            "WHERE idp.designerId = ? AND idp.status = 'Active' "
+            "ORDER BY saves DESC, idp.title COLLATE NOCASE",
+            (designerId,)).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
 
-    def record_project_view(self, idp_id):
-        """Count one request to a real active project; never accept a caller-supplied count."""
+    # UC46 / UC47 / UC48 Generate daily / weekly / monthly report
+    # every category with its views and saves between startDate and endDate (both included).
+    # the database stores UTC times, so they're turned into local time before comparing -
+    # otherwise a Singapore "today" report would miss everything before 8am
+    def getCategoryReport(self, startDate, endDate):
         conn = getConnection()
-        try:
-            cursor = conn.execute("""
-                INSERT INTO idp_view(idpId)
-                SELECT p.idpId FROM idp p
-                JOIN idp_category c ON c.categoryId = p.categoryId
-                WHERE p.idpId = ? AND p.status = 'Active' AND c.status = 'Active'
-            """, (idp_id,))
-            if cursor.rowcount != 1:
-                conn.rollback()
-                return None
-            row = conn.execute("""
-                SELECT p.idpId,p.title,p.description,p.location,p.projectType,
-                       c.categoryName,u.fullName AS designerName
-                FROM idp p
-                JOIN idp_category c ON c.categoryId = p.categoryId
-                JOIN user_account u ON u.userId=p.designerId
-                WHERE p.idpId = ?
-            """, (idp_id,)).fetchone()
-            conn.commit()
-            return dict(row) if row else None
-        finally:
-            conn.close()
+        rows = conn.execute(
+            "SELECT c.categoryId, c.categoryName, c.status, "
+            "(SELECT COUNT(*) FROM idp WHERE idp.categoryId = c.categoryId AND idp.status = 'Active') AS totalIDPs, "
+            "(SELECT COUNT(*) FROM idp_view v JOIN idp ON idp.idpId = v.idpId "
+            " WHERE idp.categoryId = c.categoryId "
+            " AND date(v.viewedAt, 'localtime') BETWEEN ? AND ?) AS views, "
+            "(SELECT COUNT(*) FROM saved_idp s JOIN idp ON idp.idpId = s.idpId "
+            " WHERE idp.categoryId = c.categoryId "
+            " AND date(s.savedDate, 'localtime') BETWEEN ? AND ?) AS saves "
+            "FROM idp_category c "
+            "ORDER BY views DESC, saves DESC, c.categoryName COLLATE NOCASE",
+            (startDate.isoformat(), endDate.isoformat(),
+             startDate.isoformat(), endDate.isoformat())).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]

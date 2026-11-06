@@ -21,6 +21,7 @@
         <nav class="sidebar" aria-label="Manager navigation">
             <a href="{{ url_for('platformManagerDashboard') }}" class="{% if activePage == 'dashboard' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('idpCategories') }}" class="{% if activePage == 'categories' %}active{% endif %}">IDP Categories</a>
+            <a href="{{ url_for('generateDailyReport') }}" class="{% if activePage == 'reports' %}active{% endif %}">Reports</a>
         </nav>
         <main class="content">
             {% for category, msg in get_flashed_messages(with_categories=true) %}

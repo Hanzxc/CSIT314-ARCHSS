@@ -1,28 +1,62 @@
 {% extends "platformManagerBase.html" %}
-{% block title %}{{ period|title }} Category Popularity Report - Interior Design Platform{% endblock %}
+
+{% block title %}{{ period|title }} Report - Interior Design Platform{% endblock %}
+
 {% block content %}
-  <h1>{{ period|title }} IDP Category Popularity Report</h1>
-  <p class="subtitle">Compare customer interest across interior design project categories.</p>
-  <div class="form-buttons">
-    <a class="btn-small {{ 'btn-blue' if period == 'daily' else 'btn-grey' }}" href="{{ url_for('dailyCategoryReport') }}">Daily</a>
-    <a class="btn-small {{ 'btn-blue' if period == 'weekly' else 'btn-grey' }}" href="{{ url_for('weeklyCategoryReport') }}">Weekly</a>
-    <a class="btn-small {{ 'btn-blue' if period == 'monthly' else 'btn-grey' }}" href="{{ url_for('monthlyCategoryReport') }}">Monthly</a>
-  </div>
-  <form method="GET" class="search-bar" style="align-items:end;max-width:520px">
-    <div style="flex:1"><label for="date">Choose a date</label>
-    <input type="date" name="date" id="date" value="{{ selectedDate }}" required></div>
-    <button type="submit" class="btn-small btn-blue">Generate report</button>
-  </form>
-  {% if error %}<div class="message error" role="alert">{{ error }}</div>{% endif %}
-  {% if report %}
-    <p class="subtitle"><strong>Reporting period:</strong> {{ report.start }} to {{ report.end_exclusive }} (end date excluded)</p>
-    {% if report.categories %}
-      <table class="list-table"><thead><tr><th>Category</th><th>Status</th><th>Active IDPs</th><th>Views in period</th><th>Current saves added in period</th></tr></thead>
-      <tbody>{% for item in report.categories %}<tr>
-        <td>{{ item.categoryName }}</td><td>{{ item.status }}</td><td>{{ item.totalIDPs }}</td>
-        <td><strong>{{ item.views }}</strong></td><td><strong>{{ item.saves }}</strong></td>
-      </tr>{% endfor %}</tbody></table>
-    {% else %}<p class="message info">No IDP categories found.</p>{% endif %}
-    <p class="hint">Ranked by views, then saves. Saved-list figures reflect bookmarks that still exist, not deleted or unsaved historical activity.</p>
-  {% endif %}
+    <!-- US46 daily, US47 weekly, US48 monthly - same page, one tab each -->
+    <h1>{{ period|title }} Category Report</h1>
+    <p class="subtitle">See which IDP categories customers were most interested in.</p>
+
+    <div class="form-buttons">
+        <a href="{{ url_for('generateDailyReport') }}"
+           class="btn-small {{ 'btn-blue' if period == 'daily' else 'btn-grey' }}">Daily</a>
+        <a href="{{ url_for('generateWeeklyReport') }}"
+           class="btn-small {{ 'btn-blue' if period == 'weekly' else 'btn-grey' }}">Weekly</a>
+        <a href="{{ url_for('generateMonthlyReport') }}"
+           class="btn-small {{ 'btn-blue' if period == 'monthly' else 'btn-grey' }}">Monthly</a>
+    </div>
+
+    <form method="GET" class="search-bar" style="align-items:end; max-width:520px; margin-top:20px">
+        <div style="flex:1">
+            <label for="date">{% if period == 'daily' %}Day{% elif period == 'weekly' %}Any day in the week{% else %}Any day in the month{% endif %}</label>
+            <input type="date" name="date" id="date" value="{{ selectedDate }}" required>
+        </div>
+        <button type="submit" class="btn-small btn-blue">Generate report</button>
+    </form>
+
+    {% if errorMessage %}
+        <div class="message error" role="alert">{{ errorMessage }}</div>
+    {% endif %}
+
+    {% if report %}
+        <p class="subtitle">
+            <strong>Period:</strong>
+            {% if report.startDate == report.endDate %}{{ report.startDate.strftime('%d %b %Y') }}
+            {% else %}{{ report.startDate.strftime('%d %b %Y') }} to {{ report.endDate.strftime('%d %b %Y') }}{% endif %}
+        </p>
+        {% if infoMessage %}
+            <div class="message info">&#8505; {{ infoMessage }}</div>
+        {% endif %}
+        <table class="list-table">
+            <tr>
+                <th>Rank</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Active IDPs</th>
+                <th>Views</th>
+                <th>Saves</th>
+            </tr>
+            {% for row in report.categories %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><strong>{{ row.categoryName }}</strong></td>
+                    <td><span class="badge {{ row.status|lower }}">{{ row.status }}</span></td>
+                    <td>{{ row.totalIDPs }}</td>
+                    <td><strong>{{ row.views }}</strong></td>
+                    <td><strong>{{ row.saves }}</strong></td>
+                </tr>
+            {% endfor %}
+        </table>
+        <p class="hint">Ranked by views, then saves. Saves only count IDPs that are still in a customer's saved list.</p>
+    {% endif %}
 {% endblock %}

@@ -1,21 +1,43 @@
 {% extends "interiorDesignerBase.html" %}
-{% block title %}IDP {{ metric|title }} Statistics - Interior Design Platform{% endblock %}
+
+{% block title %}IDP Statistics - Interior Design Platform{% endblock %}
+
 {% block content %}
-<div class="page-top"><div><h1>IDP {{ metric|title }} Statistics</h1>
-<p class="subtitle">See how customers interact with your interior design projects.</p></div></div>
-<div class="form-buttons">
-  <a href="{{ url_for('viewIDPViewStatistics') }}" class="btn-small {{ 'btn-blue' if metric == 'views' else 'btn-grey' }}">Views</a>
-  <a href="{{ url_for('viewIDPSaveStatistics') }}" class="btn-small {{ 'btn-blue' if metric == 'saves' else 'btn-grey' }}">Saves</a>
-</div>
-{% if rows %}
-<table class="list-table" style="margin-top:20px">
-  <thead><tr><th>IDP</th><th>Category</th><th>Project type</th><th>{{ 'Total views' if metric == 'views' else 'Customers who saved' }}</th></tr></thead>
-  <tbody>{% for idp in rows %}<tr><td>{{ idp.title }}</td><td>{{ idp.categoryName }}</td>
-  <td>{{ idp.projectType }}</td><td><strong>{{ idp[metric] }}</strong></td></tr>{% endfor %}</tbody>
-</table>
-{% else %}
-  <p class="message info" style="margin-top:24px">You do not have any active IDPs yet.</p>
-{% endif %}
-{% if metric == 'views' %}<p class="hint">Views are counted when visitors open an active IDP detail page.</p>
-{% else %}<p class="hint">Saves show the number of unique customers currently saving each IDP.</p>{% endif %}
+    <!-- US37 (views) and US38 (saves) - one tab each, same table -->
+    <div class="page-top">
+        <h1>IDP Statistics</h1>
+    </div>
+    <p class="subtitle">See which of your IDPs get the most attention from customers.</p>
+
+    <div class="form-buttons">
+        <a href="{{ url_for('viewIDPViewStatistics') }}"
+           class="btn-small {{ 'btn-blue' if metric == 'views' else 'btn-grey' }}">Views</a>
+        <a href="{{ url_for('viewIDPSaveStatistics') }}"
+           class="btn-small {{ 'btn-blue' if metric == 'saves' else 'btn-grey' }}">Saves</a>
+    </div>
+
+    {% if infoMessage %}
+        <div class="message info" style="margin-top:20px">&#8505; {{ infoMessage }}</div>
+    {% else %}
+        <table class="list-table" style="margin-top:20px">
+            <tr>
+                <th>IDP</th>
+                <th>Category</th>
+                <th>Type</th>
+                <th>{{ 'Views' if metric == 'views' else 'Customers who saved it' }}</th>
+            </tr>
+            {% for row in statistics %}
+                <tr>
+                    <td><strong>{{ row.title }}</strong></td>
+                    <td>{{ row.categoryName }}</td>
+                    <td>{{ row.projectType }}</td>
+                    <td><strong>{{ row[metric] }}</strong></td>
+                </tr>
+            {% endfor %}
+        </table>
+        <p class="hint">
+            {% if metric == 'views' %}A view is counted each time a customer opens the IDP.
+            {% else %}Each customer is counted once, for as long as the IDP stays in their saved list.{% endif %}
+        </p>
+    {% endif %}
 {% endblock %}

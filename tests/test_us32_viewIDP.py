@@ -212,10 +212,15 @@ def test_ut32_25_forgedQueryFields(client, projects):
 
 
 def test_ut32_26_readOnly(client, projects):
-    before = snapshot()
+    # viewing changes nothing, except US37: each IDP a customer can see gets one idp_view row
+    def withoutViews():
+        return [line for line in snapshot() if "idp_view" not in line]   # its rows + id counter
+    before = withoutViews()
     for key in ('own', 'past', 'foreign', 'hidden', 'suspended'):
         client.get(url(projects[key]))
-    assert snapshot() == before
+    assert withoutViews() == before
+    viewed = [line for line in snapshot() if 'INSERT INTO "idp_view"' in line]
+    assert len(viewed) == 3
 
 
 @pytest.mark.parametrize('method', ['post', 'put', 'patch', 'delete'])

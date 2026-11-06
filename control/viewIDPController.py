@@ -2,6 +2,7 @@
 from control.customerLoginController import CustomerLoginController
 from entity.companyProfile import CompanyProfile
 from entity.idp import IDP
+from entity.idpAnalytics import IDPAnalytics
 from entity.savedIDP import SavedIDP
 
 
@@ -15,6 +16,8 @@ class ViewIDPController:
         idp = IDP().getIDP(idpId)
         if idp is None:
             return None
+        # US37 / US46 - US48: every time a customer opens an IDP counts as one view
+        IDPAnalytics().recordView(idp.idpId)
         return {"idp": idp,
                 "companyProfile": CompanyProfile().getCompanyProfile(idp.designerId),
                 "isSaved": SavedIDP().isSaved(customerId, idp.idpId)}

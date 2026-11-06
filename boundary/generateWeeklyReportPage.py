@@ -1,0 +1,68 @@
+# Boundary: GenerateWeeklyReportPage - UC47 Generate weekly report (US47)
+# templates: idpCategoryReport.html, platformManagerBase.html
+# precondition: the platform manager is already logged in (US39), so there's no extra access check here
+
+from datetime import date
+
+from flask import render_template
+
+from control.generateWeeklyReportController import GenerateWeeklyReportController
+
+MSG_INVALID_DATE = "Please choose a valid date"
+MSG_FUTURE_DATE = "The date can't be in the future"
+MSG_NO_ACTIVITY = "No IDPs were viewed or saved in this period"
+
+
+class GenerateWeeklyReportPage:
+    # UC47 Generate weekly report
+    # the date box starts on today
+    def __init__(self):
+        self.generateWeeklyReportController = GenerateWeeklyReportController()
+        self.selectedDate = date.today().isoformat()
+
+    # UC47 Generate weekly report
+    # manager clicked "Weekly report" - just show the date box, no report yet (wireframe 4a).
+    # any day can be picked - the controller turns it into its Monday-Sunday week
+    def clickGenerateWeeklyReport(self):
+        return self.displayReportForm()
+
+    # UC47 Generate weekly report
+    # the date box, plus the report or an error message when there is one
+    def displayReportForm(self, report=None, errorMessage=None, infoMessage=None):
+        return render_template("idpCategoryReport.html", period="weekly", selectedDate=self.selectedDate,
+                               report=report, errorMessage=errorMessage, infoMessage=infoMessage,
+                               activePage="reports")
+
+    # UC47 Generate weekly report
+    # the date has to be a real YYYY-MM-DD date and not after today. returns the error, or None if ok
+    def validateDate(self, selectedDate):
+        try:
+            chosen = date.fromisoformat(selectedDate)
+        except ValueError:
+            return MSG_INVALID_DATE
+        if chosen > date.today():
+            return MSG_FUTURE_DATE
+        return None
+
+    # UC47 Generate weekly report
+    # manager picked a date and pressed "Generate report"
+    def submitDate(self, selectedDate):
+        self.selectedDate = selectedDate.strip()
+        # bad date -> controller never gets called (outer alt in the seq diagram)
+        error = self.validateDate(self.selectedDate)
+        if error:
+            return self.displayErrorMessage(error)
+        report = self.generateWeeklyReportController.generateWeeklyReport(date.fromisoformat(self.selectedDate))
+        return self.displayReport(report)
+
+    # UC47 Generate weekly report
+    # categories ranked by views then saves (wireframe 4b), or a note if nothing happened (4c)
+    def displayReport(self, report):
+        if all(row["views"] == 0 and row["saves"] == 0 for row in report["categories"]):
+            return self.displayReportForm(report, infoMessage=MSG_NO_ACTIVITY)
+        return self.displayReportForm(report)
+
+    # UC47 Generate weekly report
+    # same date box again with the message on top (wireframe 4d)
+    def displayErrorMessage(self, msg):
+        return self.displayReportForm(errorMessage=msg), 400

@@ -40,5 +40,11 @@
             <p>Your completed interior design projects.</p>
             <a href="{{ url_for('view_past_idp.viewPastIDPs') }}" class="btn" style="display: inline-block; padding: 8px 16px; background: #4568df; color: white; border-radius: 6px; text-decoration: none; margin-top: 10px;">View Past IDPs</a>
         </div>
+
+        <div class="card">
+            <h2>IDP Statistics</h2>
+            <p>How many views and saves each of your IDPs has.</p>
+            <a href="{{ url_for('viewIDPViewStatistics') }}" class="btn-outline">View IDP statistics</a>
+        </div>
     </div>
 {% endblock %}

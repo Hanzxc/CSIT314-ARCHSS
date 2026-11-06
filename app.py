@@ -62,6 +62,12 @@ from boundary.updateIDPCategoryPage import UpdateIDPCategoryPage
 from boundary.suspendIDPCategoryPage import SuspendIDPCategoryPage
 from boundary.searchIDPCategoryPage import SearchIDPCategoryPage
 
+from boundary.viewIDPViewStatisticsPage import ViewIDPViewStatisticsPage
+from boundary.viewIDPSaveStatisticsPage import ViewIDPSaveStatisticsPage
+from boundary.generateDailyReportPage import GenerateDailyReportPage
+from boundary.generateWeeklyReportPage import GenerateWeeklyReportPage
+from boundary.generateMonthlyReportPage import GenerateMonthlyReportPage
+
 app = Flask(__name__)
 app.secret_key = "change-this-later"     # TODO: move to an environment variable
 
@@ -516,6 +522,52 @@ def suspendIDPCategory(categoryId):
     if request.form.get("choice") == "cancel":
         return page.cancelSuspend()
     return page.confirmSuspend()
+
+
+# US37 View IDP view statistics
+@app.route("/designer/idps/statistics/views")
+@designerLoginRequired
+def viewIDPViewStatistics():
+    return ViewIDPViewStatisticsPage().clickViewIDPViews()
+
+
+# US38 View IDP save statistics
+@app.route("/designer/idps/statistics/saves")
+@designerLoginRequired
+def viewIDPSaveStatistics():
+    return ViewIDPSaveStatisticsPage().clickViewIDPSaves()
+
+
+# US46 Generate daily report
+# no ?date= -> manager just opened the page, with ?date= -> they pressed "Generate report"
+@app.route("/manager/reports/daily")
+@managerLoginRequired
+def generateDailyReport():
+    page = GenerateDailyReportPage()
+    if "date" in request.args:
+        return page.submitDate(request.args.get("date", ""))
+    return page.clickGenerateDailyReport()
+
+
+# US47 Generate weekly report
+@app.route("/manager/reports/weekly")
+@managerLoginRequired
+def generateWeeklyReport():
+    page = GenerateWeeklyReportPage()
+    if "date" in request.args:
+        return page.submitDate(request.args.get("date", ""))
+    return page.clickGenerateWeeklyReport()
+
+
+# US48 Generate monthly report
+@app.route("/manager/reports/monthly")
+@managerLoginRequired
+def generateMonthlyReport():
+    page = GenerateMonthlyReportPage()
+    if "date" in request.args:
+        return page.submitDate(request.args.get("date", ""))
+    return page.clickGenerateMonthlyReport()
+
 
 # --- Register Sprint 4 Blueprints (Before app execution) ---
 app.register_blueprint(add_past_idp_bp)
