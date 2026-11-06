@@ -39,8 +39,16 @@ class UserProfile:
 
         if row is None:
             return None
+
+        # Safely parse JSON permissions with fallback
+        raw_perms = row["permissions"] if hasattr(row, "keys") else row[3]
+        try:
+            permissions = json.loads(raw_perms) if raw_perms else []
+        except (json.JSONDecodeError, TypeError):
+            permissions = [raw_perms] if raw_perms else []
+
         return UserProfile(row["profileId"], row["profileName"], row["description"],
-                           json.loads(row["permissions"]), row["status"])
+                           permissions, row["status"])
 
     # US1, US6 - UT6.5
     def isActive(self):
