@@ -1,7 +1,0 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Explore IDPs - Interior Design Platform</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head>
-<body><div class="header"><span class="logo">Interior Design Platform</span></div>
-<main class="content"><h1>Explore Interior Design Projects</h1><p class="subtitle">Browse active projects from interior designers.</p>
-<div class="cards">{% for idp in idps %}<div class="card"><h2>{{ idp.title }}</h2><p>{{ idp.categoryName }} · {{ idp.projectType }}</p>
-<p>By {{ idp.designerName }}</p><a class="btn-outline" href="{{ url_for('publicIDPDetails',idpId=idp.idpId) }}">View IDP</a></div>
-{% else %}<p class="message info">No active projects available.</p>{% endfor %}</div></main></body></html>
