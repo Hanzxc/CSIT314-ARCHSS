@@ -1,0 +1,13 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}View past IDP - Interior Design Platform{% endblock %}
+{% block content %}
+    <!-- US26 View past IDPs - wireframe 4b (details), with the US27 Update and US28 Delete buttons -->
+    <h1>View past IDP</h1>
+    <p class="subtitle">This is how the project looks to customers.</p>
+    {% include "idpDetailContent.html" %}
+    <div class="form-buttons">
+        <a href="{{ url_for('editPastIDP', idpId=idp.idpId) }}" class="btn-small btn-blue">Update</a>
+        <a href="{{ url_for('deletePastIDP', idpId=idp.idpId) }}" class="btn-small btn-red">Delete</a>
+        <a href="{{ url_for('pastIDPs') }}" class="btn-small btn-grey">Back to past IDPs</a>
+    </div>
+{% endblock %}

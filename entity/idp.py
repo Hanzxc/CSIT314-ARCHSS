@@ -15,6 +15,14 @@ VISIBLE_CURRENT_IDPS_SQL = """
       AND idp.status = 'Active' AND category.status = 'Active'
 """
 
+# US25 - US29: the logged-in designer's own past IDPs that are still Active.
+PAST_IDPS_SQL = """
+    SELECT idp.*, category.categoryName
+    FROM idp
+    JOIN idp_category AS category ON category.categoryId = idp.categoryId
+    WHERE idp.designerId = ? AND idp.projectType = 'Past' AND idp.status = 'Active'
+"""
+
 # US31 searches the customer catalogue across designers and project types.
 VISIBLE_CUSTOMER_IDPS_SQL = """
     SELECT idp.*, category.categoryName
@@ -166,79 +174,77 @@ class IDP:
         conn.close()
         return added
 
-    def addPastIDP(self, idp):
+    # ---------- US25 - US29: past IDPs ----------
+    # a past IDP is a row in the idp table with projectType 'Past' (same table as current IDPs).
+    # the designer always only sees and changes their own, Active past IDPs
+
+    # UC25 Add past IDP
+    # the page has already checked the input - this only saves it if the category is still Active.
+    # designerId comes from the session, never the form
+    def createPastIDP(self, idp):
         conn = getConnection()
         cursor = conn.execute(
-            "INSERT INTO idp (designerId, categoryId, title, description, location, projectType, status) "
-            "SELECT ?, categoryId, ?, ?, ?, 'Past', 'Active' FROM idp_category "
-            "WHERE categoryId = ? AND status = 'Active' "
-            "AND EXISTS (SELECT 1 FROM user_account WHERE userId = ?)",
-            (idp.designerId, idp.title, idp.description, idp.location, idp.categoryId, idp.designerId))
+            "INSERT INTO idp (designerId, categoryId, title, description, location, projectType) "
+            "SELECT ?, categoryId, ?, ?, ?, 'Past' FROM idp_category "
+            "WHERE categoryId = ? AND status = 'Active'",
+            (idp.designerId, idp.title, idp.description, idp.location, idp.categoryId))
         conn.commit()
         added = cursor.rowcount == 1
         conn.close()
         return added
 
-    def getPastIDPsByDesigner(self, designerId):
+    # UC26 View past IDPs
+    # all of the designer's Active past IDPs, newest first
+    def findPastIDPsByDesignerId(self, designerId):
         conn = getConnection()
-        cursor = conn.execute(
-            "SELECT i.*, c.categoryName FROM idp i "
-            "LEFT JOIN idp_category c ON i.categoryId = c.categoryId "
-            "WHERE i.designerId = ? AND i.projectType = 'Past' AND i.status = 'Active' "
-            "ORDER BY i.createdDate DESC",
-            (designerId,)
-        )
-        rows = cursor.fetchall()
+        rows = conn.execute(PAST_IDPS_SQL + " ORDER BY idp.idpId DESC", (designerId,)).fetchall()
         conn.close()
-        return rows
+        return [IDP(**dict(row)) for row in rows]
 
-    def getIDPById(self, idpId):
+    # UC26 View past IDPs / UC27 Update past IDP / UC28 Delete past IDP
+    # one past IDP, but only if it belongs to this designer and is still Active. None otherwise
+    def getPastIDPDetails(self, designerId, idpId):
         conn = getConnection()
-        cursor = conn.execute(
-            "SELECT i.*, c.categoryName FROM idp i "
-            "LEFT JOIN idp_category c ON i.categoryId = c.categoryId "
-            "WHERE i.idpId = ?",
-            (idpId,)
-        )
-        row = cursor.fetchone()
+        row = conn.execute(PAST_IDPS_SQL + " AND idp.idpId = ?", (designerId, idpId)).fetchone()
         conn.close()
-        return row
+        return IDP(**dict(row)) if row is not None else None
 
-    def updatePastIDP(self, idp):
+    # UC27 Update past IDP
+    # saves the new details - only the owner's Active past IDP, and only into an Active category
+    def updatePastIDPDetails(self, idp):
         conn = getConnection()
         cursor = conn.execute(
             "UPDATE idp SET categoryId = ?, title = ?, description = ?, location = ? "
-            "WHERE idpId = ? AND designerId = ? AND projectType = 'Past'",
-            (idp.categoryId, idp.title, idp.description, idp.location, idp.idpId, idp.designerId)
-        )
+            "WHERE idpId = ? AND designerId = ? AND projectType = 'Past' AND status = 'Active' "
+            "AND EXISTS (SELECT 1 FROM idp_category WHERE categoryId = ? AND status = 'Active')",
+            (idp.categoryId, idp.title, idp.description, idp.location, idp.idpId, idp.designerId,
+             idp.categoryId))
         conn.commit()
         updated = cursor.rowcount == 1
         conn.close()
         return updated
 
-    def deletePastIDP(self, idpId, designerId):
+    # UC28 Delete past IDP
+    # "delete" = mark it Suspended so it's no longer shown (the row and its views/saves are kept)
+    def markPastIDPUnavailable(self, designerId, idpId):
         conn = getConnection()
         cursor = conn.execute(
             "UPDATE idp SET status = 'Suspended' "
-            "WHERE idpId = ? AND designerId = ? AND projectType = 'Past'",
-            (idpId, designerId)
-        )
+            "WHERE idpId = ? AND designerId = ? AND projectType = 'Past' AND status = 'Active'",
+            (idpId, designerId))
         conn.commit()
         deleted = cursor.rowcount == 1
         conn.close()
         return deleted
 
-    def searchPastIDPs(self, designerId, keyword):
+    # UC29 Search past IDPs
+    # the designer's own Active past IDPs whose title, description, location or category contain the keyword
+    def searchByKeywordAndDesigner(self, keyword, designerId):
+        pattern = "%" + keyword + "%"
         conn = getConnection()
-        search_kw = f"%{keyword}%"
-        cursor = conn.execute(
-            "SELECT i.*, c.categoryName FROM idp i "
-            "LEFT JOIN idp_category c ON i.categoryId = c.categoryId "
-            "WHERE i.designerId = ? AND i.projectType = 'Past' AND i.status = 'Active' "
-            "AND (i.title LIKE ? OR i.description LIKE ? OR i.location LIKE ?) "
-            "ORDER BY i.createdDate DESC",
-            (designerId, search_kw, search_kw, search_kw)
-        )
-        rows = cursor.fetchall()
+        rows = conn.execute(
+            PAST_IDPS_SQL + " AND (idp.title LIKE ? OR idp.description LIKE ? OR idp.location LIKE ? "
+            "OR category.categoryName LIKE ?) ORDER BY idp.idpId DESC",
+            (designerId, pattern, pattern, pattern, pattern)).fetchall()
         conn.close()
-        return rows
+        return [IDP(**dict(row)) for row in rows]

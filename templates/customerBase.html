@@ -10,7 +10,7 @@
     <div class="header">
         <span class="logo">Interior Design Platform</span>
         <div class="user-info">
-            <span>Logged in as {{ account.username }} (Customer)</span>
+            <span>Logged in as {{ account.username if account else headerUsername }} (Customer)</span>
             <form method="POST" action="{{ url_for('customerLogout') }}">
                 <button type="submit" class="btn-outline">Log out</button>
             </form>
@@ -20,7 +20,7 @@
         <nav class="sidebar" aria-label="Customer navigation">
             <a href="{{ url_for('customerDashboard') }}" class="{% if activePage == 'dashboard' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('searchIDPs') }}" class="{% if activePage == 'searchIDPs' %}active{% endif %}">Search IDPs</a>
-            <a href="{{ url_for('view_saved_list.viewSavedList') }}" class="{% if activePage == 'savedIDPs' %}active{% endif %}">Saved IDPs</a>
+            <a href="{{ url_for('savedList') }}" class="{% if activePage == 'savedIDPs' %}active{% endif %}">Saved IDPs</a>
         </nav>
         <main class="content">
             {% for category, msg in get_flashed_messages(with_categories=true) %}

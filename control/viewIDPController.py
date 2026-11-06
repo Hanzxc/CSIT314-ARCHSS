@@ -20,4 +20,4 @@ class ViewIDPController:
         IDPAnalytics().recordView(idp.idpId)
         return {"idp": idp,
                 "companyProfile": CompanyProfile().getCompanyProfile(idp.designerId),
-                "isSaved": SavedIDP().isSaved(customerId, idp.idpId)}
+                "isSaved": SavedIDP().exists(customerId, idp.idpId)}

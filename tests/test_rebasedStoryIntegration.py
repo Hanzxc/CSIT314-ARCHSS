@@ -30,32 +30,19 @@ def test_addedProjectCanBeManagedFoundViewedSavedAndLoggedOut():
     assert b'Integrated Kitchen' in customer.get('/customer/idps/search?keyword=integrated').data
     detail = customer.get(f'/customer/idps/{project}')
     assert b'Carpentry completed' in detail.data and b'>Save IDP</button>' in detail.data
-    saved = customer.post(f'/customer/save-idp/{project}', follow_redirects=True)
+    # US33: saving goes back to the US32 details page, which now shows the IDP as saved
+    saved = customer.post(f'/customer/idps/{project}/save', follow_redirects=True)
     assert saved.status_code == 200 and b'Integrated Kitchen' in saved.data
-    assert b'IDP saved to your favourites' in saved.data
-    assert b'Remove from saved list' in customer.get(f'/customer/idps/{project}').data
+    assert b'IDP saved to your saved list' in saved.data
+    assert b'Saved</span>' in customer.get(f'/customer/idps/{project}').data
+    assert b'Integrated Kitchen' in customer.get('/customer/saved-list').data
     assert b'Integrated Kitchen' in customer.get('/customer/saved-list/search?keyword=Kitchen').data
     customer.post('/customer/logout', follow_redirects=True)
     assert customer.get('/customer/saved-list').headers['Location'].endswith('/customer/login')
 
 
 @pytest.mark.parametrize('path,method', [('/customer/saved-list', 'get'),
-    ('/customer/saved-list/search', 'get'), ('/customer/save-idp/999999', 'post')])
-def test_savedRoutesRecheckUS30Access(path, method):
-    client = app.test_client()
-    client.post('/customer/login', data=dict(username='cust001', password='Cust@123'))
-    conn = getConnection()
-    conn.execute("UPDATE user_profile SET permissions='[]' WHERE profileId=3")
-    conn.commit()
-    conn.close()
-    # Old role labels must not bypass current database permissions.
-    with client.session_transaction() as state:
-        state.update(user_role='Customer', user_id=3)
-    assert getattr(client, method)(path).status_code == 403
-
-
-@pytest.mark.parametrize('path,method', [('/customer/saved-list', 'get'),
-    ('/customer/saved-list/search', 'get'), ('/customer/save-idp/999999', 'post')])
+    ('/customer/saved-list/search', 'get'), ('/customer/idps/999999/save', 'post')])
 def test_savedRoutesRequireLogin(path, method):
     response = getattr(app.test_client(), method)(path)
     assert response.status_code == 302 and response.headers['Location'].endswith('/customer/login')

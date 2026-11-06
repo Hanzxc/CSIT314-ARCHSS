@@ -20,6 +20,7 @@
         <nav class="sidebar" aria-label="Designer navigation">
             <a href="{{ url_for('interiorDesignerDashboard') }}" class="{% if activePage == 'dashboard' %}active{% endif %}">Dashboard</a>
             <a href="{{ url_for('viewCurrentIDPs') }}" class="{% if activePage == 'currentIDPs' %}active{% endif %}">Current IDPs</a>
+            <a href="{{ url_for('pastIDPs') }}" class="{% if activePage == 'pastIDPs' %}active{% endif %}">Past IDPs</a>
             <a href="{{ url_for('viewIDPViewStatistics') }}" class="{% if activePage == 'statistics' %}active{% endif %}">IDP Statistics</a>
         </nav>
         <main class="content">

@@ -1,19 +1,15 @@
-# Control: saveIDPController - UC33 Save / Bookmark IDP
+# Control: SaveIDPController - UC33 Save IDP (US33)
+
 from entity.savedIDP import SavedIDP
 
+
 class SaveIDPController:
-    def __init__(self):
-        self.savedEntity = SavedIDP()
+    # UC33 Save IDP
+    # true if the IDP is already in the customer's saved list (alt flow A1)
+    def checkAlreadySaved(self, customerId, idpId):
+        return SavedIDP().exists(customerId, idpId)
 
-    def toggleSaveIDP(self, customerId, idpId):
-        # Validation checks
-        if not customerId or not idpId:
-            return False, False, "Invalid user session or project ID."
-
-        # Delegate toggle action to Entity layer
-        is_saved = self.savedEntity.toggleSaveIDP(customerId, int(idpId))
-
-        if is_saved:
-            return True, True, "IDP saved to your favourites."
-        else:
-            return True, False, "IDP removed from your saved list."
+    # UC33 Save IDP
+    # adds it to the saved list - the entity refuses duplicates and IDPs customers can't see
+    def saveIDP(self, customerId, idpId):
+        return SavedIDP().createSavedRecord(customerId, idpId)

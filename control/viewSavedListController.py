@@ -1,14 +1,10 @@
-# Control: viewSavedListController - UC35 View Saved List
+# Control: ViewSavedListController - UC35 View saved list (US35)
+
 from entity.savedIDP import SavedIDP
 
+
 class ViewSavedListController:
-    def __init__(self):
-        self.savedEntity = SavedIDP()
-
-    def getSavedListByCustomer(self, customerId):
-        # Validation check: Ensure customer is authenticated
-        if not customerId:
-            return []
-
-        # Delegate retrieval of bookmarked IDPs to Entity layer
-        return self.savedEntity.getSavedListByCustomer(customerId)
+    # UC35 View saved list
+    # the logged-in customer's saved IDPs (the page passes in session["userId"])
+    def getSavedList(self, customerId):
+        return SavedIDP().getSavedRecords(customerId)

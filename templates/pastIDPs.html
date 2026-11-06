@@ -1,0 +1,36 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}My past IDPs - Interior Design Platform{% endblock %}
+{% block content %}
+    <!-- US26 View past IDPs (wireframes 4a, 4c) + the US29 search bar (wireframes 4a, 4b) -->
+    <div class="page-top">
+        <h1>My past IDPs</h1>
+        <a href="{{ url_for('addPastIDP') }}" class="btn-small btn-blue">+ Add past IDP</a>
+    </div>
+    <p class="subtitle">Your completed interior design projects, newest first.</p>
+
+    <form method="GET" action="{{ url_for('searchPastIDPs') }}" class="search-bar">
+        <input type="text" name="keyword" value="{{ keyword }}" maxlength="100"
+               placeholder="Search by title, description, location or category" aria-label="Keyword">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        {% if keyword %}<a href="{{ url_for('pastIDPs') }}" class="btn-small btn-grey">Clear</a>{% endif %}
+    </form>
+
+    {% if errorMessage %}<div class="message error" role="alert">{{ errorMessage }}</div>{% endif %}
+    {% if infoMessage %}<p class="message info" role="status">&#8505; {{ infoMessage }}</p>{% endif %}
+
+    {% if idps %}
+        <div class="cards">
+            {% for idp in idps %}
+                <article class="card">
+                    <h2>{{ idp.title }}</h2>
+                    <p>{{ idp.categoryName }}{% if idp.location %} | {{ idp.location }}{% endif %}</p>
+                    <a href="{{ url_for('viewPastIDP', idpId=idp.idpId) }}" class="btn-outline"
+                       aria-label="View {{ idp.title }}">View</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="form-buttons">
+        <a href="{{ url_for('interiorDesignerDashboard') }}" class="btn-small btn-grey">Back to dashboard</a>
+    </div>
+{% endblock %}

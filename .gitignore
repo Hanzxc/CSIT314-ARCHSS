@@ -4,3 +4,7 @@ __pycache__/
 venv/
 .venv/
 database/archss.db
+
+# Mac system files and draw.io temp files
+.DS_Store
+*.dtmp

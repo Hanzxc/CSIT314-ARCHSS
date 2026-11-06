@@ -1,0 +1,11 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Past IDP not found - Interior Design Platform{% endblock %}
+{% block content %}
+    <!-- US26 - US28: the IDP isn't one of this designer's Active past IDPs -->
+    <h1>Past IDP not found</h1>
+    <div class="message error" role="alert">{{ errorMessage }}</div>
+    <p>It may have been deleted, or it belongs to another designer.</p>
+    <div class="form-buttons">
+        <a href="{{ url_for('pastIDPs') }}" class="btn-small btn-grey">Back to past IDPs</a>
+    </div>
+{% endblock %}

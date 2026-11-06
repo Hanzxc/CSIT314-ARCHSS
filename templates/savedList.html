@@ -1,0 +1,30 @@
+{% extends "customerBase.html" %}
+{% block title %}Saved IDPs - Interior Design Platform{% endblock %}
+{% block content %}
+    <!-- US35 View saved list (wireframes 4a, 4b) + the US34 search bar (wireframes 4a, 4b) -->
+    <h1>Saved IDPs</h1>
+    <p class="subtitle">The interior design projects you saved, most recent first.</p>
+
+    <form method="GET" action="{{ url_for('searchSavedList') }}" class="search-bar">
+        <input type="text" name="keyword" value="{{ keyword }}" maxlength="100"
+               placeholder="Search your saved IDPs" aria-label="Keyword">
+        <button type="submit" class="btn-small btn-blue">Search</button>
+        {% if keyword %}<a href="{{ url_for('savedList') }}" class="btn-small btn-grey">Clear</a>{% endif %}
+    </form>
+
+    {% if errorMessage %}<div class="message error" role="alert">{{ errorMessage }}</div>{% endif %}
+    {% if infoMessage %}<p class="message info" role="status">&#8505; {{ infoMessage }}</p>{% endif %}
+
+    {% if idps %}
+        <div class="cards">
+            {% for idp in idps %}
+                <article class="card">
+                    <h2>{{ idp.title }}</h2>
+                    <p>{{ idp.categoryName }}{% if idp.location %} | {{ idp.location }}{% endif %} | {{ idp.projectType }}</p>
+                    <a class="btn-outline" href="{{ url_for('viewIDP', idpId=idp.idpId) }}"
+                       aria-label="View {{ idp.title }}">View</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

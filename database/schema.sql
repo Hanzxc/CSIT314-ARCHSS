@@ -57,18 +57,6 @@ CREATE TABLE IF NOT EXISTS idp (
     status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
     createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
--- US20, US25 - US29: Interior Design Projects (IDPs)
-CREATE TABLE IF NOT EXISTS idp (
-    idpId        INTEGER PRIMARY KEY AUTOINCREMENT,
-    designerId   INTEGER NOT NULL REFERENCES user_account(userId) ON DELETE CASCADE,
-    categoryId   INTEGER NOT NULL REFERENCES idp_category(categoryId) ON DELETE CASCADE,
-    title        TEXT NOT NULL CHECK(length(trim(title)) BETWEEN 3 AND 100),
-    description  TEXT NOT NULL CHECK(length(trim(description)) BETWEEN 1 AND 2000),
-    location     TEXT NOT NULL DEFAULT '' CHECK(length(location) <= 200),
-    projectType  TEXT NOT NULL DEFAULT 'Current' CHECK(projectType IN ('Current', 'Past')),
-    status       TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Suspended')),
-    createdDate  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
 -- US33 - US35: Saved List / Favourites (Customer)
 CREATE TABLE IF NOT EXISTS saved_idp (
     savedId      INTEGER PRIMARY KEY AUTOINCREMENT,

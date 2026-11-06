@@ -1,0 +1,20 @@
+{% extends "interiorDesignerBase.html" %}
+{% block title %}Delete past IDP - Interior Design Platform{% endblock %}
+{% block content %}
+    <!-- US28 Delete past IDP - wireframe 4a (confirmation box over the IDP's details) -->
+    <h1>View past IDP</h1>
+    {% include "idpDetailContent.html" %}
+    <div class="overlay">
+        <section class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="delete-past-idp-title">
+            <h2 id="delete-past-idp-title">Delete past IDP?</h2>
+            <p>Are you sure you want to delete <strong>{{ idp.title }}</strong>?</p>
+            <p>This project will no longer be shown on the platform.</p>
+            <form method="POST" action="{{ url_for('deletePastIDP', idpId=idp.idpId) }}">
+                <div class="form-buttons">
+                    <button type="submit" name="choice" value="delete" class="btn-small btn-red">Delete past IDP</button>
+                    <button type="submit" name="choice" value="cancel" class="btn-small btn-grey">Cancel</button>
+                </div>
+            </form>
+        </section>
+    </div>
+{% endblock %}

@@ -65,10 +65,9 @@ def test_ut38_6_customerSavingThroughUS33_isCounted():
     designer = createDesigner()
     idpId = addIDP(designer, createCategory("Kitchen"), "Modern Kitchen")
     from entity.savedIDP import SavedIDP
-    SavedIDP().toggleSaveIDP(customerId(), idpId)                 # save
+    SavedIDP().createSavedRecord(customerId(), idpId)             # US33 save
+    SavedIDP().createSavedRecord(customerId(), idpId)             # saving twice doesn't count twice
     assert IDPAnalytics().getSaveStatistics(designer)[0]["saves"] == 1
-    SavedIDP().toggleSaveIDP(customerId(), idpId)                 # unsave again
-    assert IDPAnalytics().getSaveStatistics(designer)[0]["saves"] == 0
 
 
 # ---------- ViewIDPSaveStatisticsController.getSaveStatistics() ----------

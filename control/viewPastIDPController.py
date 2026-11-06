@@ -1,16 +1,15 @@
-# Control: ViewPastIDPController - UC26 View Past IDPs
-# control/viewPastIDPController.py
+# Control: ViewPastIDPController - UC26 View past IDPs (US26)
+
 from entity.idp import IDP
 
-class ViewPastIDPController:
-    def __init__(self):
-        # Initialize the entity instance when the controller is created
-        self.idpEntity = IDP()
 
-    def getPastIDPsByDesigner(self, designerId):
-        # Validation check: Ensure a valid designer ID is provided
-        if not designerId:
-            return []
-            
-        # Delegate retrieval to Entity layer
-        return self.idpEntity.getPastIDPsByDesigner(designerId)
+class ViewPastIDPController:
+    # UC26 View past IDPs
+    # the logged-in designer's past IDPs (the page passes in session["userId"])
+    def getPastIDPs(self, designerId):
+        return IDP().findPastIDPsByDesignerId(designerId)
+
+    # UC26 View past IDPs
+    # one of the designer's past IDPs, or None if it isn't theirs / doesn't exist
+    def getPastIDPDetails(self, designerId, idpId):
+        return IDP().getPastIDPDetails(designerId, idpId)

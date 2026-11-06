@@ -41,16 +41,13 @@ from boundary.suspendUserAccountPage import SuspendUserAccountPage
 from boundary.searchUserAccountPage import SearchUserAccountPage
 from entity.userProfile import UserProfile
 
-# --- Sprint 4 Boundary Imports (US25 - US29: Past IDPs & US33 - US35: Customer Saved List) ---
-from boundary.addPastIDPRoute import add_past_idp_bp
-from boundary.viewPastIDPRoute import view_past_idp_bp
-from boundary.updatePastIDPRoute import update_past_idp_bp
-from boundary.deletePastIDPRoute import delete_past_idp_bp
-from boundary.searchPastIDPsRoute import search_past_idp_bp
-
-from boundary.saveIDPRoute import save_idp_bp
-from boundary.searchSaveListRoute import search_saved_list_bp
-from boundary.viewSaveListRoute import view_saved_list_bp
+# Sprint 4 (US25 - US29 past IDPs, US33 - US35 saved list)
+from boundary.addPastIDPPage import AddPastIDPPage
+from boundary.pastIDPListPage import PastIDPListPage
+from boundary.editPastIDPPage import EditPastIDPPage
+from boundary.pastIDPSearchPage import PastIDPSearchPage
+from boundary.idpDetailsPage import IDPDetailsPage
+from boundary.savedListPage import SavedListPage
 
 from database.db import initDatabase
 
@@ -110,6 +107,17 @@ def designerLoginRequired(routeFunction):
     def wrapper(*args, **kwargs):
         if "userId" not in session:
             return redirect(url_for("interiorDesignerLogin"))
+        return routeFunction(*args, **kwargs)
+    return wrapper
+
+
+def customerLoginRequired(routeFunction):
+    # US33 - US35: being logged in as a customer is the precondition of these use cases (US30),
+    # so the pages don't re-check it. this only stops a crash when there's no session at all
+    @wraps(routeFunction)
+    def wrapper(*args, **kwargs):
+        if "userId" not in session:
+            return redirect(url_for("customerLogin"))
         return routeFunction(*args, **kwargs)
     return wrapper
 
@@ -569,16 +577,87 @@ def generateMonthlyReport():
     return page.clickGenerateMonthlyReport()
 
 
-# --- Register Sprint 4 Blueprints (Before app execution) ---
-app.register_blueprint(add_past_idp_bp)
-app.register_blueprint(view_past_idp_bp)
-app.register_blueprint(update_past_idp_bp)
-app.register_blueprint(delete_past_idp_bp)
-app.register_blueprint(search_past_idp_bp)
+# US26 View past IDPs
+@app.route("/designer/past-idps")
+@designerLoginRequired
+def pastIDPs():
+    return PastIDPListPage().openPastIDPs()
 
-app.register_blueprint(save_idp_bp)
-app.register_blueprint(search_saved_list_bp)
-app.register_blueprint(view_saved_list_bp)
+
+# US25 Add past IDP
+@app.route("/designer/past-idps/add", methods=["GET", "POST"])
+@designerLoginRequired
+def addPastIDP():
+    page = AddPastIDPPage()
+    if request.method == "POST":
+        return page.submitPastIDP(request.form.get("title", ""),
+                                  request.form.get("categoryId", type=int),
+                                  request.form.get("description", ""),
+                                  request.form.get("location", ""))
+    return page.openAddPastIDPForm()
+
+
+# US29 Search past IDPs
+@app.route("/designer/past-idps/search")
+@designerLoginRequired
+def searchPastIDPs():
+    return PastIDPSearchPage().submitSearch(request.args.get("keyword", ""))
+
+
+# US26 View past IDPs - one past IDP's details
+@app.route("/designer/past-idps/<int:idpId>")
+@designerLoginRequired
+def viewPastIDP(idpId):
+    return PastIDPListPage().selectPastIDP(idpId)
+
+
+# US27 Update past IDP
+@app.route("/designer/past-idps/<int:idpId>/edit", methods=["GET", "POST"])
+@designerLoginRequired
+def editPastIDP(idpId):
+    page = EditPastIDPPage()
+    if request.method == "POST":
+        return page.submitUpdatedDetails(idpId,
+                                         request.form.get("title", ""),
+                                         request.form.get("categoryId", type=int),
+                                         request.form.get("description", ""),
+                                         request.form.get("location", ""))
+    return page.openEditForm(idpId)
+
+
+# US28 Delete past IDP
+# GET  = designer clicked Delete -> show the "are you sure?" box
+# POST = designer clicked "Delete past IDP" or Cancel in the box
+@app.route("/designer/past-idps/<int:idpId>/delete", methods=["GET", "POST"])
+@designerLoginRequired
+def deletePastIDP(idpId):
+    page = PastIDPListPage()
+    if request.method == "GET":
+        return page.clickDelete(idpId)
+    if request.form.get("choice") == "delete":
+        return page.confirmDeletion(idpId)
+    return page.cancelDeletion(idpId)
+
+
+# US33 Save IDP (the Save button on the US32 IDP details page)
+@app.route("/customer/idps/<int:idpId>/save", methods=["POST"])
+@customerLoginRequired
+def saveIDP(idpId):
+    return IDPDetailsPage().clickSave(idpId)
+
+
+# US35 View saved list
+@app.route("/customer/saved-list")
+@customerLoginRequired
+def savedList():
+    return SavedListPage().openSavedList()
+
+
+# US34 Search saved list
+@app.route("/customer/saved-list/search")
+@customerLoginRequired
+def searchSavedList():
+    return SavedListPage().submitSearch(request.args.get("keyword", ""))
 
 
 if __name__ == "__main__":
