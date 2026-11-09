@@ -32,10 +32,6 @@ def createCompanyForDesigner13():
     return userId
 
 
-def fieldNamesOf(results):
-    return [result["field"] for result in results]
-
-
 def loginAsDesigner13(client):
     return client.post("/designer/login", data={"username": "designer13", "password": "Design@123"})
 
@@ -51,25 +47,28 @@ def companyRows():
 
 def test_ut18_1_search_partOfValue():
     userId = createCompanyForDesigner13()
-    results = SearchCompanyInformationController().searchCompanyInformation(userId, "renov")
-    assert fieldNamesOf(results) == ["services"]
-    assert results[0]["value"] == "Space planning, renovation"
+    companyProfile = SearchCompanyInformationController().searchCompanyInformation(userId, "renov")
+    assert isinstance(companyProfile, CompanyProfile)
+    assert companyProfile.matchedFields == ["services"]
+    assert companyProfile.services == "Space planning, renovation"
 
 
 def test_ut18_2_search_capitals():
     userId = createCompanyForDesigner13()
-    assert fieldNamesOf(SearchCompanyInformationController().searchCompanyInformation(userId, "RENOVATION")) == ["services"]
+    assert SearchCompanyInformationController().searchCompanyInformation(userId, "RENOVATION").matchedFields == ["services"]
 
 
 def test_ut18_3_search_emptyKeyword_returnsAllFields():
     userId = createCompanyForDesigner13()
-    results = SearchCompanyInformationController().searchCompanyInformation(userId, "")
-    assert fieldNamesOf(results) == ["companyName", "description", "services", "email", "phone", "address"]
+    companyProfile = SearchCompanyInformationController().searchCompanyInformation(userId, "")
+    assert companyProfile.matchedFields == ["companyName", "description", "services", "email", "phone", "address"]
 
 
 def test_ut18_4_search_noMatch():
     userId = createCompanyForDesigner13()
-    assert SearchCompanyInformationController().searchCompanyInformation(userId, "zzzz") == []
+    companyProfile = SearchCompanyInformationController().searchCompanyInformation(userId, "zzzz")
+    assert isinstance(companyProfile, CompanyProfile)
+    assert companyProfile.matchedFields == []
 
 
 def test_ut18_5_search_trimsKeyword():
@@ -93,45 +92,44 @@ def test_ut18_6_search_spacesOnly_returnsAll():
         assert text.encode() in response.data
 
 
-def test_ut18_7_search_fieldLabel():
+def test_ut18_7_search_fieldName():
     userId = createCompanyForDesigner13()
-    results = SearchCompanyInformationController().searchCompanyInformation(userId, "phone")
-    assert fieldNamesOf(results) == ["phone"]
-    assert results[0]["value"] == "+65 6123 4567"
+    companyProfile = SearchCompanyInformationController().searchCompanyInformation(userId, "phone")
+    assert companyProfile.matchedFields == ["phone"]
+    assert companyProfile.phone == "+65 6123 4567"
 
 
 def test_ut18_9_search_noProfile():
     userId = createDesigner13()
-    assert SearchCompanyInformationController().hasCompanyProfile(userId) is False
-    assert SearchCompanyInformationController().searchCompanyInformation(userId, "") == []
+    assert SearchCompanyInformationController().searchCompanyInformation(userId, "") is None
 
 
 # ---------- CompanyProfile.searchCompanyInformation() ----------
 
 def test_ut18_10_entity_byEmail():
     userId = createCompanyForDesigner13()
-    assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "hello@")) == ["email"]
+    assert CompanyProfile().searchCompanyInformation(userId, "hello@").matchedFields == ["email"]
 
 
 def test_ut18_11_entity_byAddress():
     userId = createCompanyForDesigner13()
-    assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "Design Street")) == ["address"]
+    assert CompanyProfile().searchCompanyInformation(userId, "Design Street").matchedFields == ["address"]
 
 
 def test_ut18_12_entity_otherOwnerExcluded():
     createCompanyForDesigner13()
     UserAccount().createUserAccount(UserAccount(username="designer18", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
-    assert CompanyProfile().searchCompanyInformation(otherId, "Uda") == []
+    assert CompanyProfile().searchCompanyInformation(otherId, "Uda") is None
 
 
 def test_ut18_13_entity_treatsPercentAsLiteral():
     userId = createCompanyForDesigner13()
-    assert CompanyProfile().searchCompanyInformation(userId, "%") == []
+    assert CompanyProfile().searchCompanyInformation(userId, "%").matchedFields == []
     data = companyData()
     data["description"] = "Save 20% on design"
     CompanyProfile().updateCompanyProfile(makeCompany(userId, data))
-    assert fieldNamesOf(CompanyProfile().searchCompanyInformation(userId, "%")) == ["description"]
+    assert CompanyProfile().searchCompanyInformation(userId, "%").matchedFields == ["description"]
 
 
 def test_ut18_14_entity_doesNotChangeData():
@@ -143,8 +141,8 @@ def test_ut18_14_entity_doesNotChangeData():
 
 def test_ut18_15_entity_noInternalAccountData():
     userId = createCompanyForDesigner13()
-    assert CompanyProfile().searchCompanyInformation(userId, "designer13") == []
-    assert CompanyProfile().searchCompanyInformation(userId, "Design@123") == []
+    assert CompanyProfile().searchCompanyInformation(userId, "designer13").matchedFields == []
+    assert CompanyProfile().searchCompanyInformation(userId, "Design@123").matchedFields == []
 
 
 # ---------- whole page, through the browser (test client) ----------
@@ -252,7 +250,7 @@ def test_ut18_27_viewPage_showsSearchLink():
 
 
 def test_ut18_28_search_afterUpdateAndDelete():
-    createDesigner13()
+    userId = createDesigner13()
     client = app.test_client()
     loginAsDesigner13(client)
     client.post("/designer/company/create", data=companyData())
@@ -260,11 +258,11 @@ def test_ut18_28_search_afterUpdateAndDelete():
     data["services"] = "Office refurbishment"
     client.post("/designer/company/update", data=data)
     assert b"Office refurbishment" in client.get("/designer/company/search?keyword=refurb").data
+    # the confirmation box posts the companyId + revision
+    profile = CompanyProfile().getCompanyProfile(userId)
     client.get("/designer/company/delete")
-    with client.session_transaction() as session:
-        confirmation = dict(session["companyDeleteConfirmation"])
-    client.post("/designer/company/delete", data={"choice": "delete", "companyId": str(confirmation["companyId"]),
-                "confirmationToken": confirmation["token"]})
+    client.post("/designer/company/delete", data={"choice": "delete", "companyId": str(profile.companyId),
+                                                "revision": str(profile.revision)})
     response = client.get("/designer/company/search?keyword=refurb")
     assert response.status_code == 404
     assert b"Office refurbishment" not in response.data
@@ -274,8 +272,8 @@ def test_ut18_suspendedProfile_isUnavailable():
     userId = createDesigner13()
     CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     profile = CompanyProfile().getCompanyProfile(userId)
-    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision) is True
     client = app.test_client()
     loginAsDesigner13(client)
     assert client.get("/designer/company/search?keyword=Uda").status_code == 404
-    assert CompanyProfile().searchCompanyInformation(userId, "Uda") == []
+    assert CompanyProfile().searchCompanyInformation(userId, "Uda") is None

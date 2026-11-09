@@ -1,16 +1,13 @@
 # Control: InteriorDesignerLogoutController - UC19 Interior designer log out (US19)
-# No entity is needed: logout changes the browser session, not company/account records.
+# no entity class needed, it only ends the session
 
 from flask import session
 
-from control.logoutController import LogoutController
-
 
 class InteriorDesignerLogoutController:
-    # UC19 Interior designer log out
-    # reuses the normal log out (US2), then clears anything left in the session
+    # UT19.1 to UT19.5
     def logout(self):
-        loggedOut = LogoutController().logout()
-        # Also discard orphaned data if authentication has already ended.
-        session.clear()
+        # True if a session was ended, False if there was no session left to end
+        loggedOut = "userId" in session
+        session.clear()     # removes the logged-in designer so the session can't be used again
         return loggedOut

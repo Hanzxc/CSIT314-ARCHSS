@@ -10,6 +10,7 @@ class DeleteCompanyProfileController:
         return CompanyProfile().getCompanyProfile(designerId)
 
     # UC17 Delete company profile
-    # "deleting" really just suspends it, so it can be restored later
-    def deleteCompanyProfile(self, designerId, companyId, expectedRevision=None):
+    # "deleting" really just suspends it, so it can be restored later.
+    # the entity only does it if expectedRevision still matches the row
+    def deleteCompanyProfile(self, designerId, companyId, expectedRevision):
         return CompanyProfile().suspendCompanyProfile(designerId, companyId, expectedRevision)

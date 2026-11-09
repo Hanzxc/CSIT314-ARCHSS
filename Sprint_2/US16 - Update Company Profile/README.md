@@ -1,34 +1,51 @@
-# US16 - Update Company Profile
+# US16 — Update company profile
 
-Updated company-profile lifecycle amendment, applied together after US13-19 and US39.
+> As an interior designer, I want to update my company profile so that customers see the latest information.
 
 ## Behaviour
-Update modifies the six business fields only when the owner matches and status is Active. Suspended or missing profiles cannot be updated, and an update never inserts/reactivates a profile. Existing validation rules are unchanged.
 
-The shared CompanyProfile entity contains status (Active/Suspended) and revision (activation version). Status is system-controlled; it is not an editable creation field. getCompanyProfile() returns only Active profiles. A suspended row keeps all its details until the designer restores it from the dashboard (US17). Revision goes up on each restore, so an old delete confirmation can't be reused.
+- "Update company profile" on the company profile page (`clickUpdate()`) loads the current details with the controller's own loader `getCompanyProfile(designerId)` (`designerId = session["userId"]`).
+- Found → `displayUpdateForm()` shows the form filled in with the saved details. None → "You have not created a company profile yet" (HTTP 404).
+- "Cancel" is a plain link back to the company profile - nothing is saved.
+- On "Save changes" (`submitUpdate(companyName, description, services, email, phone, address)`) the page trims the spaces and builds `companyProfile = CompanyProfile(designerId, companyName, description, services, email, phone, address)`. A designerId or companyId in the form or URL is ignored.
+- `validateInput(companyProfile)` uses `getFieldErrors(companyProfile)` from `boundary/createCompanyProfilePage.py` - the same field rules as US14. Bad input → "Please fix the highlighted fields", the typed values stay and the saved profile is not changed.
+- Otherwise `updateCompanyProfile(companyProfile)` → the entity changes only the six business fields of the owner's Active row. companyId, designerId and createdDate stay the same and no new row is added. Optional fields can be cleared.
+- Updated → the company profile page with "Company profile updated successfully". Not updated (no Active row any more, e.g. deleted in the meantime) → "You have not created a company profile yet" (HTTP 404). A Suspended (deleted) profile is never updated.
 
-## Lecturer feedback changes
-- **Boundary checks everything.** The page trims the input and checks every field itself (`getFieldErrors(companyProfile)` in `boundary/createCompanyProfilePage.py`, reused by US16).
-- **The controller just calls the entity** and returns the result. It doesn't re-check the input and has no `canXxx()` access methods.
-- **The entity checks for duplicates.** `createCompanyProfile(companyProfile)` returns False if the designer already has a row (Active or Suspended). Otherwise it inserts all the fields and commits, with no `.strip()`.
-- **A CompanyProfile object is passed around, not a `{}` dict.**
-- **Precondition, no double check.** Being logged in as a designer is the precondition, so the B-C-E flow and the sequence diagrams no longer re-check the designer with `InteriorDesignerLoginController`. `app.py`'s `designerLoginRequired` only sends someone with no session to `/designer/login`.
+## Who checks what
 
-## Code and database
-Full replacement source files are supplied in the amendment ZIP, with an exact list in its root README and CHANGED-FILES.txt. Replace file contents; do not append complete versions below old code. app.py and login code do not change in this amendment. Existing routes and Delete wording remain.
+- **Boundary** (`UpdateCompanyProfilePage`): checks all the input with the shared `getFieldErrors(companyProfile)`, trims spaces, takes the owner from the session, builds the `CompanyProfile` object and passes it on.
+- **Control** (`UpdateCompanyProfileController`): `getCompanyProfile(designerId)` (US16's own loader for the form) and `updateCompanyProfile(companyProfile)` just call the entity and return the result - no checks.
+- **Entity** (`CompanyProfile`): only updates the owner's Active row (`WHERE designerId = ? AND status = 'Active'`) and returns False if no row changed.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again.
 
-Start with python app.py. database.db.initDatabase() automatically adds missing status/revision columns to an existing database, keeps all existing rows, and can run repeatedly. Existing companies become Active with revision 1. Keep your own database/archss.db; the package contains no database file. US15/16/18 changes use the shared active-only entity behaviour, with regression tests in each story's test file.
+## Diagram/code mapping
 
-## Tests and browser checks
-Run python -m pytest tests -q from the repository root. After the lecturer-feedback refactor, 398 tests pass (the tests for the removed designer re-checks were dropped). Test data uses the existing isolated conftest.py fixture; browser-created records are not used by pytest.
+| Diagram element | Code |
+|---|---|
+| Boundary `UpdateCompanyProfilePage` — `clickUpdate()`, `displayUpdateForm(msg=None)`, `validateInput(companyProfile): bool`, `submitUpdate(companyName, description, services, email, phone, address)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()`; uses `getFieldErrors(companyProfile)` from `createCompanyProfilePage.py` | `boundary/updateCompanyProfilePage.py`, `templates/updateCompanyProfile.html`, `templates/companyProfileNotFound.html` |
+| Control `UpdateCompanyProfileController` — `getCompanyProfile(designerId): CompanyProfile \| None`, `updateCompanyProfile(companyProfile): bool` | `control/updateCompanyProfileController.py` |
+| Entity `CompanyProfile` — `getCompanyProfile(designerId)`, `updateCompanyProfile(companyProfile): bool` | `entity/companyProfile.py` (table `company_profile`) |
+| Route | GET / POST `/designer/company/update` (`@designerLoginRequired`) → `updateCompanyProfile()` in `app.py` |
 
-In the running website, log in as an Active Interior Designer, create a company, view its Active status, update/search it, open Delete and try Cancel, then confirm Delete. The dashboard offers Restore company profile for its own Suspended record. The old view/update/search URLs must return 404 while suspended. Restore returns the same saved record to Active with all business details unchanged. Creating again while the profile is suspended is rejected as a duplicate - use Restore. User account/login are kept. A fresh confirmation works; an old consumed or earlier-activation confirmation cannot suspend the restored company.
+Messages: `MSG_UPDATED` "Company profile updated successfully", `MSG_FIX_FIELDS` "Please fix the highlighted fields", `MSG_NOT_FOUND` "You have not created a company profile yet".
 
-## Diagrams
-The PNG use case/BCE/sequence diagrams and labelled wireframes use the existing story format. The draw.io file is editable. Only story-relevant entity methods are shown; status/revision are included. US14 shows the duplicate check in the entity. US17 shows suspension and the revision guard. US15/16/18 document Active-only access. Images are diagram/wireframe exports rather than browser screenshots. Written use case descriptions and written test case tables remain deferred.
+## Files
 
+- `US16 Update company profile.drawio` — every diagram, one page each
+- `US16 Update company profile.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Update button.png`
+  - `4b Wireframe - Update form.png`
+  - `4c Wireframe - Update errors.png`
+  - `4d Wireframe - Company updated.png`
+  - `4e Wireframe - Profile not found.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-## Own-dashboard Restore extension (US17)
-The existing designer dashboard now checks for its own Suspended company and shows a Restore company profile POST button instead of Create in that state. It shows status only, not a list of company records. Active companies show View; designers with no company row show Create. A fresh signed-session confirmation is prepared when the dashboard opens. The Restore boundary reads the owner/record/revision from that confirmation, never from posted owner or company fields. Restore changes only status/revision, clears stale delete confirmation, and redirects to the existing company view with Company profile restored successfully. Invalid/reused confirmations redirect to the dashboard with an error and no business-data changes. Logging out clears the session; reopening the dashboard after login prepares a fresh Restore button.
+## Tests
 
-This is implemented by RestoreCompanyProfilePage, RestoreCompanyProfileController and the shared Company's getSuspendedCompanyProfile()/restoreCompanyProfile() methods, plus POST /designer/company/restore in app.py. It adds no suspended-company listing page. The new tests/test_us17_restoreCompanyProfile.py contains 25 simple pytest functions. All 398 tests pass. US17's single sequence canvas covers Delete followed by the own-dashboard Restore interaction; BCE/use case diagrams and restored/error wireframes agree with the implementation. The US13 login flow, US19 logout and US39 manager login retain their existing behaviour; the shared designer dashboard is integrated through InteriorDesignerLoginPage.openDashboard().
+```
+python -m pytest tests/test_us16_updateCompanyProfile.py -v
+```

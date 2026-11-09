@@ -1,6 +1,9 @@
-# Unit tests for US17 Restore company profile.
+# Unit tests for US17 Restore company profile (UC17-R).
 # Existing conftest.py supplies a fresh database for each test.
-# designer13 / Design@123; the same simple helpers/functions as US11/12.
+# designer13 / Design@123; the dashboard's Restore button posts hidden companyId + revision.
+
+import re
+
 from app import app
 from database.db import getConnection
 from entity.userAccount import UserAccount
@@ -19,7 +22,7 @@ def createSuspendedCompany():
     userId = UserAccount().verifyCredentials("designer13", "Design@123").userId
     assert CompanyProfile().createCompanyProfile(CompanyProfile(designerId=userId, **companyData())) is True
     profile = CompanyProfile().getCompanyProfile(userId)
-    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision) is True
     return userId
 
 
@@ -35,9 +38,19 @@ def loginAsDesigner13(client):
 
 
 def restoreData(client):
-    client.get("/designer/dashboard")
-    with client.session_transaction() as session:
-        return {"confirmationToken": session["companyRestoreConfirmation"]["token"]}
+    # reads the hidden fields of the dashboard's Restore form, like the browser would send them
+    response = client.get("/designer/dashboard")
+    companyId = re.search(rb'name="companyId" value="([^"]*)"', response.data).group(1).decode()
+    revision = re.search(rb'name="revision" value="([^"]*)"', response.data).group(1).decode()
+    return {"companyId": companyId, "revision": revision}
+
+
+def deleteData(client):
+    # same for the delete confirmation box (US17)
+    response = client.get("/designer/company/delete")
+    companyId = re.search(rb'name="companyId" value="([^"]*)"', response.data).group(1).decode()
+    revision = re.search(rb'name="revision" value="([^"]*)"', response.data).group(1).decode()
+    return {"choice": "delete", "companyId": companyId, "revision": revision}
 
 
 # ---------- CompanyProfile.restoreCompanyProfile() ----------
@@ -56,6 +69,9 @@ def test_ut17r_2_entity_repeatedRestoreReturnsFalse():
     profile = CompanyProfile().getSuspendedCompanyProfile(userId)
     assert CompanyProfile().restoreCompanyProfile(userId, profile.companyId, profile.revision) is True
     assert CompanyProfile().restoreCompanyProfile(userId, profile.companyId, profile.revision) is False
+    conn = getConnection()
+    assert conn.execute("SELECT COUNT(*) FROM company_profile").fetchone()[0] == 1
+    conn.close()
 
 
 def test_ut17r_3_entity_wrongOwnerRejected():
@@ -95,13 +111,17 @@ def test_ut17r_9_controller_missingAccountRejected():
 
 def test_ut17r_10_dashboard_showsOwnRestoreButton():
     userId = createSuspendedCompany()
+    profile = CompanyProfile().getSuspendedCompanyProfile(userId)
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/dashboard")
     assert b"Suspended" in response.data
     assert b"Restore company profile" in response.data
     assert b'action="/designer/company/restore"' in response.data
+    assert ('name="companyId" value="' + str(profile.companyId) + '"').encode() in response.data
+    assert ('name="revision" value="' + str(profile.revision) + '"').encode() in response.data
     assert b"Modena" not in response.data
+    assert b"hello@modena.com" not in response.data
     assert readCompanyRow(userId)["status"] == "Suspended"
 
 
@@ -122,7 +142,9 @@ def test_ut17r_11_restorePage_success():
 
 def test_ut17r_12_restorePage_notLoggedIn():
     userId = createSuspendedCompany()
-    response = app.test_client().post("/designer/company/restore")
+    profile = CompanyProfile().getSuspendedCompanyProfile(userId)
+    response = app.test_client().post("/designer/company/restore",
+                                      data={"companyId": profile.companyId, "revision": profile.revision})
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/designer/login")
     assert readCompanyRow(userId)["status"] == "Suspended"
@@ -130,37 +152,43 @@ def test_ut17r_12_restorePage_notLoggedIn():
 
 def test_ut17r_13_restorePage_getNotAllowed():
     userId = createSuspendedCompany()
-    assert app.test_client().get("/designer/company/restore").status_code == 405
+    client = app.test_client()
+    loginAsDesigner13(client)
+    assert client.get("/designer/company/restore").status_code == 405
     assert readCompanyRow(userId)["status"] == "Suspended"
 
 
-def test_ut17r_15_restorePage_missingTokenRejected():
+def test_ut17r_15_restorePage_missingFieldsRejected():
+    # no companyId or revision -> the entity matches no row
     userId = createSuspendedCompany()
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.post("/designer/company/restore", follow_redirects=True)
-    assert b"Company profile could not be restored" in response.data
+    assert b"Company profile could not be restored. Please reopen the dashboard and try again" in response.data
+    assert b"Restore company profile" in response.data
     assert readCompanyRow(userId)["status"] == "Suspended"
 
 
-def test_ut17r_16_restorePage_wrongTokenRejected():
+def test_ut17r_16_restorePage_wrongRevisionRejected():
     userId = createSuspendedCompany()
     client = app.test_client()
     loginAsDesigner13(client)
-    restoreData(client)
-    response = client.post("/designer/company/restore", data={"confirmationToken": "wrong"}, follow_redirects=True)
+    data = restoreData(client)
+    data["revision"] = str(int(data["revision"]) + 1)
+    response = client.post("/designer/company/restore", data=data, follow_redirects=True)
     assert b"Company profile could not be restored" in response.data
     assert readCompanyRow(userId)["status"] == "Suspended"
 
 
-def test_ut17r_17_restorePage_replayDoesNotChangeData():
+def test_ut17r_17_restorePage_sameFormTwiceDoesNotChangeData():
     userId = createSuspendedCompany()
     client = app.test_client()
     loginAsDesigner13(client)
     data = restoreData(client)
     client.post("/designer/company/restore", data=data)
     before = readCompanyRow(userId)
-    client.post("/designer/company/restore", data=data)
+    response = client.post("/designer/company/restore", data=data, follow_redirects=True)
+    assert b"Company profile could not be restored" in response.data
     assert readCompanyRow(userId) == before
 
 
@@ -169,7 +197,7 @@ def test_ut17r_18_restorePage_ignoresForgedOwnerAndBusinessDetails():
     client = app.test_client()
     loginAsDesigner13(client)
     data = restoreData(client)
-    data.update({"designerId": "1", "companyId": "9999", "companyName": "Forged", "status": "Suspended"})
+    data.update({"designerId": "1", "companyName": "Forged", "status": "Suspended"})
     response = client.post("/designer/company/restore?designerId=1", data=data, follow_redirects=True)
     assert b"Company profile restored successfully" in response.data
     assert readCompanyRow(userId)["companyName"] == "Modena"
@@ -178,13 +206,18 @@ def test_ut17r_18_restorePage_ignoresForgedOwnerAndBusinessDetails():
 
 def test_ut17r_20_dashboard_otherDesignerCannotSeeOrRestoreCompany():
     userId = createSuspendedCompany()
+    profile = CompanyProfile().getSuspendedCompanyProfile(userId)
     UserAccount().createUserAccount(UserAccount(username="other17", password="Design@123", fullName="Other Designer", email="", phone="", profileId=2))
     client = app.test_client()
     client.post("/designer/login", data={"username": "other17", "password": "Design@123"})
     response = client.get("/designer/dashboard")
     assert b"Restore company profile" not in response.data
     assert b"Modena" not in response.data
-    client.post("/designer/company/restore", data={"designerId": str(userId)})
+    # the owner comes from other17's session, so designer13's row doesn't match
+    response = client.post("/designer/company/restore",
+                           data={"companyId": profile.companyId, "revision": profile.revision, "designerId": userId},
+                           follow_redirects=True)
+    assert b"Company profile could not be restored" in response.data
     assert readCompanyRow(userId)["status"] == "Suspended"
 
 
@@ -201,7 +234,7 @@ def test_ut17r_22_restore_afterLogoutAndLoginStillAvailable():
     userId = createSuspendedCompany()
     client = app.test_client()
     loginAsDesigner13(client)
-    restoreData(client)
+    client.get("/designer/dashboard")
     client.post("/designer/logout")
     loginAsDesigner13(client)
     assert b"Restore company profile" in client.get("/designer/dashboard").data
@@ -209,14 +242,15 @@ def test_ut17r_22_restore_afterLogoutAndLoginStillAvailable():
     assert readCompanyRow(userId)["status"] == "Active"
 
 
-def test_ut17r_23_restore_oldActivationTokenRejected():
+def test_ut17r_23_restore_oldDashboardFormRejected():
+    # restored + deleted again in between -> revision went up, so the old form matches no row
     userId = createSuspendedCompany()
     client = app.test_client()
     loginAsDesigner13(client)
     data = restoreData(client)
     profile = CompanyProfile().getSuspendedCompanyProfile(userId)
     CompanyProfile().restoreCompanyProfile(userId, profile.companyId, profile.revision)
-    CompanyProfile().suspendCompanyProfile(userId, profile.companyId)
+    CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision + 1)
     response = client.post("/designer/company/restore", data=data, follow_redirects=True)
     assert b"Company profile could not be restored" in response.data
     assert readCompanyRow(userId)["status"] == "Suspended"
@@ -229,15 +263,14 @@ def test_ut17r_24_deleteRestore_doesNotLoseDetails():
     loginAsDesigner13(client)
     client.post("/designer/company/restore", data=restoreData(client))
     assert b"Modena" in client.get("/designer/company/search?keyword=modena").data
-    client.get("/designer/company/delete")
-    with client.session_transaction() as session:
-        confirmation = dict(session["companyDeleteConfirmation"])
-    client.post("/designer/company/delete", data={"choice": "delete", "companyId": confirmation["companyId"],
-                                                "confirmationToken": confirmation["token"]})
+    client.post("/designer/company/delete", data=deleteData(client))
     assert readCompanyRow(userId)["status"] == "Suspended"
     client.post("/designer/company/restore", data=restoreData(client))
     after = readCompanyRow(userId)
     assert after == dict(before, status="Active", revision=before["revision"] + 2)
+    conn = getConnection()
+    assert conn.execute("SELECT COUNT(*) FROM company_profile").fetchone()[0] == 1
+    conn.close()
 
 
 def test_ut17r_25_dashboard_openDoesNotRestore():
@@ -247,4 +280,34 @@ def test_ut17r_25_dashboard_openDoesNotRestore():
     loginAsDesigner13(client)
     client.get("/designer/dashboard")
     client.get("/designer/dashboard")
+    assert readCompanyRow(userId) == before
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc17_10_restoreOnlyWorksForOwner():
+    # designer A = designer13 (Suspended profile), designer B = other17 with no profile
+    userId = createSuspendedCompany()
+    profile = CompanyProfile().getSuspendedCompanyProfile(userId)
+    UserAccount().createUserAccount(UserAccount(username="other17", password="Design@123", fullName="Other Designer", email="", phone="", profileId=2))
+    client = app.test_client()
+    client.post("/designer/login", data={"username": "other17", "password": "Design@123"})
+    response = client.get("/designer/dashboard")
+    assert b"Restore company profile" not in response.data
+    assert b"Modena" not in response.data
+    client.post("/designer/company/restore", data={"companyId": profile.companyId, "revision": profile.revision})
+    assert readCompanyRow(userId)["status"] == "Suspended"
+
+
+def test_tc17_11_outOfDateRestoreForm():
+    # two tabs: restore + delete again in the first, then Restore in the second (old revision)
+    userId = createSuspendedCompany()
+    client = app.test_client()
+    loginAsDesigner13(client)
+    secondTab = restoreData(client)
+    client.post("/designer/company/restore", data=restoreData(client))
+    client.post("/designer/company/delete", data=deleteData(client))
+    before = readCompanyRow(userId)
+    response = client.post("/designer/company/restore", data=secondTab, follow_redirects=True)
+    assert b"Company profile could not be restored. Please reopen the dashboard and try again" in response.data
     assert readCompanyRow(userId) == before

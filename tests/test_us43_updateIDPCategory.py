@@ -7,7 +7,7 @@ from entity.userAccount import UserAccount
 from entity.idpCategory import IDPCategory
 from control.updateIDPCategoryController import UpdateIDPCategoryController
 from control.suspendIDPCategoryController import SuspendIDPCategoryController
-from boundary.updateIDPCategoryPage import UpdateIDPCategoryPage
+from boundary.updateIDPCategoryPage import UpdateIDPCategoryPage, MSG_CANNOT_UPDATE
 
 
 def createManager43():
@@ -70,11 +70,14 @@ def test_ut43_7_updateIDPCategory_keepSameName():
     assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(categoryId, "Kitchen", "New text")) is True
 
 
-def test_ut43_8_updateIDPCategory_doesNotUnsuspend():
+def test_ut43_8_updateIDPCategory_suspendedCannotBeUpdated():
+    # only an Active category can be updated - the entity changes nothing for a Suspended one
     categoryId = createCategory("Kitchen")
     SuspendIDPCategoryController().suspendIDPCategory(categoryId)
-    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(categoryId, "Kitchens", "")) is True
-    assert IDPCategory().getIDPCategory(categoryId).status == "Suspended"
+    assert UpdateIDPCategoryController().updateIDPCategory(makeCategory(categoryId, "Kitchens", "")) is False
+    category = IDPCategory().getIDPCategory(categoryId)
+    assert category.categoryName == "Kitchen"
+    assert category.status == "Suspended"
 
 
 # ---------- UpdateIDPCategoryPage ----------
@@ -118,8 +121,10 @@ def test_ut43_12_submit_nameTaken_showsErrorAndKeepsInput():
     loginAsManager43(client)
     response = client.post("/manager/categories/" + str(bedroom) + "/update",
                            data={"categoryName": "kitchen", "description": "Typed text"})
-    assert b"An IDP category with this name already exists" in response.data
+    assert MSG_CANNOT_UPDATE.encode() in response.data
+    assert b'value="kitchen"' in response.data
     assert b"Typed text" in response.data
+    assert IDPCategory().getIDPCategory(bedroom).categoryName == "Bedroom"
 
 
 def test_ut43_13_submit_invalid_showsFieldErrors():
@@ -159,3 +164,69 @@ def test_ut43_15_updatePage_notLoggedIn_redirects():
     response = app.test_client().post(url, data={"categoryName": "Hacked", "description": ""})
     assert response.headers["Location"].endswith("/manager/login")
     assert IDPCategory().getIDPCategory(categoryId).categoryName == "Kitchen"
+
+
+def test_ut43_16_submit_suspendedCategory_showsCannotUpdate():
+    createManager43()
+    categoryId = createCategory("Kitchen", "Old text")
+    SuspendIDPCategoryController().suspendIDPCategory(categoryId)
+    client = app.test_client()
+    loginAsManager43(client)
+    response = client.post("/manager/categories/" + str(categoryId) + "/update",
+                           data={"categoryName": "Kitchens", "description": "New text"})
+    assert MSG_CANNOT_UPDATE.encode() in response.data
+    # the re-shown form has no status row
+    assert b"Status:" not in response.data
+    category = IDPCategory().getIDPCategory(categoryId)
+    assert (category.categoryName, category.description, category.status) == ("Kitchen", "Old text", "Suspended")
+
+
+def test_ut43_17_detailsPage_suspendedHasNoUpdateButton():
+    createManager43()
+    categoryId = createCategory("Kitchen")
+    client = app.test_client()
+    loginAsManager43(client)
+    updateLink = ("/manager/categories/" + str(categoryId) + "/update").encode()
+    assert updateLink in client.get("/manager/categories/" + str(categoryId)).data
+    SuspendIDPCategoryController().suspendIDPCategory(categoryId)
+    assert updateLink not in client.get("/manager/categories/" + str(categoryId)).data
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc43_3_nameUsedByAnotherCategory():
+    createManager43()
+    createCategory("Kitchen")
+    bedroom = createCategory("Bedroom")
+    client = app.test_client()
+    loginAsManager43(client)
+    response = client.post("/manager/categories/" + str(bedroom) + "/update",
+                           data={"categoryName": "kitchen", "description": ""})
+    assert b"This IDP category could not be updated - the name is already used or the category is suspended" in response.data
+    assert IDPCategory().getIDPCategory(bedroom).categoryName == "Bedroom"
+
+
+def test_tc43_5_suspendedCategoryCannotBeUpdated():
+    createManager43()
+    categoryId = createCategory("Kitchen")
+    SuspendIDPCategoryController().suspendIDPCategory(categoryId)
+    client = app.test_client()
+    loginAsManager43(client)
+    url = "/manager/categories/" + str(categoryId) + "/update"
+    assert client.get(url).status_code == 200
+    response = client.post(url, data={"categoryName": "Kitchens", "description": ""})
+    assert b"This IDP category could not be updated - the name is already used or the category is suspended" in response.data
+    category = IDPCategory().getIDPCategory(categoryId)
+    assert category.categoryName == "Kitchen"
+    assert category.status == "Suspended"
+
+
+def test_tc43_8_noUpdateButtonOnSuspendedCategory():
+    createManager43()
+    categoryId = createCategory("Kitchen")
+    SuspendIDPCategoryController().suspendIDPCategory(categoryId)
+    client = app.test_client()
+    loginAsManager43(client)
+    response = client.get("/manager/categories/" + str(categoryId))
+    assert b"Suspended" in response.data
+    assert b">Update</a>" not in response.data

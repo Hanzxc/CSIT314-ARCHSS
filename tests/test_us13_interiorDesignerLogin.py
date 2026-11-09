@@ -3,16 +3,20 @@
 # Existing data: admin01 / Admin@123 (User Admin), cust001 / Cust@123 (Customer).
 # Designer tests add designer13 / Design@123 (Interior Designer, profile 2).
 
+import re
+
 from app import app
 from database.db import getConnection
 from entity.userAccount import UserAccount
-from control.interiorDesignerLoginController import InteriorDesignerLoginController
+from entity.companyProfile import CompanyProfile
+from control.interiorDesignerLoginController import InteriorDesignerLoginController, REQUIRED_DESIGNER_PERMISSIONS
 from boundary.interiorDesignerLoginPage import InteriorDesignerLoginPage
 
 
 def createDesigner13():
     UserAccount().createUserAccount(
         UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
+    return InteriorDesignerLoginController().login("designer13", "Design@123").userId
 
 
 def loginAsDesigner13(client):
@@ -87,7 +91,7 @@ def test_ut13_8_login_missingDesignerPermission():
 
 def test_ut13_9_verifyCredentials_designer():
     createDesigner13()
-    account = UserAccount().verifyCredentials("designer13", "Design@123")
+    account = UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS)
     assert account is not None
     assert account.username == "designer13"
     assert account.password != "Design@123"
@@ -181,12 +185,16 @@ def test_ut13_20_dashboard_notLoggedIn():
     assert response.headers["Location"].endswith("/designer/login")
 
 
-def test_ut13_21_dashboard_accessRemovedAfterLogin():
+def test_ut13_21_dashboard_notRecheckedAfterLogin():
+    # being logged in is the precondition, so the dashboard doesn't check the role again -
+    # the suspended profile is only stopped at the next login
     createDesigner13()
     client = app.test_client()
     loginAsDesigner13(client)
     suspendProfileInDb()
-    assert client.get("/designer/dashboard").status_code == 403
+    assert client.get("/designer/dashboard").status_code == 200
+    response = loginAsDesigner13(app.test_client())
+    assert b"Invalid login details or access unavailable" in response.data
 
 
 def test_ut13_22_designer_cannotOpenAdminAccounts():
@@ -218,3 +226,43 @@ def test_ut13_24_sharedLogin_stillWorksForAdmin():
         "username": "admin01", "password": "Admin@123"})
     assert response.headers["Location"].endswith("/dashboard")
     assert client.get("/accounts").status_code == 200
+
+
+def test_ut13_25_verifyCredentials_userAdminHasNoDesignerPermissions():
+    assert UserAccount().verifyCredentials("admin01", "Admin@123", REQUIRED_DESIGNER_PERMISSIONS) is None
+
+
+def test_ut13_26_submitLogin_trimsUsername():
+    createDesigner13()
+    client = app.test_client()
+    response = client.post("/designer/login", data={"username": "  designer13  ", "password": "Design@123"})
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/designer/dashboard")
+
+
+def test_ut13_27_dashboard_restoreFormHasCompanyIdAndRevision():
+    # the deleted profile comes from US17-R's controller, its id + revision go in hidden fields
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(CompanyProfile(designerId=userId, companyName="Uda Interiors",
+                                                         description="Interior design for homes.",
+                                                         services="Space planning, renovation"))
+    profile = CompanyProfile().getCompanyProfile(userId)
+    CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision)
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/dashboard")
+    assert b"Restore company profile" in response.data
+    assert re.search(rb'name="companyId" value="' + str(profile.companyId).encode() + rb'"', response.data)
+    assert re.search(rb'name="revision" value="' + str(profile.revision).encode() + rb'"', response.data)
+    assert b'href="/designer/company/create"' not in response.data
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc13_10_spacesAroundUsername():
+    createDesigner13()
+    client = app.test_client()
+    response = client.post("/designer/login", data={"username": "  designer13  ", "password": "Design@123"},
+                           follow_redirects=True)
+    assert b"Welcome back, designer13" in response.data
+    assert b"Logged in as designer13 (Interior Designer)" in response.data

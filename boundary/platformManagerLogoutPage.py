@@ -17,7 +17,8 @@ class PlatformManagerLogoutPage:
     # UC40 Platform manager log out
     # manager clicked Log out - the message depends on whether they were still logged in
     def clickLogout(self):
-        if self.platformManagerLogoutController.logout():
+        loggedOut = self.platformManagerLogoutController.logout()
+        if loggedOut:
             return self.displayLoginPage(MSG_LOGGED_OUT)
         return self.displayLoginPage(MSG_SESSION_ENDED)
 

@@ -9,7 +9,7 @@ from control.updateIDPCategoryController import UpdateIDPCategoryController
 from entity.idpCategory import IDPCategory
 
 MSG_UPDATED = "IDP category updated successfully"
-MSG_NAME_TAKEN = "An IDP category with this name already exists"
+MSG_CANNOT_UPDATE = "This IDP category could not be updated - the name is already used or the category is suspended"
 MSG_FIX_FIELDS = "Please fix the highlighted fields"
 MSG_NOT_FOUND = "IDP category not found"
 
@@ -58,12 +58,11 @@ class UpdateIDPCategoryPage:
 
         if not self.validateInput(self.idpCategory):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
-        if self.updateIDPCategoryController.updateIDPCategory(self.idpCategory):
+        updated = self.updateIDPCategoryController.updateIDPCategory(self.idpCategory)
+        if updated:
             return self.displaySuccessMessage(MSG_UPDATED)
-
-        # categories can't be deleted (no such use case), so the only way update fails is the name being taken
-        self.fieldErrors["categoryName"] = MSG_NAME_TAKEN
-        return self.displayErrorMessage(MSG_NAME_TAKEN)
+        # the entity says False if the name is used by another category or the category is suspended
+        return self.displayErrorMessage(MSG_CANNOT_UPDATE)
 
     # UC43 Update IDP category
     # go to the updated category's details page with the message (wireframe 4d)

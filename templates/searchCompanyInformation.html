@@ -12,11 +12,13 @@
     <table class="list-table">
         <thead><tr><th scope="col">Field</th><th scope="col">Information</th></tr></thead>
         <tbody>
-            {% for result in results %}
-                <tr><th scope="row">{{ result.label }}</th><td style="white-space: pre-wrap">{{ result.value or "Not provided" }}</td></tr>
+            {% if companyProfile %}
+                {% for field in companyProfile.matchedFields %}
+                    <tr><th scope="row">{{ fieldLabels[field] }}</th><td style="white-space: pre-wrap">{{ companyProfile[field] or "Not provided" }}</td></tr>
+                {% endfor %}
             {% else %}
                 <tr><td colspan="2">{{ noResultsMessage }}</td></tr>
-            {% endfor %}
+            {% endif %}
         </tbody>
     </table>
     <div class="form-buttons">

@@ -135,3 +135,19 @@ def test_ut42_13_viewPage_notLoggedIn_redirects():
     categoryId = createCategory("Kitchen")
     response = app.test_client().get("/manager/categories/" + str(categoryId))
     assert response.headers["Location"].endswith("/manager/login")
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc42_5_suspendedCategory_badgeAndNoButtons():
+    # a Suspended category can still be viewed, but can't be updated (US43) or suspended again (US44)
+    createManager42()
+    categoryId = createCategory("Kitchen")
+    IDPCategory().suspendIDPCategory(categoryId)
+    client = app.test_client()
+    loginAsManager42(client)
+    response = client.get("/manager/categories/" + str(categoryId))
+    assert response.status_code == 200
+    assert b'<span class="badge suspended">Suspended</span>' in response.data
+    assert ("/manager/categories/" + str(categoryId) + "/update").encode() not in response.data
+    assert ("/manager/categories/" + str(categoryId) + "/suspend").encode() not in response.data

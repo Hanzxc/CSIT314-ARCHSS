@@ -3,7 +3,7 @@
 {% block title %}Interior Designer Dashboard - Interior Design Platform{% endblock %}
 
 {% block content %}
-    <h1>Welcome back, {{ account.username }}</h1>
+    <h1>Welcome back, {{ session.username }}</h1>
     <p class="subtitle">Your company information and design portfolio</p>
 
     <div class="cards">
@@ -11,15 +11,17 @@
             <h2>Company Profile</h2>
             <p>Your company information and services.</p>
 
-            {% if hasCompanyProfile %}
+            {% if companyProfile %}
                 <p class="message success">Company profile created</p>
                 <a href="{{ url_for('viewCompanyProfile') }}"
                    class="btn-outline">View company profile</a>
-            {% elif restoreToken %}
+            {% elif suspendedProfile %}
+                <!-- US17-R: the Restore button posts the deleted profile's id + revision -->
                 <p class="message info">Company profile status: Suspended</p>
                 <p>Your saved company details are kept. Restore to show them again.</p>
                 <form method="POST" action="{{ url_for('restoreCompanyProfile') }}">
-                    <input type="hidden" name="confirmationToken" value="{{ restoreToken }}">
+                    <input type="hidden" name="companyId" value="{{ suspendedProfile.companyId }}">
+                    <input type="hidden" name="revision" value="{{ suspendedProfile.revision }}">
                     <button type="submit" class="btn-small btn-blue">Restore company profile</button>
                 </form>
             {% else %}

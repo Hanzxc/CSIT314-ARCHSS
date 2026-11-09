@@ -40,6 +40,16 @@ def test_ut40_3_logout_twice():
         assert PlatformManagerLogoutController().logout() is False
 
 
+def test_ut40_4_logout_noUserIdButOtherData():
+    # nobody is logged in, but old data is still cleared out
+    with app.test_request_context():
+        from flask import session
+        session["username"] = "old-name"
+        session["oldData"] = {"categoryId": 1}
+        assert PlatformManagerLogoutController().logout() is False
+        assert dict(session) == {}
+
+
 # ---------- PlatformManagerLogoutPage via the /manager/logout route ----------
 
 def test_ut40_5_dashboard_hasLogoutButton():

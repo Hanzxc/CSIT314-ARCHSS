@@ -1,11 +1,13 @@
 # Control: PlatformManagerLogoutController - UC40 Platform manager log out (US40)
-# No entity is needed: logout changes the browser session, not account records.
+# no entity class needed, it only ends the session
 
-from control.logoutController import LogoutController
+from flask import session
 
 
 class PlatformManagerLogoutController:
-    # UC40 Platform manager log out
-    # reuses the normal log out (US2) - True if a session was ended, False if it had already ended
+    # UT40.1 to UT40.4
     def logout(self):
-        return LogoutController().logout()
+        # True if a session was ended, False if there was no session left to end
+        loggedOut = "userId" in session
+        session.clear()     # removes the logged-in manager so the session can't be used again
+        return loggedOut

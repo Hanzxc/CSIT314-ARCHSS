@@ -214,12 +214,14 @@ def test_ut30_23_sharedAdminUnchanged(client):
     assert client.get('/accounts').status_code == 200
 
 
-# the User Admin pages (/accounts, /profiles) aren't here any more: their loginRequired only checks
-# there's a session, because logged in as a User Admin is their precondition (US1)
-@pytest.mark.parametrize('path', ['/designer/dashboard', '/manager/dashboard'])
+# the User Admin pages (/accounts, /profiles) and, since Sprint 2, the designer and manager dashboards
+# aren't checked here any more: their decorators only check there's a session, because being logged
+# in as that role is their precondition (US1, US13, US39). a customer is refused at those log ins instead
+@pytest.mark.parametrize('path', ['/designer/login', '/manager/login'])
 def test_ut30_24_otherAreasDenied(client, path):
     login(client)
-    assert client.get(path).status_code == 403
+    response = client.post(path, data={'username': 'cust001', 'password': 'Cust@123'})
+    assert b'Invalid login details or access unavailable' in response.data
 
 
 def test_ut30_25_existingLogout(client):

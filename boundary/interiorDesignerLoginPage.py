@@ -1,10 +1,13 @@
 # Boundary: InteriorDesignerLoginPage - UC13 Interior designer log in (US13)
-"""US13 Boundary. The Boundary delegates all entity access to the Control."""
+# /designer/login is only for interior designers - the dashboard borrows US15's and US17-R's
+# controllers to pick the Company Profile button
+# templates: interiorDesignerLogin.html, interiorDesignerDashboard.html
+
 from flask import redirect, render_template, session, url_for
 
 from control.interiorDesignerLoginController import InteriorDesignerLoginController
-from control.createCompanyProfileController import CreateCompanyProfileController
-from boundary.restoreCompanyProfilePage import RestoreCompanyProfilePage
+from control.viewCompanyProfileController import ViewCompanyProfileController
+from control.restoreCompanyProfileController import RestoreCompanyProfileController
 
 MSG_EMPTY_FIELDS = "Please enter your username and password"
 MSG_INVALID_LOGIN = "Invalid login details or access unavailable"
@@ -26,20 +29,24 @@ class InteriorDesignerLoginPage:
     def displayLoginForm(self):
         return render_template("interiorDesignerLogin.html")
 
-    # UC13 Interior designer log in
+    # UT13.10 to UT13.13
     # both boxes have to be filled in (spaces only doesn't count)
     def validateInput(self, username, password):
-        return bool(username and username.strip() and password)
+        if not username.strip() or not password:
+            return False
+        return True
 
     # UC13 Interior designer log in
-    # check the boxes are filled, then ask the controller if this is a real active designer
+    # empty field -> the controller is never called (alt flow 4a)
     def submitLogin(self, username, password):
         if not self.validateInput(username, password):
             return self.displayErrorMessage(MSG_EMPTY_FIELDS)
-        account = self.interiorDesignerLoginController.login(username, password)
-        if account is None:
-            return self.displayErrorMessage(MSG_INVALID_LOGIN)
-        return self.redirectToDashboard(account)
+
+        # the page trims the spaces from the username (not the password) before it calls login()
+        account = self.interiorDesignerLoginController.login(username.strip(), password)
+        if account is not None:
+            return self.redirectToDashboard(account)
+        return self.displayErrorMessage(MSG_INVALID_LOGIN)
 
     # UC13 Interior designer log in
     # login worked - start a fresh session for this designer and go to their dashboard
@@ -56,15 +63,12 @@ class InteriorDesignerLoginPage:
         return render_template("interiorDesignerLogin.html", errorMessage=msg)
 
     # UC13 Interior designer log in
-    # the designer dashboard - also shows Restore if their company profile was deleted
+    # being logged in is checked by designerLoginRequired in app.py, so this just renders.
+    # US15's controller says if there's an Active profile (View), US17-R's if there's a
+    # deleted one (Restore) - otherwise the card shows Create
     def openDashboard(self):
-        userId = session.get("userId")
-        if userId is None:
-            return redirect(url_for("interiorDesignerLogin"))
-        account = self.interiorDesignerLoginController.getAuthenticatedDesigner(userId)
-        if account is None:
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return render_template("interiorDesignerDashboard.html", account=account,
-                               activePage="dashboard",
-                               hasCompanyProfile=CreateCompanyProfileController().hasCompanyProfile(userId),
-                               restoreToken=RestoreCompanyProfilePage().prepareRestore(userId))
+        designerId = session["userId"]
+        companyProfile = ViewCompanyProfileController().viewCompanyProfile(designerId)
+        suspendedProfile = RestoreCompanyProfileController().getSuspendedCompanyProfile(designerId)
+        return render_template("interiorDesignerDashboard.html", activePage="dashboard",
+                               companyProfile=companyProfile, suspendedProfile=suspendedProfile)

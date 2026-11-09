@@ -17,7 +17,8 @@ class InteriorDesignerLogoutPage:
     # UC19 Interior designer log out
     # designer clicked Log out - the message depends on whether they were still logged in
     def clickLogout(self):
-        if self.interiorDesignerLogoutController.logout():
+        loggedOut = self.interiorDesignerLogoutController.logout()
+        if loggedOut:
             return self.displayLoginPage(MSG_LOGGED_OUT)
         return self.displayLoginPage(MSG_SESSION_ENDED)
 

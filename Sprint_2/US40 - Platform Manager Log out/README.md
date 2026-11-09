@@ -4,68 +4,46 @@
 
 ## Behaviour
 
-- Every Platform Manager page has a "Log out" button in the header (the dashboard and the IDP category pages). It sends a POST to /manager/logout. Opening /manager/logout with GET is not allowed and doesn't log anyone out.
-- PlatformManagerLogoutController just returns the US2 LogoutController.logout() result (True if a session was ended, False if it had already ended).
-- No entity class is needed. Logging out only ends the browser session - it doesn't change the user account or any IDP category.
-- After logging out the manager goes to the manager login page with "You have logged out successfully". If the session had already ended, the message is "Your session has already ended". The message is shown once only.
-- A manager can always log out, even if their account or profile was suspended after they logged in.
-- Logging out only ends the session in this browser, not on other devices.
-- The User Admin's log out (US2, /logout) and the designer's log out (US19, /designer/logout) are not changed.
+- Every Platform Manager page has a "Log out" button in the header (the dashboard and the IDP category pages). It sends a POST to `/manager/logout`; opening `/manager/logout` with GET is not allowed and doesn't log anyone out.
+- Clicking it calls `clickLogout()` → `logout()`: the controller notes whether someone was logged in (`loggedOut = "userId" in session`), clears the session and returns `loggedOut`. It does its own work - it doesn't call the US2 `LogoutController`.
+- `loggedOut == True` → `displayLoginPage(MSG_LOGGED_OUT)`: the manager login page with "You have logged out successfully" (wireframe 4b).
+- `loggedOut == False` (the session had already ended, e.g. it timed out or Log out came from an old tab) → `displayLoginPage(MSG_SESSION_ENDED)`: "Your session has already ended" (wireframe 4c). No error page.
+- `displayLoginPage(msg)` flashes the message and redirects (HTTP 302) to `/manager/login`; the message is shown once only.
+- After logging out, the dashboard and every `/manager/categories` page send the person to the manager login page (wireframe 4d): `managerLoginRequired` only lets a request through when there is a session.
+- Logging out doesn't change the user account or any IDP category, and it only ends the session in this browser. The User Admin's log out (US2) and the designer's log out (US19) are separate stories.
 
-## Lecturer feedback changes
+## Who checks what
 
-- **Return directly, no double clear.** The control used to call the US2 `logout()` and then clear the session a second time; it now just returns the US2 result. The US2 `logout()` returns `True` / `False` directly instead of storing it in a `loggedOut` variable first. The B-C-E and sequence diagrams were redrawn to match (no Flask session lifeline, no second `clear()`).
-
-## Repository files
-
-New files for this story:
-
-```text
-boundary/platformManagerLogoutPage.py
-control/platformManagerLogoutController.py
-templates/platformManagerBase.html
-tests/test_us40_platformManagerLogout.py
-Sprint_3/US40 - Platform Manager Log out/...
-```
-
-Existing files with small additions (shared by US20 and US40 - US45; nothing removed):
-
-- `app.py` — imports and routes for US20 and US40 - US45, and `managerLoginRequired` (only sends someone with no session to `/manager/login`, like `designerLoginRequired`); no existing route changed
-- `database/schema.sql` — `idp_category` and `idp` tables appended (existing tables unchanged; `initDatabase()` creates them in an existing `archss.db`, no migration needed)
-- `templates/platformManagerDashboard.html` — Log out button (US40) and IDP Categories links (US45)
-- `templates/interiorDesignerDashboard.html` — "Add current IDP" button on the Current IDPs card (US20)
+- **Boundary** (`PlatformManagerLogoutPage`): picks the message from the controller's result and redirects to the manager login page. There is no input to check.
+- **Control** (`PlatformManagerLogoutController`): ends the session and returns whether a session was ended - one controller per use case, no other controller is called.
+- **Entity**: none - log out doesn't read or change any saved data.
+- Precondition: none is enforced - `/manager/logout` has no decorator in `app.py`, so logging out with no session just shows "Your session has already ended".
 
 ## Diagram/code mapping
 
-| Element | Implementation |
+| Diagram element | Code |
 |---|---|
-| Boundary `PlatformManagerLogoutPage` | `boundary/platformManagerLogoutPage.py` |
-| Control `PlatformManagerLogoutController` | `control/platformManagerLogoutController.py` |
-| Reused control `LogoutController` | Existing US2 `control/logoutController.py` |
-| Header Log out button | `templates/platformManagerBase.html`, `templates/platformManagerDashboard.html` |
-| Route | POST `/manager/logout` in `app.py` |
+| Boundary `PlatformManagerLogoutPage` — `clickLogout()`, `displayLoginPage(msg)`; attribute `platformManagerLogoutController` | `boundary/platformManagerLogoutPage.py`, Log out button in `templates/platformManagerBase.html` and `templates/platformManagerDashboard.html` |
+| Control `PlatformManagerLogoutController` — `logout(): bool` | `control/platformManagerLogoutController.py` |
+| Route | POST `/manager/logout` → `platformManagerLogout()` in `app.py` |
 
-Class, method, attribute and variable names in the diagrams are the same as in the code.
+Messages: `MSG_LOGGED_OUT` "You have logged out successfully", `MSG_SESSION_ENDED` "Your session has already ended".
 
-```text
-US40 Platform manager log out.drawio
-diagrams/
-  2 Use Case Diagram.png
-  4a Wireframe - Logout button.png
-  4b Wireframe - Logged out.png
-  4c Wireframe - Session already ended.png
-  4d Wireframe - Protected page blocked.png
-  5 BCE Class Diagram.png
-  6 Sequence Diagram.png
+## Files
+
+- `US40 Platform manager log out.drawio` — every diagram, one page each
+- `US40 Platform manager log out.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Logout button.png`
+  - `4b Wireframe - Logged out.png`
+  - `4c Wireframe - Session already ended.png`
+  - `4d Wireframe - Protected page blocked.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
+
+## Tests
+
 ```
-
-The draw.io file contains 7 editable pages. PNGs are locally rendered vector illustrations of the same pages, not browser screenshots.
-
-## Automated pass/fail tests
-
-Open a terminal at the repository root:
-
-```powershell
 python -m pytest tests/test_us40_platformManagerLogout.py -v
-python -m pytest -q
 ```

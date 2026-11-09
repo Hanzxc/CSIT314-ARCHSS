@@ -55,7 +55,7 @@ class UserAccount:
             return None
         account = rowToAccount(row)
 
-        # US13, US30 and US39 still call this with 2 arguments (password only) until their sprints are fixed
+        # only US30 still calls this with 2 arguments (password only) until Sprint 3 is fixed
         if requiredPermissions is None:
             return account
 

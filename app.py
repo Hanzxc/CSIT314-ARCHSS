@@ -85,8 +85,9 @@ def loginRequired(routeFunction):
 
 
 def designerLoginRequired(routeFunction):
-    # US14 - US18, US20: being logged in as a designer is the precondition of these use cases (US13),
-    # so the pages don't re-check it (lecturer's feedback). this only stops a crash when there's no session at all
+    # US13 dashboard + US14 - US18, US20: being logged in as a designer is the precondition of these
+    # use cases (US13), so the pages don't re-check it (lecturer's feedback). this only stops a crash
+    # when there's no session at all
     @wraps(routeFunction)
     def wrapper(*args, **kwargs):
         if "userId" not in session:
@@ -107,8 +108,8 @@ def customerLoginRequired(routeFunction):
 
 
 def managerLoginRequired(routeFunction):
-    # US41 - US45: being logged in as a platform manager is the precondition of these use cases (US39),
-    # so the pages don't re-check it. this only stops a crash when there's no session at all
+    # US39 dashboard + US41 - US45: being logged in as a platform manager is the precondition of these
+    # use cases (US39), so the pages don't re-check it. this only stops a crash when there's no session at all
     @wraps(routeFunction)
     def wrapper(*args, **kwargs):
         if "userId" not in session:
@@ -185,8 +186,9 @@ def interiorDesignerLogin():
 
 
 # UC13 Interior designer log in
-# the designer's home page after logging in (the page class checks the login itself)
+# the designer's home page after logging in
 @app.route("/designer/dashboard")
+@designerLoginRequired
 def interiorDesignerDashboard():
     return InteriorDesignerLoginPage().openDashboard()
 
@@ -263,7 +265,10 @@ def updateCompanyProfile():
     return page.clickUpdate()
 
 
-# US17 GET opens confirmation; only an explicit, validated POST can delete.
+# US17 Delete company profile
+# GET  = designer clicked Delete -> show the "Are you sure?" box
+# POST = Delete or Cancel in the box, with the hidden companyId + revision
+# (type=int gives None if they're missing, then the entity just matches no row)
 @app.route("/designer/company/delete", methods=["GET", "POST"])
 @designerLoginRequired
 def deleteCompanyProfile():
@@ -271,7 +276,7 @@ def deleteCompanyProfile():
     if request.method == "POST":
         return page.submitDelete(request.form.get("choice", ""),
                                  request.form.get("companyId", type=int),
-                                 request.form.get("confirmationToken", ""))
+                                 request.form.get("revision", type=int))
     return page.clickDelete()
 
 
@@ -431,15 +436,18 @@ def platformManagerLogin():
 # UC39 Platform manager log in
 # the platform manager's home page after logging in
 @app.route("/manager/dashboard")
+@managerLoginRequired
 def platformManagerDashboard():
     return PlatformManagerLoginPage().openDashboard()
 
 
-# US17 recovery: restore saved company details without re-entering them.
+# US17 Restore company profile (UC17-R)
+# the dashboard's Restore button posts the deleted profile's companyId + revision
 @app.route("/designer/company/restore", methods=["POST"])
 @designerLoginRequired
 def restoreCompanyProfile():
-    return RestoreCompanyProfilePage().submitRestore(request.form.get("confirmationToken", ""))
+    return RestoreCompanyProfilePage().submitRestore(request.form.get("companyId", type=int),
+                                                     request.form.get("revision", type=int))
 
 
 # US20 Add current IDP. Ownership is taken from the session in the boundary.

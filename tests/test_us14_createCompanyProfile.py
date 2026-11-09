@@ -93,13 +93,6 @@ def test_ut14_9_getCompanyProfile_notFound():
     assert CompanyProfile().getCompanyProfile(9999) is None
 
 
-def test_ut14_10_hasCompanyProfile():
-    userId = createDesigner13()
-    assert CreateCompanyProfileController().hasCompanyProfile(userId) is False
-    assert CompanyProfile().createCompanyProfile(makeCompany(userId, companyData())) is True
-    assert CreateCompanyProfileController().hasCompanyProfile(userId) is True
-
-
 def test_ut14_11_entity_duplicateOwnerRejected():
     userId = createDesigner13()
     assert CompanyProfile().createCompanyProfile(makeCompany(userId, companyData())) is True
@@ -288,8 +281,7 @@ def test_ut14_33_create_suspendedRowCountsAsDuplicate():
     control = CreateCompanyProfileController()
     assert control.createCompanyProfile(makeCompany(userId, companyData())) is True
     original = CompanyProfile().getCompanyProfile(userId)
-    assert CompanyProfile().suspendCompanyProfile(userId, original.companyId) is True
-    assert control.hasCompanyProfile(userId) is False
+    assert CompanyProfile().suspendCompanyProfile(userId, original.companyId, original.revision) is True
     data = companyData()
     data["companyName"] = "Uda Interiors Reopened"
     assert control.createCompanyProfile(makeCompany(userId, data)) is False
@@ -301,13 +293,27 @@ def test_ut14_33_create_suspendedRowCountsAsDuplicate():
     assert countCompanies() == 1
 
 
+def test_ut14_34_createPage_existingProfile_stillShowsEmptyForm():
+    # no "has a profile?" check before the form - the duplicate is only found when they save
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
+    before = CompanyProfile().getCompanyProfile(userId)
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/create")
+    assert response.status_code == 200
+    assert b'name="companyName" value=""' in response.data
+    assert b"You already have a company profile" not in response.data
+    assert b"Uda Interiors" not in response.data
+    assert vars(CompanyProfile().getCompanyProfile(userId)) == vars(before)
+    assert countCompanies() == 1
 
 
 def test_ut14_35_createPage_suspendedProfileShowsExists():
     userId = createDesigner13()
     CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     original = CompanyProfile().getCompanyProfile(userId)
-    CompanyProfile().suspendCompanyProfile(userId, original.companyId)
+    CompanyProfile().suspendCompanyProfile(userId, original.companyId, original.revision)
     client = app.test_client()
     loginAsDesigner13(client)
     data = companyData()
@@ -315,4 +321,23 @@ def test_ut14_35_createPage_suspendedProfileShowsExists():
     response = client.post("/designer/company/create", data=data)
     assert b"You already have a company profile" in response.data
     assert client.get("/designer/company").status_code == 404
+    assert countCompanies() == 1
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc14_8_alreadyHasProfile_formOpensThenSaveRefused():
+    userId = createDesigner13()
+    CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
+    before = vars(CompanyProfile().getCompanyProfile(userId))
+    client = app.test_client()
+    loginAsDesigner13(client)
+    response = client.get("/designer/company/create")
+    assert response.status_code == 200
+    assert b'name="companyName" value=""' in response.data
+    data = companyData()
+    data["companyName"] = "Another Company"
+    response = client.post("/designer/company/create", data=data)
+    assert b"You already have a company profile" in response.data
+    assert vars(CompanyProfile().getCompanyProfile(userId)) == before
     assert countCompanies() == 1

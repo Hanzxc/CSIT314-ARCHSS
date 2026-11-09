@@ -63,14 +63,16 @@ class IDPCategory:
         return True
 
     # UC43 Update IDP category
-    # only the name and description change - status is left alone so updating never
-    # un-suspends a category. False if the name is taken or the category doesn't exist
+    # only an Active category can be updated, and only the name and description change -
+    # the status is never touched. False if the name is taken, the category is suspended
+    # or it doesn't exist
     def updateIDPCategory(self, idpCategory):
         if self.isCategoryNameTaken(idpCategory.categoryName, idpCategory.categoryId):
             return False
 
         conn = getConnection()
-        cursor = conn.execute("UPDATE idp_category SET categoryName = ?, description = ? WHERE categoryId = ?",
+        cursor = conn.execute("UPDATE idp_category SET categoryName = ?, description = ? "
+                              "WHERE categoryId = ? AND status = 'Active'",
                               (idpCategory.categoryName, idpCategory.description, idpCategory.categoryId))
         conn.commit()
         updated = cursor.rowcount == 1

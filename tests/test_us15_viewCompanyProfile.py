@@ -235,7 +235,7 @@ def test_ut15_suspendedProfile_isUnavailable():
     userId = createDesigner13()
     CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     profile = CompanyProfile().getCompanyProfile(userId)
-    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision) is True
     client = app.test_client()
     loginAsDesigner13(client)
     assert client.get("/designer/company").status_code == 404

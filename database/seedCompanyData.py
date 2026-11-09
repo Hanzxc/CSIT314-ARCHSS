@@ -26,7 +26,8 @@ def seedCompanyData():
         conn = getConnection()
         account = conn.execute("SELECT userId FROM user_account WHERE username = ?", (username,)).fetchone()
         conn.close()
-        if account and not control.hasCompanyProfile(account["userId"]):
+        # the entity refuses a second profile for the same designer, so re-running adds nothing
+        if account:
             company = CompanyProfile(designerId=account["userId"],
                                      companyName="Demo Interiors " + str(number),
                                      description="Residential interior design company " + str(number),

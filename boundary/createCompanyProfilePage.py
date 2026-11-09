@@ -45,10 +45,9 @@ class CreateCompanyProfilePage:
         self.fieldErrors = {}
 
     # UC14 Create company profile
-    # designer clicked Create - if they already have a company profile we show an error instead of the form
+    # designer clicked Create - the empty form opens straight away, a duplicate is only
+    # found by the entity when they press Save
     def clickCreateCompanyProfile(self):
-        if self.createCompanyProfileController.hasCompanyProfile(session["userId"]):
-            return self.displayErrorMessage(MSG_EXISTS)
         return self.displayCreateForm()
 
     # UC14 Create company profile

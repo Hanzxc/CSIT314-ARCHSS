@@ -8,8 +8,9 @@
         <div class="page-top">
             <h1>{{ category.categoryName }} <span class="badge {{ category.status|lower }}">{{ category.status }}</span></h1>
             <div class="form-buttons">
-                <a href="{{ url_for('updateIDPCategory', categoryId=category.categoryId) }}" class="btn-small btn-blue">Update</a>
+                {# only an Active category can be updated (US43) or suspended (US44) #}
                 {% if category.status == 'Active' %}
+                    <a href="{{ url_for('updateIDPCategory', categoryId=category.categoryId) }}" class="btn-small btn-blue">Update</a>
                     <a href="{{ url_for('suspendIDPCategory', categoryId=category.categoryId) }}" class="btn-small btn-red">Suspend</a>
                 {% endif %}
             </div>
@@ -18,6 +19,8 @@
         <h3>Description</h3>
         <p>{{ category.description or "(no description)" }}</p>
 
+        {# the US44 box only needs the category, so the IDP list isn't shown behind it #}
+        {% if not showConfirmation %}
         <h3>IDPs in this category</h3>
         {% if idps %}
             <table class="list-table">
@@ -36,6 +39,7 @@
             </table>
         {% else %}
             <div class="message info">&#8505; {{ noIDPsMessage }}</div>
+        {% endif %}
         {% endif %}
 
         <p><a href="{{ url_for('idpCategories') }}">&larr; Back to IDP Categories</a></p>

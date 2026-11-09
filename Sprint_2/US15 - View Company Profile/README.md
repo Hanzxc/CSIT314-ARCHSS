@@ -1,34 +1,50 @@
-# US15 - View Company Profile
+# US15 — View company profile
 
-Updated company-profile lifecycle amendment, applied together after US13-19 and US39.
+> As an interior designer, I want to view my company profile so that I can check what customers see.
 
 ## Behaviour
-The owner view returns only an Active company profile and displays its status outside the reusable customer-facing content. A missing or Suspended profile returns HTTP 404 with the existing Create link. Business data is not displayed for Suspended profiles.
 
-The shared CompanyProfile entity contains status (Active/Suspended) and revision (activation version). Status is system-controlled; it is not an editable creation field. getCompanyProfile() returns only Active profiles. A suspended row keeps all its details until the designer restores it from the dashboard (US17). Revision goes up on each restore, so an old delete confirmation can't be reused.
+- "View company profile" on the designer dashboard opens `/designer/company` (`clickView()`).
+- The page asks its controller for the logged-in designer's profile: `viewCompanyProfile(designerId)` with `designerId = session["userId"]`. A designerId or companyId in the URL is ignored.
+- `viewCompanyProfile()` makes one call to `CompanyProfile.getCompanyProfile(designerId)`, which only returns the designer's Active profile.
+- Found → `displayCompanyProfile(profile)` shows the company name, description, services, email, phone and address. Empty optional fields show "Not provided". IDs, the created date and the designer's account details are not shown.
+- None (never created, or deleted with US17) → "You have not created a company profile yet" (HTTP 404) with a "Create company profile" button.
+- The page is read-only; POST to `/designer/company` is not allowed (HTTP 405). It has the Update (US16), Delete (US17) and Search (US18) buttons and "Back to dashboard".
+- US13's dashboard borrows `ViewCompanyProfileController.viewCompanyProfile()` to decide whether to show "View company profile".
 
-## Lecturer feedback changes
-- **Boundary checks everything.** The page trims the input and checks every field itself (`getFieldErrors(companyProfile)` in `boundary/createCompanyProfilePage.py`, reused by US16).
-- **The controller just calls the entity** and returns the result. It doesn't re-check the input and has no `canXxx()` access methods.
-- **The entity checks for duplicates.** `createCompanyProfile(companyProfile)` returns False if the designer already has a row (Active or Suspended). Otherwise it inserts all the fields and commits, with no `.strip()`.
-- **A CompanyProfile object is passed around, not a `{}` dict.**
-- **Precondition, no double check.** Being logged in as a designer is the precondition, so the B-C-E flow and the sequence diagrams no longer re-check the designer with `InteriorDesignerLoginController`. `app.py`'s `designerLoginRequired` only sends someone with no session to `/designer/login`.
+## Who checks what
 
-## Code and database
-Full replacement source files are supplied in the amendment ZIP, with an exact list in its root README and CHANGED-FILES.txt. Replace file contents; do not append complete versions below old code. app.py and login code do not change in this amendment. Existing routes and Delete wording remain.
+- **Boundary** (`ViewCompanyProfilePage`): takes the designer from the session and chooses what to show (`[profile != None]` / `[profile == None]`). There is no typed input.
+- **Control** (`ViewCompanyProfileController`): just calls the entity and returns the profile or None - one call, no checks.
+- **Entity** (`CompanyProfile`): reads only this owner's Active row. Viewing never changes any data.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again.
 
-Start with python app.py. database.db.initDatabase() automatically adds missing status/revision columns to an existing database, keeps all existing rows, and can run repeatedly. Existing companies become Active with revision 1. Keep your own database/archss.db; the package contains no database file. US15/16/18 changes use the shared active-only entity behaviour, with regression tests in each story's test file.
+## Diagram/code mapping
 
-## Tests and browser checks
-Run python -m pytest tests -q from the repository root. After the lecturer-feedback refactor, 398 tests pass (the tests for the removed designer re-checks were dropped). Test data uses the existing isolated conftest.py fixture; browser-created records are not used by pytest.
+| Diagram element | Code |
+|---|---|
+| Boundary `ViewCompanyProfilePage` — attribute `viewCompanyProfileController`; `clickView()`, `displayCompanyProfile(profile)`, `displayErrorMessage(msg)` | `boundary/viewCompanyProfilePage.py`, `templates/viewCompanyProfile.html`, `templates/companyProfileDetails.html`, `templates/companyProfileNotFound.html` |
+| Control `ViewCompanyProfileController` — `viewCompanyProfile(designerId): CompanyProfile \| None` | `control/viewCompanyProfileController.py` |
+| Entity `CompanyProfile` — `getCompanyProfile(designerId): CompanyProfile \| None` | `entity/companyProfile.py` (table `company_profile`) |
+| Route | GET `/designer/company` (`@designerLoginRequired`) → `viewCompanyProfile()` in `app.py` |
 
-In the running website, log in as an Active Interior Designer, create a company, view its Active status, update/search it, open Delete and try Cancel, then confirm Delete. The dashboard offers Restore company profile for its own Suspended record. The old view/update/search URLs must return 404 while suspended. Restore returns the same saved record to Active with all business details unchanged. Creating again while the profile is suspended is rejected as a duplicate - use Restore. User account/login are kept. A fresh confirmation works; an old consumed or earlier-activation confirmation cannot suspend the restored company.
+Message: `MSG_NOT_FOUND` "You have not created a company profile yet".
 
-## Diagrams
-The PNG use case/BCE/sequence diagrams and labelled wireframes use the existing story format. The draw.io file is editable. Only story-relevant entity methods are shown; status/revision are included. US14 shows the duplicate check in the entity. US17 shows suspension and the revision guard. US15/16/18 document Active-only access. Images are diagram/wireframe exports rather than browser screenshots. Written use case descriptions and written test case tables remain deferred.
+## Files
 
+- `US15 View company profile.drawio` — every diagram, one page each
+- `US15 View company profile.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - View button.png`
+  - `4b Wireframe - Company details.png`
+  - `4c Wireframe - No company profile.png`
+  - `4d Wireframe - Optional fields empty.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-## Own-dashboard Restore extension (US17)
-The existing designer dashboard now checks for its own Suspended company and shows a Restore company profile POST button instead of Create in that state. It shows status only, not a list of company records. Active companies show View; designers with no company row show Create. A fresh signed-session confirmation is prepared when the dashboard opens. The Restore boundary reads the owner/record/revision from that confirmation, never from posted owner or company fields. Restore changes only status/revision, clears stale delete confirmation, and redirects to the existing company view with Company profile restored successfully. Invalid/reused confirmations redirect to the dashboard with an error and no business-data changes. Logging out clears the session; reopening the dashboard after login prepares a fresh Restore button.
+## Tests
 
-This is implemented by RestoreCompanyProfilePage, RestoreCompanyProfileController and the shared Company's getSuspendedCompanyProfile()/restoreCompanyProfile() methods, plus POST /designer/company/restore in app.py. It adds no suspended-company listing page. The new tests/test_us17_restoreCompanyProfile.py contains 25 simple pytest functions. All 398 tests pass. US17's single sequence canvas covers Delete followed by the own-dashboard Restore interaction; BCE/use case diagrams and restored/error wireframes agree with the implementation. The US13 login flow, US19 logout and US39 manager login retain their existing behaviour; the shared designer dashboard is integrated through InteriorDesignerLoginPage.openDashboard().
+```
+python -m pytest tests/test_us15_viewCompanyProfile.py -v
+```

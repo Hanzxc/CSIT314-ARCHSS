@@ -299,10 +299,12 @@ def test_ut16_suspendedProfile_isUnavailable():
     userId = createDesigner13()
     CompanyProfile().createCompanyProfile(makeCompany(userId, companyData()))
     profile = CompanyProfile().getCompanyProfile(userId)
-    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId) is True
+    assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision) is True
+    before = companyRows()
     client = app.test_client()
     loginAsDesigner13(client)
     data = companyData()
     data["companyName"] = "Must not save"
     assert client.post("/designer/company/update", data=data).status_code == 404
     assert CompanyProfile().updateCompanyProfile(makeCompany(userId, data)) is False
+    assert companyRows() == before

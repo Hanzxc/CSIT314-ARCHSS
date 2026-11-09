@@ -170,12 +170,41 @@ def test_ut44_15_suspend_notLoggedIn_redirects():
     assert IDPCategory().getIDPCategory(categoryId).status == "Active"
 
 
-def test_ut44_16_confirmationBox_pageBehindShowsNoIDPsMessage():
-    # the details page behind the box looks the same as US42's, including the empty-list message
+def test_ut44_16_clickSuspend_notFound():
+    # US42's controller finds no category, so no box - just the error
     createManager44()
-    categoryId = createCategory("Bathroom")
     client = app.test_client()
     loginAsManager44(client)
-    response = client.get("/manager/categories/" + str(categoryId) + "/suspend")
-    assert b"Suspend IDP category?" in response.data
-    assert b"No IDPs are in this category yet" in response.data
+    response = client.get("/manager/categories/9999/suspend", follow_redirects=True)
+    assert b"This IDP category cannot be suspended" in response.data
+    assert b"Suspend IDP category?" not in response.data
+
+
+def test_ut44_17_clickSuspend_alreadySuspended_boxThenEntitySaysNo():
+    # the page doesn't call isActive() first - the box shows, and OK gets False from the entity
+    createManager44()
+    categoryId = createCategory("Kitchen")
+    SuspendIDPCategoryController().suspendIDPCategory(categoryId)
+    client = app.test_client()
+    loginAsManager44(client)
+    url = "/manager/categories/" + str(categoryId) + "/suspend"
+    assert b"Suspend IDP category?" in client.get(url).data
+    response = client.post(url, data={"choice": "ok"}, follow_redirects=True)
+    assert b"This IDP category cannot be suspended" in response.data
+    assert IDPCategory().getIDPCategory(categoryId).status == "Suspended"
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc44_1_suspendCategory():
+    createManager44()
+    categoryId = createCategory("Kitchen")
+    client = app.test_client()
+    loginAsManager44(client)
+    url = "/manager/categories/" + str(categoryId) + "/suspend"
+    assert b"Suspend IDP category?" in client.get(url).data
+    response = client.post(url, data={"choice": "ok"}, follow_redirects=True)
+    assert b"IDP category suspended successfully" in response.data
+    assert b'<span class="badge suspended">Suspended</span>' in response.data
+    assert url.encode() not in response.data
+    assert ("/manager/categories/" + str(categoryId) + "/update").encode() not in response.data

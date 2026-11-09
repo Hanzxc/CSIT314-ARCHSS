@@ -65,18 +65,18 @@ def test_ut19_3_logout_twice():
         assert InteriorDesignerLogoutController().logout() is False
 
 
-def test_ut19_4_logout_clearsPendingDelete():
+def test_ut19_4_logout_clearsOtherData():
     with app.test_request_context():
         session["userId"] = 4
-        session["companyDeleteConfirmation"] = {"companyId": 1, "token": "old-token"}
+        session["oldData"] = {"companyId": 1}
         assert InteriorDesignerLogoutController().logout() is True
-        assert "companyDeleteConfirmation" not in session
+        assert dict(session) == {}
 
 
 def test_ut19_5_logout_clearsStaleAnonymousData():
     with app.test_request_context():
         session["username"] = "old-name"
-        session["companyDeleteConfirmation"] = {"token": "old-token"}
+        session["oldData"] = {"companyId": 1}
         assert InteriorDesignerLogoutController().logout() is False
         assert dict(session) == {}
 
@@ -193,18 +193,19 @@ def test_ut19_16_cannotUpdateAfterLogout():
     assert companyRows() == before
 
 
-def test_ut19_17_cannotDeleteWithOldConfirmationAfterLogout():
-    createCompanyForDesigner13()
+def test_ut19_17_cannotDeleteAfterLogout():
+    # the old box's companyId + revision are still right, but there's no session any more
+    userId = createCompanyForDesigner13()
+    profile = CompanyProfile().getCompanyProfile(userId)
     client = app.test_client()
     loginAsDesigner13(client)
     client.get("/designer/company/delete")
-    with client.session_transaction() as currentSession:
-        confirmation = dict(currentSession["companyDeleteConfirmation"])
     before = companyRows()
     client.post("/designer/logout")
-    response = client.post("/designer/company/delete", data={"choice": "delete", "companyId": str(confirmation["companyId"]),
-                           "confirmationToken": confirmation["token"]})
+    response = client.post("/designer/company/delete", data={"choice": "delete", "companyId": str(profile.companyId),
+                                                           "revision": str(profile.revision)})
     assert response.status_code == 302
+    assert response.headers["Location"].endswith("/designer/login")
     assert companyRows() == before
 
 
@@ -226,21 +227,6 @@ def test_ut19_19_canLoginAgainAfterLogout():
     response = loginAsDesigner13(client)
     assert response.headers["Location"].endswith("/designer/dashboard")
     assert b"Uda Interiors" in client.get("/designer/company").data
-
-
-def test_ut19_20_logout_clearsOldDeleteConfirmationBeforeRelogin():
-    createCompanyForDesigner13()
-    client = app.test_client()
-    loginAsDesigner13(client)
-    client.get("/designer/company/delete")
-    with client.session_transaction() as currentSession:
-        confirmation = dict(currentSession["companyDeleteConfirmation"])
-    client.post("/designer/logout", follow_redirects=True)
-    loginAsDesigner13(client)
-    response = client.post("/designer/company/delete", data={"choice": "delete", "companyId": str(confirmation["companyId"]),
-                           "confirmationToken": confirmation["token"]})
-    assert response.status_code == 400
-    assert len(companyRows()) == 1
 
 
 def test_ut19_21_logout_allowsSuspendedAccountToEndSession():
@@ -304,3 +290,17 @@ def test_ut19_26_header_companyViewStillReadOnly():
     companyContent = response.data.split(b'<main class="content">', 1)[1]
     assert b"<textarea" not in companyContent
     assert b'type="submit"' not in companyContent
+
+
+def test_ut19_27_logout_doesNotUseUS2Controller(monkeypatch):
+    # the US19 controller ends the session itself - US2's LogoutController isn't called
+    from control.logoutController import LogoutController
+
+    def notAllowed(self):
+        raise AssertionError("US2's LogoutController was called")
+    monkeypatch.setattr(LogoutController, "logout", notAllowed)
+    with app.test_request_context():
+        session["userId"] = 4
+        session["username"] = "designer13"
+        assert InteriorDesignerLogoutController().logout() is True
+        assert dict(session) == {}

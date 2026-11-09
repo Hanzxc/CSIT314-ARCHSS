@@ -6,7 +6,7 @@
 from app import app
 from database.db import getConnection
 from entity.userAccount import UserAccount
-from control.platformManagerLoginController import PlatformManagerLoginController
+from control.platformManagerLoginController import PlatformManagerLoginController, REQUIRED_MANAGER_PERMISSIONS
 from boundary.platformManagerLoginPage import PlatformManagerLoginPage
 
 
@@ -87,7 +87,7 @@ def test_ut39_8_login_missingManagerPermission():
 
 def test_ut39_9_verifyCredentials_manager():
     createManager39()
-    account = UserAccount().verifyCredentials("manager39", "Manager@123")
+    account = UserAccount().verifyCredentials("manager39", "Manager@123", REQUIRED_MANAGER_PERMISSIONS)
     assert account is not None
     assert account.username == "manager39"
     assert account.password != "Manager@123"
@@ -180,12 +180,16 @@ def test_ut39_20_dashboard_notLoggedIn():
     assert response.headers["Location"].endswith("/manager/login")
 
 
-def test_ut39_21_dashboard_accessRemovedAfterLogin():
+def test_ut39_21_dashboard_notRecheckedAfterLogin():
+    # being logged in is the precondition, so the dashboard doesn't check the role again -
+    # the suspended profile is only stopped at the next login
     createManager39()
     client = app.test_client()
     loginAsManager39(client)
     suspendProfileInDb()
-    assert client.get("/manager/dashboard").status_code == 403
+    assert client.get("/manager/dashboard").status_code == 200
+    response = loginAsManager39(app.test_client())
+    assert b"Invalid login details or access unavailable" in response.data
 
 
 def test_ut39_22_manager_cannotOpenAdminAccounts():
@@ -232,23 +236,10 @@ def test_ut39_26_login_clearsOldSession():
     createManager39()
     client = app.test_client()
     with client.session_transaction() as session:
-        session["companyDeleteConfirmation"] = {"companyId": 99}
+        session["oldData"] = {"companyId": 99}
     loginAsManager39(client)
     with client.session_transaction() as session:
-        assert "companyDeleteConfirmation" not in session
-
-
-def test_ut39_27_manager_cannotOpenDesignerDashboard():
-    createManager39()
-    client = app.test_client()
-    loginAsManager39(client)
-    assert client.get("/designer/dashboard").status_code == 403
-
-
-def test_ut39_28_admin_cannotOpenManagerDashboard():
-    client = app.test_client()
-    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
-    assert client.get("/manager/dashboard").status_code == 403
+        assert "oldData" not in session
 
 
 def test_ut39_29_login_customProfileUsesPermissions():
@@ -265,3 +256,25 @@ def test_ut39_30_designer_cannotUseManagerLogin():
     UserAccount().createUserAccount(UserAccount(username="designer39", password="Design@123", fullName="Designer", email="", phone="", profileId=2))
     assert PlatformManagerLoginController().login("designer39", "Design@123") is None
 
+
+def test_ut39_31_verifyCredentials_userAdminHasNoManagerPermissions():
+    assert UserAccount().verifyCredentials("admin01", "Admin@123", REQUIRED_MANAGER_PERMISSIONS) is None
+
+
+def test_ut39_32_submitLogin_trimsUsername():
+    createManager39()
+    client = app.test_client()
+    response = client.post("/manager/login", data={"username": "  manager39  ", "password": "Manager@123"})
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/manager/dashboard")
+
+
+# ---------- system tests (TC) ----------
+
+def test_tc39_9_spacesAroundUsername():
+    createManager39()
+    client = app.test_client()
+    response = client.post("/manager/login", data={"username": "  manager39  ", "password": "Manager@123"},
+                           follow_redirects=True)
+    assert b"Welcome back, manager39" in response.data
+    assert b"Logged in as manager39 (Platform Manager)" in response.data

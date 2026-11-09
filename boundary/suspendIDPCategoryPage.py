@@ -6,7 +6,6 @@ from flask import flash, redirect, render_template, url_for
 
 from control.suspendIDPCategoryController import SuspendIDPCategoryController
 from control.viewIDPCategoryController import ViewIDPCategoryController
-from boundary.viewIDPCategoryPage import MSG_NO_IDPS
 
 MSG_SUSPENDED = "IDP category suspended successfully"
 MSG_CANNOT_SUSPEND = "This IDP category cannot be suspended"
@@ -14,34 +13,33 @@ MSG_CANNOT_SUSPEND = "This IDP category cannot be suspended"
 
 class SuspendIDPCategoryPage:
     # UC44 Suspend IDP category
-    # just sets up the controller
+    # sets up the controllers - the box shows the category, so US42's controller is borrowed to load it
     def __init__(self):
         self.suspendIDPCategoryController = SuspendIDPCategoryController()
+        self.viewIDPCategoryController = ViewIDPCategoryController()
         self.categoryId = None
 
     # UC44 Suspend IDP category
-    # manager clicked Suspend on the details page -> ask them first
+    # manager clicked Suspend on the details page -> load the category and ask them first.
+    # no isActive() check here - the entity only suspends an Active row when they click OK
     def clickSuspend(self, categoryId):
         self.categoryId = categoryId
-        return self.displayConfirmation()
+        idpCategory = self.viewIDPCategoryController.viewIDPCategory(categoryId)
+        if idpCategory is not None:
+            return self.displayConfirmation(idpCategory)
+        return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
     # UC44 Suspend IDP category
-    # shows the details page again but with the "Are you sure?" box on top (wireframe 4b).
-    # the page behind the box is US42's job, so we borrow that controller instead of adding it here
-    def displayConfirmation(self):
-        viewIDPCategoryController = ViewIDPCategoryController()
-        idpCategory = viewIDPCategoryController.viewIDPCategory(self.categoryId)
-        if idpCategory is None or not idpCategory.isActive():
-            return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
-        idps = viewIDPCategoryController.getIDPsInCategory(self.categoryId)
+    # shows the details page again but with the "Are you sure?" box on top (wireframe 4b)
+    def displayConfirmation(self, idpCategory):
         return render_template("viewIDPCategory.html", activePage="categories",
-                               category=idpCategory, idps=idps, noIDPsMessage=MSG_NO_IDPS,
-                               showConfirmation=True)
+                               category=idpCategory, showConfirmation=True)
 
     # UC44 Suspend IDP category
     # manager clicked OK in the box - just call suspend
     def confirmSuspend(self):
-        if self.suspendIDPCategoryController.suspendIDPCategory(self.categoryId):
+        suspended = self.suspendIDPCategoryController.suspendIDPCategory(self.categoryId)
+        if suspended:
             return self.displaySuccessMessage(MSG_SUSPENDED)
         return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 

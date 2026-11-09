@@ -1,8 +1,6 @@
-# Boundary: RestoreCompanyProfilePage - UC17 Delete company profile, restore (US17)
-# the Restore button on the designer's own dashboard
+# Boundary: RestoreCompanyProfilePage - UC17-R Restore company profile (US17)
+# the Restore button on the designer's own dashboard (US13 shows it with hidden companyId + revision)
 # precondition: the designer is already logged in (US13), so there's no extra access check here
-
-from secrets import compare_digest, token_urlsafe
 
 from flask import flash, redirect, session, url_for
 
@@ -13,44 +11,28 @@ MSG_RESTORE_FAILED = "Company profile could not be restored. Please reopen the d
 
 
 class RestoreCompanyProfilePage:
-    # UC17 Delete company profile, restore
+    # UC17-R Restore company profile
     # just sets up the controller
     def __init__(self):
         self.restoreCompanyProfileController = RestoreCompanyProfileController()
 
-    # UC17 Delete company profile, restore
-    # if the designer has a deleted (suspended) profile, make a token for the Restore button
-    def prepareRestore(self, designerId):
-        profile = self.restoreCompanyProfileController.getSuspendedCompanyProfile(designerId)
-        if profile is None:
-            session.pop("companyRestoreConfirmation", None)
-            return None
-        token = token_urlsafe(24)
-        session["companyRestoreConfirmation"] = {
-            "designerId": designerId, "companyId": profile.companyId,
-            "revision": profile.revision, "token": token}
-        # Do not return business details to the suspended dashboard.
-        return token
+    # UC17-R Restore company profile
+    # designer clicked Restore - the owner comes from the session, the entity only restores
+    # their Suspended row if the companyId and revision still match
+    def submitRestore(self, companyId, revision):
+        restored = self.restoreCompanyProfileController.restoreCompanyProfile(session["userId"], companyId, revision)
+        if restored:
+            return self.displaySuccessMessage(MSG_RESTORED)
+        return self.displayErrorMessage(MSG_RESTORE_FAILED)
 
-    # UC17 Delete company profile, restore
-    # designer clicked Restore - check the token, then make the profile Active again
-    def submitRestore(self, confirmationToken):
-        designerId = session["userId"]
-        confirmation = session.pop("companyRestoreConfirmation", None)
-        if (not confirmation or confirmation.get("designerId") != designerId
-                or not isinstance(confirmation.get("revision"), int)
-                or not confirmationToken
-                or not compare_digest(confirmation["token"], confirmationToken)):
-            return self.displayFailure()
-        if not self.restoreCompanyProfileController.restoreCompanyProfile(
-                designerId, confirmation["companyId"], confirmation["revision"]):
-            return self.displayFailure()
-        session.pop("companyDeleteConfirmation", None)
-        flash(MSG_RESTORED, "success")
+    # UC17-R Restore company profile
+    # the company view with the saved details back (wireframe 4f)
+    def displaySuccessMessage(self, msg):
+        flash(msg, "success")
         return redirect(url_for("viewCompanyProfile"))
 
-    # UC17 Delete company profile, restore
-    # restore didn't work, so back to the dashboard with an error
-    def displayFailure(self):
-        flash(MSG_RESTORE_FAILED, "error")
+    # UC17-R Restore company profile
+    # old dashboard or not Suspended any more - back to the dashboard with the error (wireframe 4g)
+    def displayErrorMessage(self, msg):
+        flash(msg, "error")
         return redirect(url_for("interiorDesignerDashboard"))

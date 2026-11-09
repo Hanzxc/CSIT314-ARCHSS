@@ -4,71 +4,47 @@
 
 ## Behaviour
 
-- Following the lecturer's feedback (the same way Sprint 1 and 2 were changed): the boundary trims and checks all the input, the controller just calls the entity and returns the result (no canXxx() access methods), the entity does the duplicate / still-Active checks, an entity object is passed around instead of a dict, and each B-C-E diagram has only one entity.
-- Being logged in as a Platform Manager (UC39) is the precondition of these use cases, so the pages and the B-C-E / sequence diagrams don't check the manager again (no PlatformManagerLoginController). managerLoginRequired in app.py only sends someone with no session to /manager/login.
-- The manager opens a category from the IDP Categories list (US45) by clicking "View".
-- The details page shows the name, the status badge, the description and every Active IDP that is grouped in the category (title, type and location), newest first. This lets the manager check that IDPs are grouped correctly.
-- IDPs are added to a category by designers (US20). Suspended categories can still be viewed.
-- The Update (US43) and Suspend (US44) buttons start from this page.
+- The manager opens a category from the IDP Categories list (US45) by clicking "View" (`selectIDPCategory(categoryId)`).
+- The page loads the category with `viewIDPCategory(categoryId)`.
+  - Not found (e.g. a wrong link) → `displayErrorMessage(MSG_NOT_FOUND)` shows "IDP category not found" and a Back button (wireframe 4d).
+  - Found → the page loads the IDPs grouped in it with `getIDPsInCategory(categoryId)` (a `list[IDP]`: every Active IDP whose `categoryId` is this category, newest first) and shows them with `displayIDPCategory(idpCategory, idps)`.
+- The details page shows the name, the status badge, the description and the IDP list (title, type and location, wireframe 4b). An empty list → "No IDPs are in this category yet" (`MSG_NO_IDPS`, wireframe 4c).
+- Suspended categories can still be viewed. The Update (US43) and Suspend (US44) buttons start from this page and are only shown for an Active category.
+- Nothing is changed (read only). IDPs are added to a category by designers (US20).
 
-## Lecturer feedback changes
+## Who checks what
 
-- **Boundary checks everything.** The page trims the input, puts it in an entity object and checks every field itself (`validateInput()`).
-- **The controller just calls the entity** and returns the result. It doesn't re-check the input and has no `canXxx()` access methods.
-- **The entity checks for duplicates / still-Active rows** (e.g. a taken category name, a category suspended meanwhile).
-- **An entity object is passed around, not a `{}` dict.**
-- **One entity per B-C-E diagram.**
-- **Precondition, no double check.** Being logged in is the precondition, so the B-C-E and sequence diagrams no longer re-check the user with the US13 / US39 login controller. `designerLoginRequired` and `managerLoginRequired` in `app.py` only send someone with no session to the login page.
-
-## Repository files
-
-New files for this story:
-
-```text
-boundary/viewIDPCategoryPage.py
-control/viewIDPCategoryController.py
-templates/viewIDPCategory.html
-tests/test_us42_viewIDPCategory.py
-Sprint_3/US42 - View IDP Category/...
-```
-
-Existing files with small additions (shared by US20 and US40 - US45; nothing removed):
-
-- `app.py` — imports and routes for US20 and US40 - US45, and `managerLoginRequired` (only sends someone with no session to `/manager/login`, like `designerLoginRequired`); no existing route changed
-- `database/schema.sql` — `idp_category` and `idp` tables appended (existing tables unchanged; `initDatabase()` creates them in an existing `archss.db`, no migration needed)
-- `templates/platformManagerDashboard.html` — Log out button (US40) and IDP Categories links (US45)
-- `templates/interiorDesignerDashboard.html` — "Add current IDP" button on the Current IDPs card (US20)
+- **Boundary** (`ViewIDPCategoryPage`): there is no typed input; it shows the details, `MSG_NO_IDPS` for an empty list, or `MSG_NOT_FOUND` when the controller returns None.
+- **Control** (`ViewIDPCategoryController`): `viewIDPCategory(categoryId)` and `getIDPsInCategory(categoryId)` just call the entity and return the result - no checks.
+- **Entity** (`IDPCategory`): `getIDPCategory(categoryId)` returns the category or None; `getIDPsInCategory(categoryId)` reads the Active rows of the `idp` table for the category.
+- Precondition: logged in as a Platform Manager (UC39). `managerLoginRequired` in `app.py` only sends someone with no session to `/manager/login`; the use case doesn't check the role again.
 
 ## Diagram/code mapping
 
-| Element | Implementation |
+| Diagram element | Code |
 |---|---|
-| Boundary `ViewIDPCategoryPage` | `boundary/viewIDPCategoryPage.py` |
-| Control `ViewIDPCategoryController` | `control/viewIDPCategoryController.py` |
-| Entity `IDPCategory` | `entity/idpCategory.py` (`getIDPsInCategory()` reads table `idp`) |
-| Route | GET `/manager/categories/<categoryId>` in `app.py` |
+| Boundary `ViewIDPCategoryPage` — `selectIDPCategory(categoryId)`, `displayIDPCategory(idpCategory, idps)`, `displayErrorMessage(msg)`; attribute `viewIDPCategoryController` | `boundary/viewIDPCategoryPage.py`, `templates/viewIDPCategory.html` |
+| Control `ViewIDPCategoryController` — `viewIDPCategory(categoryId): IDPCategory \| None`, `getIDPsInCategory(categoryId): list[IDP]` | `control/viewIDPCategoryController.py` |
+| Entity `IDPCategory` — `getIDPCategory(categoryId): IDPCategory \| None`, `getIDPsInCategory(categoryId): list[IDP]` | `entity/idpCategory.py` (tables `idp_category` and `idp`) |
+| Route | GET `/manager/categories/<categoryId>` → `viewIDPCategory()` in `app.py` |
 
-Class, method, attribute and variable names in the diagrams are the same as in the code.
+Messages: `MSG_NOT_FOUND` "IDP category not found", `MSG_NO_IDPS` "No IDPs are in this category yet".
 
-```text
-US42 View IDP category.drawio
-diagrams/
-  2 Use Case Diagram.png
-  4a Wireframe - Categories list.png
-  4b Wireframe - Category details.png
-  4c Wireframe - No IDPs yet.png
-  4d Wireframe - Category not found.png
-  5 BCE Class Diagram.png
-  6 Sequence Diagram.png
+## Files
+
+- `US42 View IDP category.drawio` — every diagram, one page each
+- `US42 View IDP category.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Categories list.png`
+  - `4b Wireframe - Category details.png`
+  - `4c Wireframe - No IDPs yet.png`
+  - `4d Wireframe - Category not found.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
+
+## Tests
+
 ```
-
-The draw.io file contains 7 editable pages. PNGs are locally rendered vector illustrations of the same pages, not browser screenshots.
-
-## Automated pass/fail tests
-
-Open a terminal at the repository root:
-
-```powershell
 python -m pytest tests/test_us42_viewIDPCategory.py -v
-python -m pytest -q
 ```

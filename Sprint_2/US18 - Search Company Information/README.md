@@ -1,34 +1,52 @@
-# US18 - Search Company Information
+# US18 — Search company information
 
-Updated company-profile lifecycle amendment, applied together after US13-19 and US39.
+> As an interior designer, I want to search my company’s information so that I can find the details I need.
 
 ## Behaviour
-Search reads the Active company owned by the current designer. Missing or Suspended profiles return HTTP 404 on the page and no entity search results. Field label/value matching, six business fields, blank-keyword behaviour and no-match HTTP 200 are unchanged.
 
-The shared CompanyProfile entity contains status (Active/Suspended) and revision (activation version). Status is system-controlled; it is not an editable creation field. getCompanyProfile() returns only Active profiles. A suspended row keeps all its details until the designer restores it from the dashboard (US17). Revision goes up on each restore, so an old delete confirmation can't be reused.
+- "Search company information" on the company profile page opens `/designer/company/search`; typing a keyword and clicking "Search" (or "Clear") sends it again (`searchCompanyInformation(keyword)`).
+- The page trims the keyword and calls `searchCompanyInformation(designerId, keyword)` straight away, with `designerId = session["userId"]` - there is no "has a profile?" call first.
+- The entity loads the designer's Active profile. None → it returns None. Otherwise it returns that `CompanyProfile` with `matchedFields` = the names of the six business fields (companyName, description, services, email, phone, address, in that order) whose field name or saved value contains the keyword. Capitals don't matter, `%` is searched as normal text, and an empty keyword matches all six.
+- Three results:
+  - `companyProfile == None` → "You have not created a company profile yet" (HTTP 404) with a create link (`displayNotFoundMessage()`).
+  - `matchedFields` is empty → "No matching company information found", the keyword stays in the box (`displayNoResultsMessage()`).
+  - else → a Field / Information table with one row per name in `matchedFields` (`displayResults(companyProfile)`). The field labels belong to the page (`FIELD_LABELS`): Company name, Company description, Services offered, Contact email, Contact phone, Company address. Empty optional values show "Not provided".
+- Searching is read-only. A designerId in the URL is ignored; IDs, the created date and account details are never searched or shown. A deleted (Suspended) profile can't be searched.
 
-## Lecturer feedback changes
-- **Boundary checks everything.** The page trims the input and checks every field itself (`getFieldErrors(companyProfile)` in `boundary/createCompanyProfilePage.py`, reused by US16).
-- **The controller just calls the entity** and returns the result. It doesn't re-check the input and has no `canXxx()` access methods.
-- **The entity checks for duplicates.** `createCompanyProfile(companyProfile)` returns False if the designer already has a row (Active or Suspended). Otherwise it inserts all the fields and commits, with no `.strip()`.
-- **A CompanyProfile object is passed around, not a `{}` dict.**
-- **Precondition, no double check.** Being logged in as a designer is the precondition, so the B-C-E flow and the sequence diagrams no longer re-check the designer with `InteriorDesignerLoginController`. `app.py`'s `designerLoginRequired` only sends someone with no session to `/designer/login`.
+## Who checks what
 
-## Code and database
-Full replacement source files are supplied in the amendment ZIP, with an exact list in its root README and CHANGED-FILES.txt. Replace file contents; do not append complete versions below old code. app.py and login code do not change in this amendment. Existing routes and Delete wording remain.
+- **Boundary** (`SearchCompanyInformationPage`): trims the keyword, takes the owner from the session, picks one of the three results and turns field names into labels.
+- **Control** (`SearchCompanyInformationController`): `searchCompanyInformation(designerId, keyword)` just calls the entity and returns the result - no checks, no trimming.
+- **Entity** (`CompanyProfile`): reads only the owner's Active row and works out `matchedFields`. No `.strip()` here.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again.
 
-Start with python app.py. database.db.initDatabase() automatically adds missing status/revision columns to an existing database, keeps all existing rows, and can run repeatedly. Existing companies become Active with revision 1. Keep your own database/archss.db; the package contains no database file. US15/16/18 changes use the shared active-only entity behaviour, with regression tests in each story's test file.
+## Diagram/code mapping
 
-## Tests and browser checks
-Run python -m pytest tests -q from the repository root. After the lecturer-feedback refactor, 398 tests pass (the tests for the removed designer re-checks were dropped). Test data uses the existing isolated conftest.py fixture; browser-created records are not used by pytest.
+| Diagram element | Code |
+|---|---|
+| Boundary `SearchCompanyInformationPage` — attributes `searchCompanyInformationController`, `keyword`; `searchCompanyInformation(keyword)`, `displayResults(companyProfile)`, `displayNoResultsMessage()`, `displayNotFoundMessage()`; constant `FIELD_LABELS` | `boundary/searchCompanyInformationPage.py`, `templates/searchCompanyInformation.html`, `templates/companyProfileNotFound.html` |
+| Control `SearchCompanyInformationController` — `searchCompanyInformation(designerId, keyword): CompanyProfile \| None` | `control/searchCompanyInformationController.py` |
+| Entity `CompanyProfile` — attribute `matchedFields: list[String]`; `searchCompanyInformation(designerId, keyword): CompanyProfile \| None` | `entity/companyProfile.py` (table `company_profile`) |
+| Route | GET `/designer/company/search?keyword=...` (`@designerLoginRequired`) → `searchCompanyInformation()` in `app.py` |
 
-In the running website, log in as an Active Interior Designer, create a company, view its Active status, update/search it, open Delete and try Cancel, then confirm Delete. The dashboard offers Restore company profile for its own Suspended record. The old view/update/search URLs must return 404 while suspended. Restore returns the same saved record to Active with all business details unchanged. Creating again while the profile is suspended is rejected as a duplicate - use Restore. User account/login are kept. A fresh confirmation works; an old consumed or earlier-activation confirmation cannot suspend the restored company.
+Messages: `MSG_NO_RESULTS` "No matching company information found", `MSG_NOT_FOUND` "You have not created a company profile yet".
 
-## Diagrams
-The PNG use case/BCE/sequence diagrams and labelled wireframes use the existing story format. The draw.io file is editable. Only story-relevant entity methods are shown; status/revision are included. US14 shows the duplicate check in the entity. US17 shows suspension and the revision guard. US15/16/18 document Active-only access. Images are diagram/wireframe exports rather than browser screenshots. Written use case descriptions and written test case tables remain deferred.
+## Files
 
+- `US18 Search company information.drawio` — every diagram, one page each
+- `US18 Search company information.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Search button.png`
+  - `4b Wireframe - Search results.png`
+  - `4c Wireframe - No matching information.png`
+  - `4d Wireframe - All information.png`
+  - `4e Wireframe - Profile not found.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-## Own-dashboard Restore extension (US17)
-The existing designer dashboard now checks for its own Suspended company and shows a Restore company profile POST button instead of Create in that state. It shows status only, not a list of company records. Active companies show View; designers with no company row show Create. A fresh signed-session confirmation is prepared when the dashboard opens. The Restore boundary reads the owner/record/revision from that confirmation, never from posted owner or company fields. Restore changes only status/revision, clears stale delete confirmation, and redirects to the existing company view with Company profile restored successfully. Invalid/reused confirmations redirect to the dashboard with an error and no business-data changes. Logging out clears the session; reopening the dashboard after login prepares a fresh Restore button.
+## Tests
 
-This is implemented by RestoreCompanyProfilePage, RestoreCompanyProfileController and the shared Company's getSuspendedCompanyProfile()/restoreCompanyProfile() methods, plus POST /designer/company/restore in app.py. It adds no suspended-company listing page. The new tests/test_us17_restoreCompanyProfile.py contains 25 simple pytest functions. All 398 tests pass. US17's single sequence canvas covers Delete followed by the own-dashboard Restore interaction; BCE/use case diagrams and restored/error wireframes agree with the implementation. The US13 login flow, US19 logout and US39 manager login retain their existing behaviour; the shared designer dashboard is integrated through InteriorDesignerLoginPage.openDashboard().
+```
+python -m pytest tests/test_us18_searchCompanyInformation.py -v
+```
