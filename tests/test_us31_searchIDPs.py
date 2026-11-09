@@ -134,7 +134,7 @@ def test_ut31_19_noSession(catalogue):
 
 @pytest.mark.parametrize('profileId', [1, 2, 4])
 def test_ut31_20_otherRoles(catalogue, profileId):
-    UserAccount().createUserAccount('other31', 'Other@123', 'Other', '', '', profileId)
+    UserAccount().createUserAccount(UserAccount(username='other31', password='Other@123', fullName='Other', email='', phone='', profileId=profileId))
     account = UserAccount().verifyCredentials('other31', 'Other@123')
     client = app.test_client()
     with client.session_transaction() as state:

@@ -4,11 +4,11 @@ from entity.userProfile import UserProfile
 
 
 class CreateUserProfileController:
-    # used to fill in the tick boxes on the form
+    # UT3.1 - fills in the tick boxes on the form (US5 borrows it for its form too)
     def getAllPermissions(self):
         return UserProfile().getAllPermissions()
 
-    # UT3.5 to UT3.8
+    # UT3.5, UT3.6
     # the page checks the input, the entity checks the name isn't taken - this just calls create
-    def createUserProfile(self, profileName, description, permissions):
-        return UserProfile().createUserProfile(profileName, description, permissions)
+    def createUserProfile(self, profile):
+        return UserProfile().createUserProfile(profile)

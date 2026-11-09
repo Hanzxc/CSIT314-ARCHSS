@@ -12,7 +12,7 @@ from boundary.searchIDPCategoryPage import SearchIDPCategoryPage
 
 def createManager45():
     UserAccount().createUserAccount(
-        "manager45", "Manager@123", "Daniel Tan", "manager45@archss.com", "", 4)
+        UserAccount(username="manager45", password="Manager@123", fullName="Daniel Tan", email="manager45@archss.com", phone="", profileId=4))
 
 
 def loginAsManager45(client):

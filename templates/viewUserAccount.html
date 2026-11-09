@@ -21,7 +21,10 @@
             <tr><th>Full name</th><td>{{ account.fullName }}</td></tr>
             <tr><th>Email</th><td>{{ account.email or "-" }}</td></tr>
             <tr><th>Phone</th><td>{{ account.phone or "-" }}</td></tr>
-            <tr><th>User profile</th><td>{{ profile.profileName if profile else "-" }}</td></tr>
+            {# US9 passes the profile (from US4's controller); US11's confirmation view only has the account #}
+            {% if profile is defined %}
+                <tr><th>User profile</th><td>{{ profile.profileName if profile else "-" }}</td></tr>
+            {% endif %}
             <tr><th>Status</th><td>{{ account.status }}</td></tr>
             <tr><th>Created</th><td>{{ account.createdDate }}</td></tr>
         </table>

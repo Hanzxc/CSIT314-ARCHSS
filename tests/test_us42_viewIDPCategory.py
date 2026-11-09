@@ -13,13 +13,13 @@ from control.addCurrentIDPController import AddCurrentIDPController
 
 def createManager42():
     UserAccount().createUserAccount(
-        "manager42", "Manager@123", "Daniel Tan", "manager42@archss.com", "", 4)
+        UserAccount(username="manager42", password="Manager@123", fullName="Daniel Tan", email="manager42@archss.com", phone="", profileId=4))
     return UserAccount().verifyCredentials("manager42", "Manager@123").userId
 
 
 def createDesigner42():
     UserAccount().createUserAccount(
-        "designer42", "Design@123", "Tengku Uda Designer", "designer42@archss.com", "", 2)
+        UserAccount(username="designer42", password="Design@123", fullName="Tengku Uda Designer", email="designer42@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer42", "Design@123").userId
 
 

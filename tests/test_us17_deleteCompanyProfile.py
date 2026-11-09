@@ -23,7 +23,7 @@ def makeCompany(designerId, data):
 
 def createDesigner13():
     UserAccount().createUserAccount(
-        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+        UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer13", "Design@123").userId
 
 
@@ -87,7 +87,7 @@ def test_ut17_6_deleteCompanyProfile_keepsAccount():
 
 def test_ut17_7_entity_suspendsOnlyMatchingOwner():
     userId = createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer17", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer17", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer17", "Design@123").userId
     CompanyProfile().createCompanyProfile(makeCompany(otherId, companyData()))
     companyId = CompanyProfile().getCompanyProfile(userId).companyId
@@ -211,7 +211,7 @@ def test_ut17_19_deletePage_forgedCompanyIdRejected():
 
 def test_ut17_20_deletePage_ignoresForgedOwner():
     userId = createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer17", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer17", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer17", "Design@123").userId
     CompanyProfile().createCompanyProfile(makeCompany(otherId, companyData()))
     client = app.test_client()

@@ -8,7 +8,6 @@ class LogoutController:
     # UT2.1 to UT2.3
     def logout(self):
         # True if a session was ended, False if there was no session left to end
-        if "userId" not in session:
-            return False
+        loggedOut = "userId" in session
         session.clear()     # removes the logged-in user so the session can't be used again
-        return True
+        return loggedOut

@@ -39,8 +39,8 @@ def addProject(designerId, categoryId, title, projectType="Current", status="Act
 @pytest.fixture
 def projects():
     for username in ("designer21", "designer22"):
-        assert UserAccount().createUserAccount(username, "Design@123", "Designer " + username,
-                                              username + "@example.com", "", 2)
+        assert UserAccount().createUserAccount(UserAccount(username=username, password="Design@123", fullName="Designer " + username,
+                                              email=username + "@example.com", phone="", profileId=2))
     owner = UserAccount().verifyCredentials("designer21", "Design@123").userId
     other = UserAccount().verifyCredentials("designer22", "Design@123").userId
     category = execute("INSERT INTO idp_category (categoryName) VALUES ('Living Room')")
@@ -185,10 +185,12 @@ def test_ut21_17_signedOutRedirectsToLogin(path):
 
 
 @pytest.mark.parametrize("path", [LIST_URL, detailUrl(1)])
-@pytest.mark.parametrize("username,password", [("admin01", "Admin@123"), ("cust001", "Cust@123")])
-def test_ut21_18_nonDesignerForbidden(path, username, password):
+@pytest.mark.parametrize("loginUrl,username,password", [("/login", "admin01", "Admin@123"),
+                                                        ("/customer/login", "cust001", "Cust@123")])
+def test_ut21_18_nonDesignerForbidden(path, loginUrl, username, password):
+    # each role logs in on its own page (/login is only for User Admins, US1)
     client = app.test_client()
-    client.post("/login", data={"username": username, "password": password})
+    client.post(loginUrl, data={"username": username, "password": password})
     assert client.get(path).status_code == 403
 
 

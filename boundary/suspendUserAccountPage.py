@@ -12,37 +12,35 @@ MSG_CANNOT_SUSPEND = "This user account cannot be suspended"
 
 class SuspendUserAccountPage:
     # UC11 Suspend user account
-    # userId gets filled in by the route
+    # userId gets filled in by clickSuspend() or the route
     def __init__(self):
         self.suspendUserAccountController = SuspendUserAccountController()
         self.userId = None
 
     def clickSuspend(self, userId):
-        # admin clicked Suspend on the details page -> ask them first
+        # admin clicked Suspend on the details page -> ask them first.
+        # the box shows the account, so borrow US9's controller to load it
         self.userId = userId
-        return self.displayConfirmation()
+        account = ViewUserAccountController().viewUserAccount(userId)
+        if account is not None:
+            return self.displayConfirmation(account)
+        return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
-    def displayConfirmation(self):
-        # details page again with the confirmation box on top, same as US6.
-        # borrowing the US9 controller to load the account + profile for the page behind the box
-        viewController = ViewUserAccountController()
-        account = viewController.viewUserAccount(self.userId)
-        if account is None:
-            return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
+    def displayConfirmation(self, account):
+        # details page again with the confirmation box on top, same as US6
         return render_template("viewUserAccount.html", activePage="accounts",
-                               account=account, profile=viewController.profile,
-                               showConfirmation=True)
+                               account=account, showConfirmation=True)
 
     def confirmSuspend(self):
         # admin clicked Suspend in the box.
         # the page checks this one - the admin can't suspend their own account or
         # they'd lock themselves out (UT11.3)
-        if self.userId == session["userId"]:
+        if self.userId != session["userId"]:
+            # already suspended / no such id -> the entity gives back False (UT11.2, UT11.4)
+            suspended = self.suspendUserAccountController.suspendUserAccount(self.userId)
+            if suspended:
+                return self.displaySuccessMessage(MSG_SUSPENDED)
             return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
-
-        # already suspended / no such id -> the entity gives back False (UT11.2, UT11.4)
-        if self.suspendUserAccountController.suspendUserAccount(self.userId):
-            return self.displaySuccessMessage(MSG_SUSPENDED)
         return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
     def cancelSuspend(self):

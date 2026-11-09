@@ -15,7 +15,7 @@ def companyData():
 
 
 def createSuspendedCompany():
-    UserAccount().createUserAccount("designer13", "Design@123", "Tengku Uda Designer", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="", phone="", profileId=2))
     userId = UserAccount().verifyCredentials("designer13", "Design@123").userId
     assert CompanyProfile().createCompanyProfile(CompanyProfile(designerId=userId, **companyData())) is True
     profile = CompanyProfile().getCompanyProfile(userId)
@@ -178,7 +178,7 @@ def test_ut17r_18_restorePage_ignoresForgedOwnerAndBusinessDetails():
 
 def test_ut17r_20_dashboard_otherDesignerCannotSeeOrRestoreCompany():
     userId = createSuspendedCompany()
-    UserAccount().createUserAccount("other17", "Design@123", "Other Designer", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="other17", password="Design@123", fullName="Other Designer", email="", phone="", profileId=2))
     client = app.test_client()
     client.post("/designer/login", data={"username": "other17", "password": "Design@123"})
     response = client.get("/designer/dashboard")
@@ -189,7 +189,7 @@ def test_ut17r_20_dashboard_otherDesignerCannotSeeOrRestoreCompany():
 
 
 def test_ut17r_21_dashboard_newDesignerGetsCreate():
-    UserAccount().createUserAccount("designer13", "Design@123", "Tengku Uda Designer", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="", phone="", profileId=2))
     client = app.test_client()
     loginAsDesigner13(client)
     response = client.get("/designer/dashboard")

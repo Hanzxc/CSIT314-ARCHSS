@@ -12,7 +12,7 @@ from boundary.platformManagerLoginPage import PlatformManagerLoginPage
 
 def createManager39():
     UserAccount().createUserAccount(
-        "manager39", "Manager@123", "Daniel Tan", "manager39@archss.com", "", 4)
+        UserAccount(username="manager39", password="Manager@123", fullName="Daniel Tan", email="manager39@archss.com", phone="", profileId=4))
 
 
 def loginAsManager39(client):
@@ -189,18 +189,26 @@ def test_ut39_21_dashboard_accessRemovedAfterLogin():
 
 
 def test_ut39_22_manager_cannotOpenAdminAccounts():
+    # /login is only for User Admins (US1), so a manager gets no session there and
+    # loginRequired just sends them back to /login
     createManager39()
     client = app.test_client()
-    loginAsManager39(client)
-    assert client.get("/accounts").status_code == 403
+    client.post("/login", data={"username": "manager39", "password": "Manager@123"})
+    response = client.get("/accounts")
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/login")
 
 
-def test_ut39_23_sharedLogin_redirectsManager():
+def test_ut39_23_sharedLogin_rejectsManager():
+    # platform managers log in on /manager/login - the shared /login gives them the US1 error
     createManager39()
     client = app.test_client()
     response = client.post("/login", data={
         "username": "manager39", "password": "Manager@123"})
-    assert response.headers["Location"].endswith("/manager/dashboard")
+    assert response.status_code == 200
+    assert b"Invalid login details or account suspended" in response.data
+    with client.session_transaction() as state:
+        assert "userId" not in state
 
 
 def test_ut39_24_sharedLogin_stillWorksForAdmin():
@@ -211,11 +219,13 @@ def test_ut39_24_sharedLogin_stillWorksForAdmin():
     assert client.get("/accounts").status_code == 200
 
 
-def test_ut39_25_sharedDashboard_redirectsManager():
+def test_ut39_25_sharedDashboard_noSession_goesToLogin():
+    # the User Admin dashboard only checks there's a session (logged in as a User Admin is the
+    # precondition) - a manager trying /login never gets one, so /dashboard goes back to /login
     createManager39()
     client = app.test_client()
-    loginAsManager39(client)
-    assert client.get("/dashboard").headers["Location"].endswith("/manager/dashboard")
+    client.post("/login", data={"username": "manager39", "password": "Manager@123"})
+    assert client.get("/dashboard").headers["Location"].endswith("/login")
 
 
 def test_ut39_26_login_clearsOldSession():
@@ -243,15 +253,15 @@ def test_ut39_28_admin_cannotOpenManagerDashboard():
 
 def test_ut39_29_login_customProfileUsesPermissions():
     from entity.userProfile import UserProfile
-    UserProfile().createUserProfile("Reporting team", "", ["Manage IDP categories", "Generate reports"])
+    UserProfile().createUserProfile(UserProfile(profileName="Reporting team", description="", permissions=["Manage IDP categories", "Generate reports"]))
     conn = getConnection()
     profileId = conn.execute("SELECT profileId FROM user_profile WHERE profileName = ?", ("Reporting team",)).fetchone()[0]
     conn.close()
-    UserAccount().createUserAccount("custom39", "Manager@123", "Daniel Tan", "", "", profileId)
+    UserAccount().createUserAccount(UserAccount(username="custom39", password="Manager@123", fullName="Daniel Tan", email="", phone="", profileId=profileId))
     assert PlatformManagerLoginController().login("custom39", "Manager@123") is not None
 
 
 def test_ut39_30_designer_cannotUseManagerLogin():
-    UserAccount().createUserAccount("designer39", "Design@123", "Designer", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer39", password="Design@123", fullName="Designer", email="", phone="", profileId=2))
     assert PlatformManagerLoginController().login("designer39", "Design@123") is None
 

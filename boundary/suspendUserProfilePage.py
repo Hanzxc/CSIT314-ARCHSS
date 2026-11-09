@@ -12,36 +12,36 @@ MSG_CANNOT_SUSPEND = "This user profile cannot be suspended"
 
 class SuspendUserProfilePage:
     # UC6 Suspend user profile
-    # profileId gets filled in by the route
+    # profileId gets filled in by clickSuspend() or the route
     def __init__(self):
         self.suspendUserProfileController = SuspendUserProfileController()
         self.profileId = None
 
     def clickSuspend(self, profileId):
-        # admin clicked Suspend on the details page -> ask them first
+        # admin clicked Suspend on the details page -> ask them first.
+        # the box shows the profile, so borrow US4's controller to load it
         self.profileId = profileId
-        return self.displayConfirmation()
+        profile = ViewUserProfileController().getUserProfile(profileId)
+        if profile is not None:
+            return self.displayConfirmation(profile)
+        return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
-    def displayConfirmation(self):
+    def displayConfirmation(self, profile):
         # shows the details page again but with the "Are you sure?" box on top (wireframe 4b).
-        # did it in plain HTML instead of a JS confirm() so it works even with JS off.
-        # borrowing the US4 controller just to load the profile for the page behind the box
-        profile = ViewUserProfileController().getUserProfile(self.profileId)
-        if profile is None:
-            return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
+        # did it in plain HTML instead of a JS confirm() so it works even with JS off
         return render_template("viewUserProfile.html", activePage="profiles",
                                profile=profile, showConfirmation=True)
 
     def confirmSuspend(self):
-        # admin clicked OK in the box.
+        # admin clicked Suspend in the box.
         # the page checks this one - the admin can't suspend their own group or
         # they'd lock themselves out (UT6.3)
-        if self.profileId == session["profileId"]:
+        if self.profileId != session["profileId"]:
+            # already suspended / no such id -> the entity gives back False (UT6.2, UT6.4)
+            suspended = self.suspendUserProfileController.suspendUserProfile(self.profileId)
+            if suspended:
+                return self.displaySuccessMessage(MSG_SUSPENDED)
             return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
-
-        # already suspended / no such id -> the entity gives back False (UT6.2, UT6.4)
-        if self.suspendUserProfileController.suspendUserProfile(self.profileId):
-            return self.displaySuccessMessage(MSG_SUSPENDED)
         return self.displayErrorMessage(MSG_CANNOT_SUSPEND)
 
     def cancelSuspend(self):

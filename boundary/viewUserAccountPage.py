@@ -4,6 +4,7 @@
 from flask import render_template
 
 from control.viewUserAccountController import ViewUserAccountController
+from control.viewUserProfileController import ViewUserProfileController
 
 MSG_NOT_FOUND = "Account not found"
 
@@ -19,8 +20,8 @@ class ViewUserAccountPage:
     def clickView(self, userId):
         account = self.viewUserAccountController.viewUserAccount(userId)
         if account is not None:
-            # the controller keeps the account's profile for us (seq diagram msg 8)
-            profile = self.viewUserAccountController.profile
+            # the group name comes from US4's controller (borrowed)
+            profile = ViewUserProfileController().getUserProfile(account.profileId)
             return self.displayAccountDetails(account, profile)
         return self.displayErrorMessage(MSG_NOT_FOUND)
 

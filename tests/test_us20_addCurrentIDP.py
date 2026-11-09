@@ -15,7 +15,7 @@ from boundary.addCurrentIDPPage import AddCurrentIDPPage
 
 def createDesigner20():
     UserAccount().createUserAccount(
-        "designer20", "Design@123", "Tengku Uda Designer", "designer20@archss.com", "", 2)
+        UserAccount(username="designer20", password="Design@123", fullName="Tengku Uda Designer", email="designer20@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer20", "Design@123").userId
 
 
@@ -237,7 +237,7 @@ def test_ut20_24_addedIDP_appearsInManagerCategoryView():
     client = app.test_client()
     loginAsDesigner20(client)
     client.post("/designer/idps/add", data=formData(categoryId))
-    UserAccount().createUserAccount("manager20", "Manager@123", "Daniel Tan", "", "", 4)
+    UserAccount().createUserAccount(UserAccount(username="manager20", password="Manager@123", fullName="Daniel Tan", email="", phone="", profileId=4))
     managerClient = app.test_client()
     managerClient.post("/manager/login", data={"username": "manager20", "password": "Manager@123"})
     response = managerClient.get("/manager/categories/" + str(categoryId))

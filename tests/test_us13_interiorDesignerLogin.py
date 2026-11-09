@@ -12,7 +12,7 @@ from boundary.interiorDesignerLoginPage import InteriorDesignerLoginPage
 
 def createDesigner13():
     UserAccount().createUserAccount(
-        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+        UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
 
 
 def loginAsDesigner13(client):
@@ -190,18 +190,26 @@ def test_ut13_21_dashboard_accessRemovedAfterLogin():
 
 
 def test_ut13_22_designer_cannotOpenAdminAccounts():
+    # /login is only for User Admins (US1), so a designer gets no session there and
+    # loginRequired just sends them back to /login
     createDesigner13()
     client = app.test_client()
-    loginAsDesigner13(client)
-    assert client.get("/accounts").status_code == 403
+    client.post("/login", data={"username": "designer13", "password": "Design@123"})
+    response = client.get("/accounts")
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/login")
 
 
-def test_ut13_23_sharedLogin_redirectsDesigner():
+def test_ut13_23_sharedLogin_rejectsDesigner():
+    # designers log in on /designer/login - the shared /login gives them the US1 error
     createDesigner13()
     client = app.test_client()
     response = client.post("/login", data={
         "username": "designer13", "password": "Design@123"})
-    assert response.headers["Location"].endswith("/designer/dashboard")
+    assert response.status_code == 200
+    assert b"Invalid login details or account suspended" in response.data
+    with client.session_transaction() as state:
+        assert "userId" not in state
 
 
 def test_ut13_24_sharedLogin_stillWorksForAdmin():

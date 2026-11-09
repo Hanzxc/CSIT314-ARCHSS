@@ -38,7 +38,7 @@ def updateUrl(idpId):
 def data():
     owners = []
     for username in ("update22", "other22"):
-        UserAccount().createUserAccount(username, "Design@123", username, "", "", 2)
+        UserAccount().createUserAccount(UserAccount(username=username, password="Design@123", fullName=username, email="", phone="", profileId=2))
         owners.append(UserAccount().verifyCredentials(username, "Design@123").userId)
     categories = [execute("INSERT INTO idp_category (categoryName, status) VALUES (?, ?)", values)
                   for values in [("Living Room", "Active"), ("Kitchen", "Active"), ("Hidden", "Suspended")]]

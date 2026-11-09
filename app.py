@@ -3,7 +3,7 @@
 
 from functools import wraps
 
-from flask import Flask, request, redirect, url_for, session, render_template, abort
+from flask import Flask, request, redirect, url_for, session, render_template
 
 from boundary.interiorDesignerLoginPage import InteriorDesignerLoginPage
 from boundary.createCompanyProfilePage import CreateCompanyProfilePage
@@ -16,18 +16,14 @@ from boundary.viewCurrentIDPPage import ViewCurrentIDPPage
 from boundary.updateCurrentIDPPage import UpdateCurrentIDPPage
 from boundary.deleteCurrentIDPPage import DeleteCurrentIDPPage
 from boundary.searchCurrentIDPPage import SearchCurrentIDPPage
-from control.interiorDesignerLoginController import InteriorDesignerLoginController
-from entity.userAccount import UserAccount
 
 from boundary.restoreCompanyProfilePage import RestoreCompanyProfilePage
 from boundary.platformManagerLoginPage import PlatformManagerLoginPage
-from control.platformManagerLoginController import PlatformManagerLoginController
 from boundary.loginPage import LoginPage
 from boundary.customerLoginPage import CustomerLoginPage
 from boundary.customerLogoutPage import CustomerLogoutPage
 from boundary.searchIDPPage import SearchIDPPage
 from boundary.viewIDPPage import ViewIDPPage
-from control.customerLoginController import CustomerLoginController
 from boundary.logoutPage import LogoutPage
 from boundary.createUserProfilePage import CreateUserProfilePage
 from boundary.viewUserProfilePage import ViewUserProfilePage
@@ -77,25 +73,13 @@ def noCache(response):
 
 
 def loginRequired(routeFunction):
-    # put @loginRequired on any admin page -> not logged in = sent back to the login page
+    # US3 - US12 and the User Admin dashboard: being logged in as a User Admin is the precondition
+    # of these use cases (US1), so the pages don't re-check it. this only stops a crash when there's
+    # no session at all - not logged in = sent back to the login page
     @wraps(routeFunction)
     def wrapper(*args, **kwargs):
         if "userId" not in session:
             return redirect(url_for("login"))
-        # US13: the existing management routes are for admins. Recheck the
-        # database rather than treating any authenticated session as an admin.
-        account = UserAccount().getUserAccount(session["userId"])
-        profile = UserProfile().getUserProfile(account.profileId) if account else None
-        if not account or not account.isActive() or not profile or not profile.isActive():
-            abort(403)
-        if routeFunction.__name__ == "dashboard" and InteriorDesignerLoginController().isInteriorDesigner(account):
-            return redirect(url_for("interiorDesignerDashboard"))
-        if routeFunction.__name__ == "dashboard" and PlatformManagerLoginController().isPlatformManager(account):
-            return redirect(url_for("platformManagerDashboard"))
-        if routeFunction.__name__ == "dashboard" and CustomerLoginController().isCustomer(account):
-            return redirect(url_for("customerDashboard"))
-        if not {"Manage user accounts", "Manage user profiles"}.issubset(profile.permissions):
-            abort(403)
         return routeFunction(*args, **kwargs)
     return wrapper
 

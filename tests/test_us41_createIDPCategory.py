@@ -17,7 +17,7 @@ def makeCategory(categoryName, description=""):
 
 def createManager41():
     UserAccount().createUserAccount(
-        "manager41", "Manager@123", "Daniel Tan", "manager41@archss.com", "", 4)
+        UserAccount(username="manager41", password="Manager@123", fullName="Daniel Tan", email="manager41@archss.com", phone="", profileId=4))
     return UserAccount().verifyCredentials("manager41", "Manager@123").userId
 
 

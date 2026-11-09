@@ -2,6 +2,7 @@
 # One row in the user_account table. Every account belongs to one UserProfile.
 
 import hashlib
+import json
 from datetime import datetime
 
 from database.db import getConnection
@@ -27,7 +28,7 @@ class UserAccount:
                  email="", phone="", profileId=None, status="Active", createdDate=None):
         self.userId = userId
         self.username = username
-        self.password = password        # this is the HASH, not the real password
+        self.password = password        # the HASH from the db (only US8's new account holds the typed one)
         self.fullName = fullName
         self.email = email
         self.phone = phone
@@ -35,22 +36,34 @@ class UserAccount:
         self.status = status            # "Active" or "Suspended"
         self.createdDate = createdDate
 
-    # US1 - UT1.1 to UT1.4
-    def verifyCredentials(self, username, password):
-        # returns the matching UserAccount, or None if the username/password is wrong
-        if not username or not password:
-            return None
-
+    # US1 - UT1.1 to UT1.5
+    # returns the UserAccount only if the password is right, the account is Active, its profile is
+    # Active and the profile has every permission in requiredPermissions - otherwise None
+    def verifyCredentials(self, username, password, requiredPermissions=None):
+        # one query for the account + its profile's status and permissions
+        # (LEFT JOIN so an account with a missing profile is still found, then fails the checks below)
         conn = getConnection()
         row = conn.execute(
-            "SELECT * FROM user_account WHERE username = ? AND password = ?",
+            "SELECT a.*, p.status AS profileStatus, p.permissions AS profilePermissions "
+            "FROM user_account a LEFT JOIN user_profile p ON a.profileId = p.profileId "
+            "WHERE a.username = ? AND a.password = ?",
             (username, hashPassword(password)),
         ).fetchone()
         conn.close()
 
         if row is None:
             return None
-        return rowToAccount(row)
+        account = rowToAccount(row)
+
+        # US13, US30 and US39 still call this with 2 arguments (password only) until their sprints are fixed
+        if requiredPermissions is None:
+            return account
+
+        permissions = json.loads(row["profilePermissions"]) if row["profilePermissions"] else []
+        if (account.isActive() and row["profileStatus"] == "Active"
+                and set(requiredPermissions).issubset(permissions)):
+            return account
+        return None
 
     # US1 - UT1.5, US11 - UT11.5
     def isActive(self):
@@ -85,11 +98,11 @@ class UserAccount:
         return row is not None
 
     # US8 - UT8.8
-    def createUserAccount(self, username, password, fullName, email, phone, profileId):
-        # the page already checked + tidied the input, this only checks for duplicates:
-        # the group has to exist and be active, and the username can't be taken
-        profile = UserProfile().getUserProfile(profileId)
-        if profile is None or not profile.isActive() or self.isUsernameTaken(username):
+    # the page already checked + tidied the input, this only checks the database:
+    # the chosen profile has to exist and be Active, and the username can't be taken
+    def createUserAccount(self, account):
+        profile = UserProfile().getUserProfile(account.profileId)
+        if profile is None or not profile.isActive() or self.isUsernameTaken(account.username):
             return False
 
         # no duplicate -> save it. new accounts always start as Active
@@ -99,33 +112,36 @@ class UserAccount:
             "INSERT INTO user_account "
             "(username, password, fullName, email, phone, profileId, status, createdDate) "
             "VALUES (?, ?, ?, ?, ?, ?, 'Active', ?)",
-            (username, hashPassword(password), fullName, email, phone, profileId, createdDate),
+            (account.username, hashPassword(account.password), account.fullName, account.email,
+             account.phone, account.profileId, createdDate),
         )
         conn.commit()
         conn.close()
         return True
 
-    # US10 - UT10.8
-    def updateUserAccount(self, userId, username, fullName, email, phone, profileId):
-        # same duplicate checks as create, but its OWN username is fine (pass userId in)
-        profile = UserProfile().getUserProfile(profileId)
-        if profile is None or not profile.isActive() or self.isUsernameTaken(username, userId):
+    # US10 - UT10.8, UT10.15
+    # same checks as create, but its OWN username is fine (pass userId in).
+    # only an Active account is changed - suspended or no such id -> 0 rows -> False
+    def updateUserAccount(self, account):
+        profile = UserProfile().getUserProfile(account.profileId)
+        if profile is None or not profile.isActive() or self.isUsernameTaken(account.username, account.userId):
             return False
 
         # password, status and createdDate are left alone on purpose (US10 assumptions)
         conn = getConnection()
         cursor = conn.execute(
             "UPDATE user_account SET username = ?, fullName = ?, email = ?, phone = ?, profileId = ? "
-            "WHERE userId = ?",
-            (username, fullName, email, phone, profileId, userId),
+            "WHERE userId = ? AND status = 'Active'",
+            (account.username, account.fullName, account.email, account.phone, account.profileId,
+             account.userId),
         )
         conn.commit()
         conn.close()
-        return cursor.rowcount > 0      # 0 rows means that id doesn't exist
+        return cursor.rowcount > 0
 
     # US11 - UT11.7
     def suspendUserAccount(self, userId):
-        # just flips the status, nothing gets deleted. login (US1) checks isActive() so they're blocked.
+        # just flips the status, nothing gets deleted. login (US1 verifyCredentials) only lets Active accounts in.
         # only an Active one can be suspended - already suspended or no such id -> 0 rows -> False
         conn = getConnection()
         cursor = conn.execute(

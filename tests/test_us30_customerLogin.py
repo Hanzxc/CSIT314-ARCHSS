@@ -73,7 +73,7 @@ def test_ut30_7_missingProfile(monkeypatch):
 
 @pytest.mark.parametrize('profileId', [1, 2, 4])
 def test_ut30_8_otherRoles(profileId):
-    UserAccount().createUserAccount('other30', 'Other@123', 'Other', 'other@x.test', '', profileId)
+    UserAccount().createUserAccount(UserAccount(username='other30', password='Other@123', fullName='Other', email='other@x.test', phone='', profileId=profileId))
     assert CustomerLoginController().login('other30', 'Other@123') is None
 
 
@@ -86,7 +86,7 @@ def test_ut30_10_exactCredentials():
     assert CustomerLoginController().login('CUST001', 'Cust@123') is None
     assert CustomerLoginController().login(' cust001 ', 'Cust@123') is None
     assert CustomerLoginController().login('cust001', ' Cust@123 ') is None
-    UserAccount().createUserAccount('spaces30', ' with spaces ', 'Spaces', 's@x.test', '', 3)
+    UserAccount().createUserAccount(UserAccount(username='spaces30', password=' with spaces ', fullName='Spaces', email='s@x.test', phone='', profileId=3))
     assert CustomerLoginController().login('spaces30', ' with spaces ') is not None
 
 
@@ -168,7 +168,7 @@ def test_ut30_18_dashboardNoSession(client):
 
 @pytest.mark.parametrize('profileId', [1, 2, 4])
 def test_ut30_19_dashboardOtherRole(client, profileId):
-    UserAccount().createUserAccount('other30', 'Other@123', 'Other', 'other@x.test', '', profileId)
+    UserAccount().createUserAccount(UserAccount(username='other30', password='Other@123', fullName='Other', email='other@x.test', phone='', profileId=profileId))
     account = UserAccount().verifyCredentials('other30', 'Other@123')
     with client.session_transaction() as state:
         state.update(userId=account.userId, username=account.username, profileId=profileId)
@@ -202,9 +202,10 @@ def test_ut30_21_forgedSessionMetadata(client):
 
 
 def test_ut30_22_sharedLogin(client):
+    # /login is only for User Admins (US1) - customers get the error there and use /customer/login
     response = client.post('/login', data=dict(username='cust001', password='Cust@123'))
-    assert response.headers['Location'].endswith('/customer/dashboard')
-    assert client.get('/dashboard').headers['Location'].endswith('/customer/dashboard')
+    assert b'Invalid login details or account suspended' in response.data
+    assert client.get('/dashboard').headers['Location'].endswith('/login')
 
 
 def test_ut30_23_sharedAdminUnchanged(client):
@@ -213,7 +214,9 @@ def test_ut30_23_sharedAdminUnchanged(client):
     assert client.get('/accounts').status_code == 200
 
 
-@pytest.mark.parametrize('path', ['/accounts', '/profiles', '/designer/dashboard', '/manager/dashboard'])
+# the User Admin pages (/accounts, /profiles) aren't here any more: their loginRequired only checks
+# there's a session, because logged in as a User Admin is their precondition (US1)
+@pytest.mark.parametrize('path', ['/designer/dashboard', '/manager/dashboard'])
 def test_ut30_24_otherAreasDenied(client, path):
     login(client)
     assert client.get(path).status_code == 403
@@ -228,7 +231,7 @@ def test_ut30_25_existingLogout(client):
 
 
 def test_ut30_26_escaping(client):
-    UserAccount().createUserAccount('<script>x</script>', 'Secret@123', 'X', 'x@x.test', '', 3)
+    UserAccount().createUserAccount(UserAccount(username='<script>x</script>', password='Secret@123', fullName='X', email='x@x.test', phone='', profileId=3))
     login(client, username='<script>x</script>', password='Secret@123')
     response = client.get('/customer/dashboard')
     assert b'&lt;script&gt;x&lt;/script&gt;' in response.data

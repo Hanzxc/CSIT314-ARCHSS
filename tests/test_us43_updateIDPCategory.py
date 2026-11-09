@@ -12,7 +12,7 @@ from boundary.updateIDPCategoryPage import UpdateIDPCategoryPage
 
 def createManager43():
     UserAccount().createUserAccount(
-        "manager43", "Manager@123", "Daniel Tan", "manager43@archss.com", "", 4)
+        UserAccount(username="manager43", password="Manager@123", fullName="Daniel Tan", email="manager43@archss.com", phone="", profileId=4))
 
 
 def loginAsManager43(client):

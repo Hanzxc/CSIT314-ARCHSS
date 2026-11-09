@@ -1,4 +1,4 @@
-# Control: SearchUserProfileController - UC1.7 Search user profiles (US7)
+# Control: SearchUserProfileController - UC7 Search user profiles (US7)
 # US8 and US10 also use it for the profile drop-down (empty keyword = every profile)
 
 from entity.userProfile import UserProfile

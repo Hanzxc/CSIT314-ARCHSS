@@ -22,7 +22,7 @@ def makeCompany(designerId, data):
 
 def createDesigner13():
     UserAccount().createUserAccount(
-        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+        UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer13", "Design@123").userId
 
 
@@ -120,7 +120,7 @@ def test_ut18_11_entity_byAddress():
 
 def test_ut18_12_entity_otherOwnerExcluded():
     createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer18", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer18", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
     assert CompanyProfile().searchCompanyInformation(otherId, "Uda") == []
 
@@ -199,7 +199,7 @@ def test_ut18_21_searchPage_noProfile():
 
 def test_ut18_22_searchPage_ignoresForgedOwner():
     createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer18", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer18", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
     data = companyData()
     data["services"] = "Other designer confidential service"

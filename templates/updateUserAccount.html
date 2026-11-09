@@ -11,8 +11,8 @@
     {% endif %}
 
     {% if userId %}
-        <p>Status: <span class="badge {{ status|lower }}">{{ status }}</span>
-           <span class="hint">(password and status can't be changed here)</span></p>
+        <!-- wireframe 4a note 3 - the status is changed by Suspend (US11), not here -->
+        <p class="hint">The password and status can't be changed here.</p>
 
         <form method="POST" action="{{ url_for('updateUserAccount', userId=userId) }}" class="profile-form">
             <label for="username">Username *</label>
@@ -26,10 +26,10 @@
             {% if fieldErrors.fullName %}<p class="field-error-text">{{ fieldErrors.fullName }}</p>{% endif %}
 
             <label for="email">Email (optional)</label>
-            <input type="email" id="email" name="email" value="{{ form.email }}">
+            <input type="email" id="email" name="email" value="{{ form.email or '' }}">
 
             <label for="phone">Phone (optional)</label>
-            <input type="text" id="phone" name="phone" value="{{ form.phone }}">
+            <input type="text" id="phone" name="phone" value="{{ form.phone or '' }}">
 
             <label for="profileId">User profile *</label>
             <select id="profileId" name="profileId" class="{% if fieldErrors.profileId %}field-error{% endif %}">

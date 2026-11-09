@@ -51,16 +51,19 @@ def test_ut3_4_isProfileNameTaken_new():
 # ---------- CreateUserProfileController.createUserProfile() ----------
 
 def test_ut3_5_createUserProfile_valid():
-    success = CreateUserProfileController().createUserProfile(
-        "Customer Support", "Staff who help customers with their problems", ["Manage user accounts"])
-    assert success is True
+    profile = UserProfile(profileName="Customer Support",
+                          description="Staff who help customers with their accounts",
+                          permissions=["Manage user accounts"])
+    created = CreateUserProfileController().createUserProfile(profile)
+    assert created is True
     assert getStatusByName("Customer Support") == "Active"
 
 
 def test_ut3_6_createUserProfile_nameTaken():
     before = countProfiles()
-    success = CreateUserProfileController().createUserProfile("Customer", "", ["Search, view and save IDPs"])
-    assert success is False
+    profile = UserProfile(profileName="Customer", description="", permissions=["Search, view and save IDPs"])
+    created = CreateUserProfileController().createUserProfile(profile)
+    assert created is False
     assert countProfiles() == before       # nothing got added
 
 
@@ -82,27 +85,41 @@ def test_ut3_8_createPage_noPermissions_nothingSaved():
 
 # ---------- CreateUserProfilePage.validateInput() ----------
 
+def makeProfile(profileName, permissions):
+    # validateInput() gets the UserProfile the page builds (keyword args - the 1st parameter is profileId)
+    return UserProfile(profileName=profileName, description="", permissions=permissions)
+
+
 def test_ut3_9_validateInput_2chars():
-    assert CreateUserProfilePage().validateInput("AB", ["Generate reports"]) is False
+    assert CreateUserProfilePage().validateInput(makeProfile("AB", ["Generate reports"])) is False
 
 
 def test_ut3_10_validateInput_3chars():
-    assert CreateUserProfilePage().validateInput("Ops", ["Generate reports"]) is True
+    assert CreateUserProfilePage().validateInput(makeProfile("Ops", ["Generate reports"])) is True
 
 
 def test_ut3_11_validateInput_50chars():
-    assert CreateUserProfilePage().validateInput("A" * 50, ["Generate reports"]) is True
+    assert CreateUserProfilePage().validateInput(makeProfile("A" * 50, ["Generate reports"])) is True
 
 
 def test_ut3_12_validateInput_51chars():
-    assert CreateUserProfilePage().validateInput("A" * 51, ["Generate reports"]) is False
+    assert CreateUserProfilePage().validateInput(makeProfile("A" * 51, ["Generate reports"])) is False
 
 
 def test_ut3_12b_validateInput_noPermission_setsFieldError():
     # extra: the page should know WHICH field is wrong so it can highlight it (wireframe 4c)
     page = CreateUserProfilePage()
-    assert page.validateInput("Guest", []) is False
+    assert page.validateInput(makeProfile("Guest", [])) is False
     assert "permissions" in page.fieldErrors
+
+
+def test_ut3_12c_submitPage_trimsBeforeSaving():
+    # extra: the page trims the spaces, so the saved name has none (basic flow step 4)
+    client = app.test_client()
+    client.post("/login", data={"username": "admin01", "password": "Admin@123"})
+    client.post("/profiles/create", data={"profileName": "  Guest  ", "description": "  hi  ",
+                                          "permissions": ["Generate reports"]})
+    assert getStatusByName("Guest") == "Active"
 
 
 # ---------- whole page, through the browser (test client) ----------

@@ -4,6 +4,7 @@
 from flask import render_template, redirect, url_for, flash
 
 from control.createUserProfileController import CreateUserProfileController
+from entity.userProfile import UserProfile
 
 MSG_CREATED = "User profile created successfully"
 MSG_NAME_TAKEN = "A user profile with this name already exists"
@@ -17,12 +18,8 @@ class CreateUserProfilePage:
     # starts with an empty form and no errors
     def __init__(self):
         self.createUserProfileController = CreateUserProfileController()
-        self.fieldErrors = {}       # e.g. {"profileName": MSG_NAME_LENGTH, "permissions": MSG_NO_PERMISSION}
-
-        # whatever the admin typed, so the form can be refilled if there's an error (alt flow 4a)
-        self.profileName = ""
-        self.description = ""
-        self.permissions = []
+        self.profile = UserProfile()    # what's in the form, so it can be refilled if there's an error (alt flow 4a)
+        self.fieldErrors = {}           # e.g. {"profileName": MSG_NAME_LENGTH, "permissions": MSG_NO_PERMISSION}
 
     # UC3 Create user profile
     # admin clicked "Create user profile" - get the permission tick boxes and show the form
@@ -35,25 +32,23 @@ class CreateUserProfilePage:
     def displayCreateForm(self, permissionList, msg=None):
         return render_template("createUserProfile.html", activePage="profiles",
                                permissionList=permissionList,
-                               profileName=self.profileName,
-                               description=self.description,
-                               permissions=self.permissions,
+                               profileName=self.profile.profileName,
+                               description=self.profile.description,
+                               permissions=self.profile.permissions,
                                fieldErrors=self.fieldErrors,
                                errorMessage=msg)
 
     def submitUserProfile(self, profileName, description, permissions):
-        # remember what was typed first, in case we need to show the form again
-        self.profileName = profileName
-        self.description = description
-        self.permissions = permissions
+        # the page trims the spaces first, then puts the form into a UserProfile
+        self.profile = UserProfile(profileName=profileName.strip(), description=description.strip(),
+                                   permissions=permissions)
 
         # bad input -> controller never gets called (outer alt in the seq diagram)
-        if not self.validateInput(profileName, permissions):
+        if not self.validateInput(self.profile):
             return self.displayErrorMessage(MSG_FIX_FIELDS)
 
-        # tidy it up here so the controller/entity get clean values
-        if self.createUserProfileController.createUserProfile(
-                profileName.strip(), description.strip(), permissions):
+        created = self.createUserProfileController.createUserProfile(self.profile)
+        if created:
             return self.displaySuccessMessage(MSG_CREATED)
 
         # the only way it fails is the entity finding the name is taken (alt flow 5a)
@@ -61,14 +56,13 @@ class CreateUserProfilePage:
         return self.displayErrorMessage(MSG_NAME_TAKEN)
 
     # UT3.9 to UT3.12
-    def validateInput(self, profileName, permissions):
+    def validateInput(self, profile):
         self.fieldErrors = {}       # start fresh each time
 
-        name = profileName.strip()
-        if len(name) < 3 or len(name) > 50:
+        if len(profile.profileName) < 3 or len(profile.profileName) > 50:
             self.fieldErrors["profileName"] = MSG_NAME_LENGTH
 
-        if not permissions:
+        if not profile.permissions:
             self.fieldErrors["permissions"] = MSG_NO_PERMISSION
 
         return len(self.fieldErrors) == 0

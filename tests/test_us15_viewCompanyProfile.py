@@ -11,7 +11,7 @@ from control.viewCompanyProfileController import ViewCompanyProfileController
 
 def createDesigner13():
     UserAccount().createUserAccount(
-        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+        UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer13", "Design@123").userId
 
 
@@ -83,7 +83,7 @@ def test_ut15_8_getCompanyProfile_allFields():
 
 def test_ut15_9_getCompanyProfile_differentOwner():
     createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer15", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer15", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer15", "Design@123").userId
     assert CompanyProfile().getCompanyProfile(otherId) is None
 
@@ -132,7 +132,7 @@ def test_ut15_14_viewPage_optionalFieldsEmpty():
 
 def test_ut15_15_viewPage_ignoresForgedOwner():
     createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer15", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer15", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     otherId = UserAccount().verifyCredentials("designer15", "Design@123").userId
     data = companyData()
     data["companyName"] = "Other Designer Private Company"
@@ -146,7 +146,7 @@ def test_ut15_15_viewPage_ignoresForgedOwner():
 
 def test_ut15_16_viewPage_otherAccountWithoutProfile():
     createCompanyForDesigner13()
-    UserAccount().createUserAccount("designer15", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer15", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     client = app.test_client()
     client.post("/designer/login", data={"username": "designer15", "password": "Design@123"})
     response = client.get("/designer/company?designerId=4")

@@ -1,4 +1,4 @@
-# Boundary: SearchUserProfilePage - UC1.7 Search user profiles (US7)
+# Boundary: SearchUserProfilePage - UC7 Search user profiles (US7)
 # template: templates/userProfiles.html
 # this is the User Profiles list page too - empty search just lists everything (alt flow 1a)
 
@@ -10,13 +10,13 @@ MSG_NO_RESULTS = "No user profiles found"
 
 
 class SearchUserProfilePage:
-    # UC1.7 Search user profiles
+    # UC7 Search user profiles
     # starts with an empty search box
     def __init__(self):
         self.searchUserProfileController = SearchUserProfileController()
         self.keyword = ""       # kept so it stays in the search box after searching
 
-    # UC1.7 Search user profiles
+    # UC7 Search user profiles
     # admin clicked Search - ask the controller for matching profiles
     def searchUserProfiles(self, keyword):
         # tidy up the keyword first - "  Customer " should work the same as "Customer"

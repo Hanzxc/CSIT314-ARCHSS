@@ -5,7 +5,9 @@ from app import app
 from database.db import getConnection
 from entity.userProfile import UserProfile
 from control.suspendUserProfileController import SuspendUserProfileController
-from control.loginController import LoginController
+from control.viewUserProfileController import ViewUserProfileController
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
+from entity.userAccount import UserAccount
 
 
 def countAccountsInProfile(profileId):
@@ -48,9 +50,10 @@ def test_ut6_5_isActive_afterSuspend():
     assert UserProfile().getUserProfile(3).isActive() is False
 
 
-def test_ut6_6_login_afterSuspend():
+def test_ut6_6_verifyCredentials_afterSuspend():
+    # cust001 itself is still Active, but its Customer profile isn't any more
     SuspendUserProfileController().suspendUserProfile(3)
-    assert LoginController().login("cust001", "Cust@123") is None
+    assert UserAccount().verifyCredentials("cust001", "Cust@123", REQUIRED_CUSTOMER_PERMISSIONS) is None
 
 
 def test_ut6_7_suspend_keepsAccounts():
@@ -66,7 +69,26 @@ def loginAsAdmin01(client):
     return client.post("/login", data={"username": "admin01", "password": "Admin@123"})
 
 
-def test_ut6_8_suspendPage_success():
+def test_ut6_8_clickSuspend_notFound(monkeypatch):
+    # the page loads the profile for the box with US4's controller - no profile -> error, no box
+    calls = []
+    realGetUserProfile = ViewUserProfileController.getUserProfile
+
+    def spyGetUserProfile(self, profileId):
+        calls.append(profileId)
+        return realGetUserProfile(self, profileId)
+
+    monkeypatch.setattr(ViewUserProfileController, "getUserProfile", spyGetUserProfile)
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/profiles/9999/suspend")
+    assert calls == [9999]          # one borrowed call, then straight to the error
+    response = client.get(response.headers["Location"])
+    assert b"This user profile cannot be suspended" in response.data
+    assert b"Are you sure" not in response.data
+
+
+def test_ut6_12_suspendPage_success():
     # extra: wireframe 4c - details page now shows Suspended
     client = app.test_client()
     loginAsAdmin01(client)

@@ -18,7 +18,8 @@ class LogoutPage:
     # UC2 Log out
     # user clicked Log out - the message depends on whether they were still logged in
     def clickLogout(self):
-        if self.logoutController.logout():
+        loggedOut = self.logoutController.logout()
+        if loggedOut:
             return self.displayLoginPage(MSG_LOGGED_OUT)
         return self.displayLoginPage(MSG_SESSION_ENDED)
 

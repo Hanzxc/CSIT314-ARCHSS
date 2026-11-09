@@ -14,12 +14,12 @@ from boundary.addCurrentIDPPage import AddCurrentIDPPage
 
 def createManager44():
     UserAccount().createUserAccount(
-        "manager44", "Manager@123", "Daniel Tan", "manager44@archss.com", "", 4)
+        UserAccount(username="manager44", password="Manager@123", fullName="Daniel Tan", email="manager44@archss.com", phone="", profileId=4))
 
 
 def createDesigner44():
     UserAccount().createUserAccount(
-        "designer44", "Design@123", "Tengku Uda Designer", "designer44@archss.com", "", 2)
+        UserAccount(username="designer44", password="Design@123", fullName="Tengku Uda Designer", email="designer44@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer44", "Design@123").userId
 
 

@@ -5,7 +5,7 @@ from app import app
 from database.db import getConnection
 from entity.userAccount import UserAccount
 from control.updateUserAccountController import UpdateUserAccountController
-from control.loginController import LoginController
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
 from boundary.updateUserAccountPage import UpdateUserAccountPage
 
 
@@ -23,12 +23,18 @@ def suspendProfileInDb(profileId):
     conn.close()
 
 
+def makeAccount(userId, username, fullName, email, phone, profileId):
+    # the UserAccount the page builds after trimming the input
+    return UserAccount(userId=userId, username=username, fullName=fullName,
+                       email=email, phone=phone, profileId=profileId)
+
+
 # ---------- UpdateUserAccountController.updateUserAccount() ----------
 
 def test_ut10_1_updateUserAccount_valid():
-    success = UpdateUserAccountController().updateUserAccount(
-        3, "cust001", "Chloe Ng Mei Ling", "cust001@archss.com", "98765432", 3)
-    assert success is True
+    updated = UpdateUserAccountController().updateUserAccount(
+        makeAccount(3, "cust001", "Chloe Ng Mei Ling", "cust001@archss.com", "98765432", 3))
+    assert updated is True
     account = UpdateUserAccountController().getUserAccount(3)
     assert account.fullName == "Chloe Ng Mei Ling"
     assert account.phone == "98765432"
@@ -36,30 +42,30 @@ def test_ut10_1_updateUserAccount_valid():
 
 def test_ut10_2_updateUserAccount_usernameTaken():
     before = getAccountRow(3)
-    success = UpdateUserAccountController().updateUserAccount(
-        3, "admin01", "Chloe Ng", "cust001@archss.com", "93456789", 3)
-    assert success is False
+    updated = UpdateUserAccountController().updateUserAccount(
+        makeAccount(3, "admin01", "Chloe Ng", "cust001@archss.com", "93456789", 3))
+    assert updated is False
     assert getAccountRow(3) == before
 
 
 def test_ut10_3_updateUserAccount_suspendedProfile():
     suspendProfileInDb(4)
-    success = UpdateUserAccountController().updateUserAccount(
-        3, "cust001", "Chloe Ng", "cust001@archss.com", "93456789", 4)
-    assert success is False
+    updated = UpdateUserAccountController().updateUserAccount(
+        makeAccount(3, "cust001", "Chloe Ng", "cust001@archss.com", "93456789", 4))
+    assert updated is False
     assert UserAccount().getUserAccount(3).profileId == 3
 
 
 def test_ut10_4_updateUserAccount_notFound():
-    success = UpdateUserAccountController().updateUserAccount(
-        9999, "nobody", "Nobody", "", "", 3)
-    assert success is False
+    updated = UpdateUserAccountController().updateUserAccount(
+        makeAccount(9999, "nobody", "Nobody", "", "", 3))
+    assert updated is False
 
 
 def test_ut10_4b_updateUserAccount_moveProfile():
     # extra: TC10.3 - move cust001 to Interior Designer
     assert UpdateUserAccountController().updateUserAccount(
-        3, "cust001", "Chloe Ng", "cust001@archss.com", "93456789", 2) is True
+        makeAccount(3, "cust001", "Chloe Ng", "cust001@archss.com", "93456789", 2)) is True
     assert UserAccount().getUserAccount(3).profileId == 2
 
 
@@ -77,7 +83,7 @@ def test_ut10_6_isUsernameTaken_someoneElses():
 
 def test_ut10_7_validateInput_emptyFullName():
     page = UpdateUserAccountPage()
-    assert page.validateInput("cust001", "", "cust001@archss.com", "93456789", 3) is False
+    assert page.validateInput(makeAccount(3, "cust001", "", "cust001@archss.com", "93456789", 3)) is False
     assert "fullName" in page.fieldErrors
 
 
@@ -86,17 +92,19 @@ def test_ut10_7_validateInput_emptyFullName():
 def test_ut10_8_updateUserAccount_keepsPasswordStatusDate():
     conn = getConnection()
     before = conn.execute("SELECT password, status, createdDate FROM user_account WHERE userId = 3").fetchone()
-    UserAccount().updateUserAccount(3, "cust001", "Chloe Ng Mei Ling", "cust001@archss.com", "98765432", 3)
+    assert UserAccount().updateUserAccount(
+        makeAccount(3, "cust001", "Chloe Ng Mei Ling", "cust001@archss.com", "98765432", 3)) is True
     after = conn.execute("SELECT password, status, createdDate FROM user_account WHERE userId = 3").fetchone()
     conn.close()
     assert tuple(before) == tuple(after)
 
 
 def test_ut10_9_oldPasswordStillWorks():
-    # extra: TC10.7
+    # extra: TC10.7 - cust001 is a Customer, so it's checked with the customer permissions
+    # (customers log in on /customer/login, US30)
     UpdateUserAccountController().updateUserAccount(
-        3, "cust001", "Chloe Ng Mei Ling", "cust001@archss.com", "98765432", 3)
-    assert LoginController().login("cust001", "Cust@123") is not None
+        makeAccount(3, "cust001", "Chloe Ng Mei Ling", "cust001@archss.com", "98765432", 3))
+    assert UserAccount().verifyCredentials("cust001", "Cust@123", REQUIRED_CUSTOMER_PERMISSIONS) is not None
 
 
 # ---------- whole page, through the browser (test client) ----------
@@ -151,3 +159,13 @@ def test_ut10_14_updatePage_notFound():
     loginAsAdmin01(client)
     response = client.get("/accounts/9999/update")
     assert b"Account not found" in response.data
+
+
+def test_ut10_15_updateUserAccount_suspendedAccount():
+    # admin02 is Suspended - it can't be updated, and it stays Suspended
+    before = getAccountRow(2)
+    updated = UserAccount().updateUserAccount(
+        makeAccount(2, "admin02", "Ben Lim Wei", "admin02@archss.com", "", 1))
+    assert updated is False
+    assert getAccountRow(2) == before
+    assert UserAccount().getUserAccount(2).status == "Suspended"

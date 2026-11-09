@@ -13,8 +13,8 @@ from boundary.viewIDPViewStatisticsPage import MSG_NO_IDPS
 
 
 def createDesigner(username="designer37"):
-    UserAccount().createUserAccount(username, "Design@123", "Statistics Designer",
-                                    username + "@archss.com", "", 2)
+    UserAccount().createUserAccount(UserAccount(username=username, password="Design@123", fullName="Statistics Designer",
+                                    email=username + "@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials(username, "Design@123").userId
 
 

@@ -10,7 +10,7 @@ from control.platformManagerLogoutController import PlatformManagerLogoutControl
 
 def createManager40():
     UserAccount().createUserAccount(
-        "manager40", "Manager@123", "Daniel Tan", "manager40@archss.com", "", 4)
+        UserAccount(username="manager40", password="Manager@123", fullName="Daniel Tan", email="manager40@archss.com", phone="", profileId=4))
 
 
 def loginAsManager40(client):

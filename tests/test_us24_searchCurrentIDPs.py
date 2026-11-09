@@ -122,9 +122,10 @@ def test_ut24_19_signedOutRedirect(searchable):
     assert result.status_code==302 and result.headers['Location'].endswith('/designer/login')
 
 
-@pytest.mark.parametrize('username,password',[('admin01','Admin@123'),('cust001','Cust@123')])
-def test_ut24_20_nonDesignerForbidden(searchable,username,password):
-    browser=app.test_client();browser.post('/login',data=dict(username=username,password=password))
+# each role logs in on its own page (/login is only for User Admins, US1)
+@pytest.mark.parametrize('loginUrl,username,password',[('/login','admin01','Admin@123'),('/customer/login','cust001','Cust@123')])
+def test_ut24_20_nonDesignerForbidden(searchable,loginUrl,username,password):
+    browser=app.test_client();browser.post(loginUrl,data=dict(username=username,password=password))
     assert browser.get(SEARCH_URL).status_code==403
 
 

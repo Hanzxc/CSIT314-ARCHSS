@@ -15,8 +15,8 @@ from test_us37_viewIDPViewStatistics import (createDesigner, customerId, createC
 
 
 def createManager(username="manager46"):
-    UserAccount().createUserAccount(username, "Manager@123", "Report Manager",
-                                    username + "@archss.com", "", 4)
+    UserAccount().createUserAccount(UserAccount(username=username, password="Manager@123", fullName="Report Manager",
+                                    email=username + "@archss.com", phone="", profileId=4))
     return UserAccount().verifyCredentials(username, "Manager@123").userId
 
 

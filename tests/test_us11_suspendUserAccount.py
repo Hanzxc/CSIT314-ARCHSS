@@ -6,6 +6,8 @@ from database.db import getConnection
 from entity.userAccount import UserAccount
 from control.suspendUserAccountController import SuspendUserAccountController
 from control.loginController import LoginController
+from control.viewUserAccountController import ViewUserAccountController
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
 
 
 def countAccounts():
@@ -49,6 +51,8 @@ def test_ut11_5_isActive_afterSuspend():
 def test_ut11_6_login_afterSuspend():
     SuspendUserAccountController().suspendUserAccount(3)
     assert LoginController().login("cust001", "Cust@123") is None
+    # cust001 is a Customer, so check it can't get in with the customer permissions either (US30)
+    assert UserAccount().verifyCredentials("cust001", "Cust@123", REQUIRED_CUSTOMER_PERMISSIONS) is None
 
 
 def test_ut11_6b_otherUsersCanStillLogIn():
@@ -113,3 +117,22 @@ def test_ut11_12_noSuspendButton_ownOrSuspended():
     assert b"/accounts/1/suspend" not in client.get("/accounts/1").data
     assert b"/accounts/2/suspend" not in client.get("/accounts/2").data
     assert b"/accounts/3/suspend" in client.get("/accounts/3").data
+
+
+def test_ut11_13_clickSuspend_notFound(monkeypatch):
+    # the page loads the account for the box with US9's controller - no account -> error, no box
+    calls = []
+    realViewUserAccount = ViewUserAccountController.viewUserAccount
+
+    def spyViewUserAccount(self, userId):
+        calls.append(userId)
+        return realViewUserAccount(self, userId)
+
+    monkeypatch.setattr(ViewUserAccountController, "viewUserAccount", spyViewUserAccount)
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/accounts/9999/suspend")
+    assert calls == [9999]          # one borrowed call, then straight to the error
+    response = client.get(response.headers["Location"])
+    assert b"This user account cannot be suspended" in response.data
+    assert b"Are you sure" not in response.data

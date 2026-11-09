@@ -7,6 +7,7 @@ from database.db import getConnection
 from database.seedData import seedSampleData, makeSampleData, SAMPLE_PASSWORD
 from entity.userProfile import ALL_PERMISSIONS
 from control.loginController import LoginController
+from entity.userAccount import UserAccount
 import json
 
 
@@ -93,11 +94,13 @@ def test_seed_10_sameDataEveryTime():
 
 
 def test_seed_11_sampleAccount_canLogIn():
-    # pick any active sample account that's in an active profile and log in with it
+    # pick any active sample account that's in an active profile and check its password works.
+    # each role logs in on its own page, so check it with its own profile's permissions
     addSampleData()
-    row = getAll("SELECT a.username FROM user_account a JOIN user_profile p ON a.profileId = p.profileId "
+    row = getAll("SELECT a.username, p.permissions FROM user_account a JOIN user_profile p ON a.profileId = p.profileId "
                  "WHERE a.status = 'Active' AND p.status = 'Active' AND a.username NOT IN ('admin01', 'cust001')")[0]
-    assert LoginController().login(row["username"], SAMPLE_PASSWORD) is not None
+    permissions = set(json.loads(row["permissions"]))
+    assert UserAccount().verifyCredentials(row["username"], SAMPLE_PASSWORD, permissions) is not None
 
 
 def test_seed_12_defaultTestData_notChanged():
@@ -114,6 +117,6 @@ def test_seed_13_runTwice_idsDontJump():
     addSampleData()
     addSampleData()
     from entity.userProfile import UserProfile
-    UserProfile().createUserProfile("Brand New Group", "", ["Generate reports"])
+    UserProfile().createUserProfile(UserProfile(profileName="Brand New Group", description="", permissions=["Generate reports"]))
     newId = getAll("SELECT profileId FROM user_profile WHERE profileName = 'Brand New Group'")[0]["profileId"]
     assert newId == 101

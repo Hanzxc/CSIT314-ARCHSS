@@ -20,8 +20,9 @@ def seedCompanyData():
     for number in range(1, 101):
         username = "companydemo" + str(number).zfill(3)
         if not UserAccount().isUsernameTaken(username):
-            UserAccount().createUserAccount(username, "Demo@123", "Demo Designer " + str(number),
-                                           username + "@example.com", "", profile["profileId"])
+            newAccount = UserAccount(username=username, password="Demo@123", fullName="Demo Designer " + str(number),
+                                     email=username + "@example.com", phone="", profileId=profile["profileId"])
+            UserAccount().createUserAccount(newAccount)
         conn = getConnection()
         account = conn.execute("SELECT userId FROM user_account WHERE username = ?", (username,)).fetchone()
         conn.close()

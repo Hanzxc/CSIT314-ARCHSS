@@ -1,14 +1,11 @@
 # Boundary: LoginPage - UC1 Log in (US1)
-# US13: redirect interior designers to their dashboard.
-# US39: redirect platform managers to their dashboard.
+# /login is only for User Admins - designers, customers and platform managers use their own
+# login pages (US13, US30, US39), so here they just get MSG_INVALID_LOGIN
 # template: templates/login.html
 
 from flask import render_template, redirect, url_for, session
 
 from control.loginController import LoginController
-from control.interiorDesignerLoginController import InteriorDesignerLoginController
-from control.platformManagerLoginController import PlatformManagerLoginController
-from control.customerLoginController import CustomerLoginController
 
 MSG_EMPTY_FIELDS = "Please enter your username and password"
 MSG_INVALID_LOGIN = "Invalid login details or account suspended"
@@ -19,6 +16,7 @@ class LoginPage:
     # just sets up the controller
     def __init__(self):
         self.loginController = LoginController()
+        self.username = ""      # kept so the username stays in the box after a failed login (wireframe 4b)
 
     # UC1 Log in
     # user opened the login page
@@ -31,11 +29,15 @@ class LoginPage:
         return render_template("login.html")
 
     def submitLogin(self, username, password):
-        # Empty field -> the controller is never called (alt flow 4a).
+        self.username = username
+
+        # empty field -> the controller is never called (alt flow 4a)
         if not self.validateInput(username, password):
             return self.displayErrorMessage(MSG_EMPTY_FIELDS)
 
-        account = self.loginController.login(username, password)
+        # the page trims the spaces from the username (not the password) before it calls login()
+        self.username = username.strip()
+        account = self.loginController.login(self.username, password)
         if account is not None:
             return self.redirectToDashboard(account)
         return self.displayErrorMessage(MSG_INVALID_LOGIN)
@@ -47,27 +49,14 @@ class LoginPage:
         return True
 
     def redirectToDashboard(self, account):
-        # Start a fresh session after successful authentication.
+        # start a fresh session for the User Admin, then open their dashboard
         session.clear()
         session["userId"] = account.userId
         session["profileId"] = account.profileId
         session["username"] = account.username
-
-        # US13: designers use their own dashboard.
-        if InteriorDesignerLoginController().isInteriorDesigner(account):
-            return redirect(url_for("interiorDesignerDashboard"))
-
-        # US39: platform managers use their own dashboard.
-        if PlatformManagerLoginController().isPlatformManager(account):
-            return redirect(url_for("platformManagerDashboard"))
-
-        if CustomerLoginController().isCustomer(account):
-            return redirect(url_for("customerDashboard"))
-
-        # Existing admin dashboard.
         return redirect(url_for("dashboard"))
 
     # UC1 Log in
-    # show the login form again with the error message
+    # show the login form again with the error message (the password box is cleared)
     def displayErrorMessage(self, msg):
-        return render_template("login.html", errorMessage=msg)
+        return render_template("login.html", errorMessage=msg, username=self.username)

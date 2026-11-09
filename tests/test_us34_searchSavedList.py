@@ -35,7 +35,7 @@ def test_ut34_1_search_onlyInTheSavedList_anyCapitals():
 
 def test_ut34_2_search_otherCustomersListNotIncluded():
     savedProjects()
-    UserAccount().createUserAccount("cust034", "Cust@123", "Other Customer", "c34@archss.com", "", 3)
+    UserAccount().createUserAccount(UserAccount(username="cust034", password="Cust@123", fullName="Other Customer", email="c34@archss.com", phone="", profileId=3))
     other = UserAccount().verifyCredentials("cust034", "Cust@123").userId
     assert SavedIDP().searchSavedRecords(other, "kitchen") == []
 

@@ -12,7 +12,7 @@ from boundary.createCompanyProfilePage import CreateCompanyProfilePage
 
 def createDesigner13():
     UserAccount().createUserAccount(
-        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+        UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer13", "Design@123").userId
 
 
@@ -109,7 +109,7 @@ def test_ut14_11_entity_duplicateOwnerRejected():
 
 def test_ut14_12_profilesKeptSeparate():
     first = createDesigner13()
-    UserAccount().createUserAccount("designer14", "Design@123", "Daniel Tan", "", "", 2)
+    UserAccount().createUserAccount(UserAccount(username="designer14", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
     second = UserAccount().verifyCredentials("designer14", "Design@123").userId
     assert CreateCompanyProfileController().createCompanyProfile(makeCompany(first, companyData())) is True
     assert CompanyProfile().getCompanyProfile(second) is None

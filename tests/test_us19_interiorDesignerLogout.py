@@ -13,7 +13,7 @@ from control.interiorDesignerLogoutController import InteriorDesignerLogoutContr
 
 def createDesigner13():
     UserAccount().createUserAccount(
-        "designer13", "Design@123", "Tengku Uda Designer", "designer13@archss.com", "", 2)
+        UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
     return UserAccount().verifyCredentials("designer13", "Design@123").userId
 
 

@@ -6,6 +6,7 @@ from database.db import getConnection
 from entity.userAccount import UserAccount, hashPassword
 from entity.userProfile import UserProfile
 from control.viewUserAccountController import ViewUserAccountController
+from control.viewUserProfileController import ViewUserProfileController
 
 
 # ---------- ViewUserAccountController.viewUserAccount() ----------
@@ -30,18 +31,24 @@ def test_ut9_4_viewUserAccount_zero():
     assert ViewUserAccountController().viewUserAccount(0) is None
 
 
-def test_ut9_4b_viewUserAccount_alsoGetsProfile():
-    # extra: seq diagram msgs 5-8 - the controller gets the account's profile too,
-    # so the page can show the group name
-    controller = ViewUserAccountController()
-    controller.viewUserAccount(3)
-    assert controller.profile.profileName == "Customer"
+def test_ut9_4b_clickView_profileFromUS4(monkeypatch):
+    # seq diagram msgs 6-9 - the page gets the group name through US4's controller,
+    # ViewUserAccountController only gives back the account
+    calls = []
+    realGetUserProfile = ViewUserProfileController.getUserProfile
 
+    def spyGetUserProfile(self, profileId):
+        calls.append(profileId)
+        return realGetUserProfile(self, profileId)
 
-def test_ut9_4c_viewUserAccount_notFound_noProfile():
-    controller = ViewUserAccountController()
-    controller.viewUserAccount(9999)
-    assert controller.profile is None
+    monkeypatch.setattr(ViewUserProfileController, "getUserProfile", spyGetUserProfile)
+    client = app.test_client()
+    loginAsAdmin01(client)
+    response = client.get("/accounts/3")
+    assert b"cust001" in response.data
+    assert b"Customer" in response.data
+    assert calls == [3]         # cust001's profileId
+    assert not hasattr(ViewUserAccountController(), "profile")
 
 
 # ---------- entity methods ----------

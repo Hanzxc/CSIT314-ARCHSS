@@ -22,7 +22,7 @@ As a user admin, I want to view a user account so that I can check the user’s 
 #10
 As a user admin, I want to update a user account so that the user’s details and group are correct.
 #11
-As a user admin, I want to suspend a user account so that the user cannot log in. - re
+As a user admin, I want to suspend a user account so that the user cannot log in.
 #12
 As a user admin, I want to search for user accounts so that I can find the user I need to manage.
 

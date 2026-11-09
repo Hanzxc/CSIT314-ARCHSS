@@ -1,4 +1,4 @@
-# Entity: UserProfile (used by US1, US3, US4, US5, US6, US7)
+# Entity: UserProfile (used by US3 - US10, US13, US30, US39)
 # A user group e.g. User Admin, Interior Designer, Customer, Platform Manager.
 # One row in the user_profile table.
 
@@ -30,7 +30,7 @@ class UserProfile:
         self.permissions = permissions if permissions is not None else []   # list of strings
         self.status = status            # "Active" or "Suspended"
 
-    # US1, US4, US5, US6 - UT4.1 to UT4.4
+    # US4, US5, US6, US8, US9, US10 - UT4.1 to UT4.4
     def getUserProfile(self, profileId):
         # returns the UserProfile with this id, or None if there isn't one
         conn = getConnection()
@@ -50,7 +50,7 @@ class UserProfile:
         return UserProfile(row["profileId"], row["profileName"], row["description"],
                            permissions, row["status"])
 
-    # US1, US6 - UT6.5
+    # US6, US8, US10 - UT6.5
     def isActive(self):
         return self.status == "Active"
 
@@ -76,10 +76,10 @@ class UserProfile:
         conn.close()
         return row is not None
 
-    # US3
-    def createUserProfile(self, profileName, description, permissions):
+    # US3 - UT3.5, UT3.6
+    def createUserProfile(self, profile):
         # the page already checked + tidied the input, this only checks for a duplicate name
-        if self.isProfileNameTaken(profileName):
+        if self.isProfileNameTaken(profile.profileName):
             return False
 
         # no duplicate -> save it. new profiles always start as Active
@@ -87,33 +87,34 @@ class UserProfile:
         conn.execute(
             "INSERT INTO user_profile (profileName, description, permissions, status) "
             "VALUES (?, ?, ?, 'Active')",
-            (profileName, description, json.dumps(permissions)),
+            (profile.profileName, profile.description, json.dumps(profile.permissions)),
         )
         conn.commit()
         conn.close()
         return True
 
-    # US5
-    def updateUserProfile(self, profileId, profileName, description, permissions):
+    # US5 - UT5.3 to UT5.5, UT5.8
+    def updateUserProfile(self, profile):
         # pass profileId in so it doesn't count its OWN name as taken
-        if self.isProfileNameTaken(profileName, profileId):
+        if self.isProfileNameTaken(profile.profileName, profile.profileId):
             return False
 
-        # status is left alone on purpose - updating shouldn't un-suspend a profile (UT5.8)
+        # only an Active profile is changed - suspended or no such id -> 0 rows -> False.
+        # the status itself is never changed here (US6 does that)
         conn = getConnection()
         cursor = conn.execute(
             "UPDATE user_profile SET profileName = ?, description = ?, permissions = ? "
-            "WHERE profileId = ?",
-            (profileName, description, json.dumps(permissions), profileId),
+            "WHERE profileId = ? AND status = 'Active'",
+            (profile.profileName, profile.description, json.dumps(profile.permissions), profile.profileId),
         )
         conn.commit()
         conn.close()
-        return cursor.rowcount > 0      # 0 rows means that id doesn't exist
+        return cursor.rowcount > 0
 
     # US6 - UT6.7
     def suspendUserProfile(self, profileId):
         # only the profile row changes, the accounts in it stay where they are.
-        # login (US1) already checks the profile status so they get blocked anyway.
+        # login (US1 verifyCredentials) already checks the profile status so they get blocked anyway.
         # only an Active one can be suspended - already suspended or no such id -> 0 rows -> False
         conn = getConnection()
         cursor = conn.execute(

@@ -17,8 +17,9 @@ def seedCurrentIDPData():
 
     for username in ("idpdemo001", "idpdemo002"):
         if not UserAccount().isUsernameTaken(username):
-            UserAccount().createUserAccount(username, "Demo@123", "IDP Demo Designer " + username[-3:],
-                                             username + "@example.com", "", profile["profileId"])
+            newAccount = UserAccount(username=username, password="Demo@123", fullName="IDP Demo Designer " + username[-3:],
+                                     email=username + "@example.com", phone="", profileId=profile["profileId"])
+            UserAccount().createUserAccount(newAccount)
 
     conn = getConnection()
     created = 0

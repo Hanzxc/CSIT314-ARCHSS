@@ -12,8 +12,8 @@ from test_us37_viewIDPViewStatistics import (createDesigner, loginAsDesigner, cu
 
 
 def createCustomer(username):
-    UserAccount().createUserAccount(username, "Cust@123", "Another Customer",
-                                    username + "@archss.com", "", 3)
+    UserAccount().createUserAccount(UserAccount(username=username, password="Cust@123", fullName="Another Customer",
+                                    email=username + "@archss.com", phone="", profileId=3))
     return UserAccount().verifyCredentials(username, "Cust@123").userId
 
 
