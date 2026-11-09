@@ -314,10 +314,10 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 | `getCompanyProfile(designerId)` | CompanyProfile or None | US14, US15, US16, US17, US18 |
 | `createCompanyProfile(companyProfile)` | bool (False if the designer already has a row, Active or Suspended) | US14 |
 | `updateCompanyProfile(companyProfile)` | bool (False if there's no Active row - it never inserts) | US16 |
-| `suspendCompanyProfile(designerId, companyId, expectedRevision=None)` | bool (owner, id and revision must match) | US17 |
+| `suspendCompanyProfile(designerId, companyId, expectedRevision)` | bool (owner, id and revision must match) | US17 |
 | `getSuspendedCompanyProfile(designerId)` | CompanyProfile or None | US17 (restore) |
 | `restoreCompanyProfile(designerId, companyId, expectedRevision)` | bool | US17 (restore) |
-| `searchCompanyInformation(designerId, keyword)` | list of dicts `{"field", "label", "value"}` | US18 |
+| `searchCompanyInformation(designerId, keyword)` | the CompanyProfile with `matchedFields` (names of the fields whose name or value contains the keyword; empty list = no match), or None if there's no Active profile | US18 |
 
 `companyProfile` is a CompanyProfile object the page builds from the form (owner = `session["userId"]`), not a dict.
 
@@ -326,10 +326,10 @@ Controllers inside a page are always called `self.<controllerName>` e.g. `self.l
 | Role | Needs these permissions | Checked by |
 |---|---|---|
 | User Admin | Manage user accounts + Manage user profiles | `loginRequired` in `app.py` |
-| Interior Designer | Manage company profile + Manage own IDPs | `InteriorDesignerLoginController` at login (US13) and on the dashboard |
-| Platform Manager | Manage IDP categories + Generate reports | `PlatformManagerLoginController` at login (US39) and on the dashboard |
+| Interior Designer | Manage company profile + Manage own IDPs | `InteriorDesignerLoginController` at login only (US13) |
+| Platform Manager | Manage IDP categories + Generate reports | `PlatformManagerLoginController` at login only (US39) |
 
-The account and its profile must both be Active to log in. US14 - US18 don't check the designer again (logged in as a designer is their precondition) - `designerLoginRequired` only sends someone with no session back to `/designer/login`.
+The account and its profile must both be Active to log in - `UserAccount.verifyCredentials(username, password, requiredPermissions)` checks the password, both statuses and the permissions in one go. The dashboards and US14 - US18 don't check the role again (logged in as a designer / manager is their precondition) - `designerLoginRequired` / `managerLoginRequired` only send someone with no session back to the log in page.
 
 ### Control
 
@@ -352,23 +352,19 @@ The account and its profile must both be Active to log in. US14 - US18 don't che
 | `SuspendUserAccountController` | `suspendUserAccount(userId)` | bool |
 | `SearchUserAccountController` | `searchUserAccounts(keyword)` | list of UserAccount |
 | `InteriorDesignerLoginController` | `login(username, password)` | UserAccount or None |
-| | `isInteriorDesigner(account)` | bool |
-| | `getAuthenticatedDesigner(userId)` (used by the designer dashboard) | UserAccount or None |
-| `CreateCompanyProfileController` | `hasCompanyProfile(designerId)` | bool |
-| | `createCompanyProfile(companyProfile)` | bool |
+| | `isInteriorDesigner(account)` (kept only for US21 - US24 until Sprint 3 is fixed) | bool |
+| | `getAuthenticatedDesigner(userId)` (kept only for US21 - US24 until Sprint 3 is fixed) | UserAccount or None |
+| `CreateCompanyProfileController` | `createCompanyProfile(companyProfile)` | bool |
 | `ViewCompanyProfileController` | `viewCompanyProfile(designerId)` | CompanyProfile or None |
 | `UpdateCompanyProfileController` | `getCompanyProfile(designerId)` | CompanyProfile or None |
 | | `updateCompanyProfile(companyProfile)` | bool |
 | `DeleteCompanyProfileController` | `getCompanyProfile(designerId)` | CompanyProfile or None |
-| | `deleteCompanyProfile(designerId, companyId, expectedRevision=None)` | bool |
+| | `deleteCompanyProfile(designerId, companyId, expectedRevision)` | bool |
 | `RestoreCompanyProfileController` | `getSuspendedCompanyProfile(designerId)` | CompanyProfile or None |
 | | `restoreCompanyProfile(designerId, companyId, expectedRevision)` | bool |
-| `SearchCompanyInformationController` | `hasCompanyProfile(designerId)` | bool |
-| | `searchCompanyInformation(designerId, keyword)` | list of dicts |
-| `InteriorDesignerLogoutController` | `logout()` (calls the US2 `LogoutController`, then clears the whole session) | bool |
+| `SearchCompanyInformationController` | `searchCompanyInformation(designerId, keyword)` | CompanyProfile (with `matchedFields`) or None |
+| `InteriorDesignerLogoutController` | `logout()` (clears the session itself - doesn't use the US2 `LogoutController`) | bool |
 | `PlatformManagerLoginController` | `login(username, password)` | UserAccount or None |
-| | `isPlatformManager(account)` | bool |
-| | `getAuthenticatedManager(userId)` | UserAccount or None |
 
 ### Boundary
 
@@ -390,9 +386,9 @@ The account and its profile must both be Active to log in. US14 - US18 don't che
 | `CreateCompanyProfilePage` | `clickCreateCompanyProfile()`, `displayCreateForm(msg=None)`, `validateInput(companyProfile)` -> bool, `submitCompanyProfile(companyName, description, services, email, phone, address)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`. The field rules are the module function `getFieldErrors(companyProfile)`, reused by US16 |
 | `ViewCompanyProfilePage` | `clickView()`, `displayCompanyProfile(profile)`, `displayErrorMessage(msg)` |
 | `UpdateCompanyProfilePage` | `clickUpdate()`, `displayUpdateForm(msg=None)`, `validateInput(companyProfile)` -> bool, `submitUpdate(companyName, description, services, email, phone, address)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
-| `DeleteCompanyProfilePage` | `clickDelete()`, `displayConfirmation(profile)`, `submitDelete(choice, companyId, confirmationToken)`, `confirmDelete(companyId, confirmationToken)`, `cancelDelete()`, `closeConfirmation()`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
-| `RestoreCompanyProfilePage` | `prepareRestore(designerId)`, `submitRestore(confirmationToken)`, `displayFailure()` |
-| `SearchCompanyInformationPage` | `searchCompanyInformation(keyword)`, `displayResults(results)`, `displayNoResultsMessage()`, `displayNotFoundMessage()` |
+| `DeleteCompanyProfilePage` | `clickDelete()`, `displayConfirmation(profile)`, `submitDelete(choice, companyId, revision)`, `confirmDelete(companyId, revision)`, `cancelDelete()`, `closeConfirmation()`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` |
+| `RestoreCompanyProfilePage` | `submitRestore(companyId, revision)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)` |
+| `SearchCompanyInformationPage` | `searchCompanyInformation(keyword)`, `displayResults(companyProfile)`, `displayNoResultsMessage()`, `displayNotFoundMessage()` |
 | `InteriorDesignerLogoutPage` | `clickLogout()`, `displayLoginPage(msg)` |
 | `PlatformManagerLoginPage` | `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password)` -> bool, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` |
 
@@ -406,7 +402,6 @@ Use these names for the same things everywhere (they come from the sequence diag
 |---|---|
 | `account` | a UserAccount (None if login failed) |
 | `profile` | a UserProfile (None if not found) |
-| `accountActive` / `profileActive` | result of `isActive()` in login |
 | `permissionList` | all 8 permissions, for the tick boxes |
 | `permissions` | the permissions a profile has / that were ticked |
 | `loggedOut` | result of `logout()` |
@@ -419,18 +414,18 @@ Use these names for the same things everywhere (they come from the sequence diag
 | `designerId` | userId of the designer who owns the company profile - always `session["userId"]` (US14 - US18) |
 | `companyProfile` | the CompanyProfile the page builds from the company form (US14, US16) |
 | `company` | a CompanyProfile, passed to the company templates (US14 - US17) |
-| `results` | list of matching company fields from a search (US18) |
-| `confirmationToken` | random token that proves the delete box was opened (US17) |
+| `matchedFields` | names of the company fields that matched a search (on the returned `companyProfile`, US18) |
+| `revision` | the company profile's revision number, sent back by the delete box / Restore button so a stale one can't delete or restore (US17) |
 
-**Session keys:** `session["userId"]`, `session["profileId"]`, `session["username"]` (set at login, cleared at logout). US17 also uses `session["companyDeleteConfirmation"]` (`designerId`, `companyId`, `token`) while the delete box is open. Every login clears the old session first.
+**Session keys:** `session["userId"]`, `session["profileId"]`, `session["username"]` (set at login, cleared at logout). Every login clears the old session first.
 
 **Status values:** exactly `"Active"` or `"Suspended"`
 
-**HTML form field names:** `username`, `password`, `profileName`, `description`, `permissions` (tick boxes), `keyword` (search box), `choice` (`ok` / `cancel` in the suspend box, `delete` / `cancel` in the US17 delete box), `fullName`, `email`, `phone`, `profileId` (drop-down), `companyName`, `services`, `address`, `companyId` + `confirmationToken` (hidden, US17)
+**HTML form field names:** `username`, `password`, `profileName`, `description`, `permissions` (tick boxes), `keyword` (search box), `choice` (`ok` / `cancel` in the suspend box, `delete` / `cancel` in the US17 delete box), `fullName`, `email`, `phone`, `profileId` (drop-down), `companyName`, `services`, `address`, `companyId` + `revision` (hidden, US17 delete box and Restore button)
 
 **Templates:** `base.html` (admin pages extend this), `login.html`, `dashboard.html`, `userProfiles.html`, `createUserProfile.html`, `viewUserProfile.html`, `updateUserProfile.html`, `userAccounts.html`, `createUserAccount.html`, `viewUserAccount.html`, `updateUserAccount.html`
 
-Sprint 2: `interiorDesignerBase.html` (designer pages extend this - header has the US19 Log out button), `interiorDesignerLogin.html`, `interiorDesignerDashboard.html`, `interiorDesignerAccessDenied.html`, `createCompanyProfile.html`, `viewCompanyProfile.html`, `companyProfileDetails.html` (the reusable company card, for later customer pages too), `companyProfileNotFound.html`, `updateCompanyProfile.html`, `deleteCompanyProfile.html`, `companyProfileDeleteError.html`, `searchCompanyInformation.html`, `platformManagerLogin.html`, `platformManagerDashboard.html`, `platformManagerAccessDenied.html`
+Sprint 2: `interiorDesignerBase.html` (designer pages extend this - header has the US19 Log out button), `interiorDesignerLogin.html`, `interiorDesignerDashboard.html`, `interiorDesignerAccessDenied.html`, `createCompanyProfile.html`, `viewCompanyProfile.html`, `companyProfileDetails.html` (the reusable company card, for later customer pages too), `companyProfileNotFound.html`, `updateCompanyProfile.html`, `deleteCompanyProfile.html`, `companyProfileDeleteError.html`, `searchCompanyInformation.html`, `platformManagerLogin.html`, `platformManagerDashboard.html`
 
 ## URLs
 
@@ -455,6 +450,7 @@ Sprint 2: `interiorDesignerBase.html` (designer pages extend this - header has t
 | `/designer/company` | GET | US15 |
 | `/designer/company/update` | GET, POST | US16 |
 | `/designer/company/delete` | GET (shows the confirmation box), POST (Delete / Cancel) | US17 |
+| `/designer/company/restore` | POST (dashboard's Restore button) | US17 (restore) |
 | `/designer/company/search` | GET (`?keyword=...`) | US18 |
 | `/designer/logout` | POST | US19 |
 | `/manager/login` | GET, POST | US39 |
@@ -491,13 +487,13 @@ Sprint 2: `interiorDesignerBase.html` (designer pages extend this - header has t
 | `MSG_CREATED` | Company profile created successfully | US14 |
 | `MSG_FIX_FIELDS` | Please fix the highlighted fields | US14, US16 |
 | `MSG_EXISTS` | You already have a company profile | US14 |
-| `MSG_FAILED` | Company profile could not be created. Please try again | US14 |
 | `MSG_NOT_FOUND` | You have not created a company profile yet | US15, US16, US17, US18 |
 | `MSG_UPDATED` | Company profile updated successfully | US16 |
-| `MSG_FAILED` | Company profile could not be updated. Please try again | US16 |
 | `MSG_DELETED` | Company profile deleted successfully | US17 |
 | `MSG_CONFIRM_AGAIN` | Please open the delete confirmation and try again | US17 |
 | `MSG_FAILED` | Company profile could not be deleted. Please reopen the confirmation | US17 |
+| `MSG_RESTORED` | Company profile restored successfully | US17 (restore) |
+| `MSG_RESTORE_FAILED` | Company profile could not be restored. Please reopen the dashboard and try again | US17 (restore) |
 | `MSG_NO_RESULTS` | No matching company information found | US18 |
 | `MSG_LOGGED_OUT` | You have logged out successfully | US19 |
 | `MSG_SESSION_ENDED` | Your session has already ended | US19 |
