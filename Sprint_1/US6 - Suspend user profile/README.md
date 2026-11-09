@@ -28,7 +28,6 @@
 | Control `SuspendUserProfileController` — `suspendUserProfile(profileId): boolean` | `control/suspendUserProfileController.py` |
 | Borrowed control `«control» (from US4) ViewUserProfileController` — `getUserProfile(profileId): UserProfile` | `control/viewUserProfileController.py` |
 | Entity `UserProfile` — `getUserProfile(profileId)`, `suspendUserProfile(profileId)` | `entity/userProfile.py` (table `user_profile`) |
-| Entity `UserAccount` (not changed; 0..* accounts belong to 1 profile) | `entity/userAccount.py` |
 | Route | GET / POST `/profiles/<profileId>/suspend` → `suspendUserProfile()` in `app.py` (POST `choice=cancel` → `cancelSuspend()`) |
 
 Messages: `MSG_SUSPENDED` "User profile suspended successfully", `MSG_CANNOT_SUSPEND` "This user profile cannot be suspended".
