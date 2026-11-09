@@ -4,76 +4,49 @@
 
 ## Behaviour
 
-- Following the lecturer's feedback (the same way Sprint 1 and 2 were changed): the boundary trims and checks all the input, the controller just calls the entity and returns the result (no canXxx() access methods), the entity does the duplicate / still-Active checks, an entity object is passed around instead of a dict, and each B-C-E diagram has only one entity.
-- An IDP is an interior design project. A current IDP is one the designer is still working on (US20 - US24); a past IDP is a completed one (US25 onwards). Both are rows in the idp table with projectType Current or Past.
-- Being logged in as an Interior Designer (UC13) is the precondition, so the page and the diagrams don't check the designer again (no InteriorDesignerLoginController). designerLoginRequired in app.py only sends someone with no session to /designer/login.
-- The form has a project title (required, 3-100 characters), an IDP category (required), a description (required, up to 2000) and a location (optional, up to 200).
-- The category drop-down only lists Active IDP categories made by the Platform Manager (US41). Listing the categories is US45's job, so the page borrows SearchIDPCategoryController (empty keyword) and keeps the Active ones - the same way US8 borrows the US7 controller for its profile drop-down. A category that is Suspended (US44) can't be chosen, even by posting its id: the page rejects it, and the entity only saves the IDP if the category is still Active.
-- The owner (designerId) is always the logged-in designer from the session, never a form field.
-- A new IDP is saved as projectType Current and status Active, and appears under its category for the Platform Manager (US42). Viewing, updating, deleting and searching current IDPs are US21 - US24.
-- Photos are not part of this story.
+- "Add current IDP" on the Current IDPs card of the dashboard (`clickAddCurrentIDP()`) shows the form (`displayAddForm()`).
+- The category drop-down comes from `getAvailableCategories()`: the page borrows US45's `SearchIDPCategoryController.searchIDPCategories("")` and keeps the Active categories, sorted by name. No Active category → "No IDP categories are available yet. Please try again later" and no form.
+- On "Add current IDP" (`submitCurrentIDP(title, categoryId, description, location)`) the page trims the input and builds `idp = IDP(session userId, categoryId, title, description, location)`. The owner always comes from the session, never from the form.
+- `validateInput(idp)`: title required, 3-100 characters; description required, up to 2000; location optional, up to 200; the category must be one of the Active ones (it calls `getAvailableCategories()` again). Bad input → "Please fix the highlighted fields", the typed values stay and nothing is saved.
+- Otherwise `addCurrentIDP(idp)` → the entity inserts a Current, Active IDP only if its category is still Active and the owner exists. Added → the dashboard with "Current IDP added successfully". Not added → "Current IDP could not be added. Please try again".
+- Photos are not part of this story. Viewing, updating, deleting and searching current IDPs are US21 - US24.
 
-## Lecturer feedback changes
+## Who checks what
 
-- **Boundary checks everything.** The page trims the input, puts it in an entity object and checks every field itself (`validateInput()`).
-- **The controller just calls the entity** and returns the result. It doesn't re-check the input and has no `canXxx()` access methods.
-- **The entity checks for duplicates / still-Active rows** (e.g. a taken category name, a category suspended meanwhile).
-- **An entity object is passed around, not a `{}` dict.**
-- **One entity per B-C-E diagram.**
-- **Precondition, no double check.** Being logged in is the precondition, so the B-C-E and sequence diagrams no longer re-check the user with the US13 / US39 login controller. `designerLoginRequired` and `managerLoginRequired` in `app.py` only send someone with no session to the login page.
-
-## Repository files
-
-New files for this story:
-
-```text
-boundary/addCurrentIDPPage.py
-control/addCurrentIDPController.py
-entity/idp.py
-templates/addCurrentIDP.html
-tests/test_us20_addCurrentIDP.py
-Sprint_3/US20 - Add Current IDP/...
-```
-
-Existing files with small additions (shared by US20 and US40 - US45; nothing removed):
-
-- `app.py` — imports and routes for US20 and US40 - US45, and `managerLoginRequired` (only sends someone with no session to `/manager/login`, like `designerLoginRequired`); no existing route changed
-- `database/schema.sql` — `idp_category` and `idp` tables appended (existing tables unchanged; `initDatabase()` creates them in an existing `archss.db`, no migration needed)
-- `templates/platformManagerDashboard.html` — Log out button (US40) and IDP Categories links (US45)
-- `templates/interiorDesignerDashboard.html` — "Add current IDP" button on the Current IDPs card (US20)
+- **Boundary** (`AddCurrentIDPPage`): trims the input, builds the `IDP` object and checks every field rule and that the category is one of the Active ones.
+- **Control** (`AddCurrentIDPController`): `addCurrentIDP(idp)` just calls the entity and returns the result - no checks.
+- **Borrowed control** (`SearchIDPCategoryController`, from US45): `searchIDPCategories("")` lists the categories for the drop-down.
+- **Entity** (`IDP`): `addCurrentIDP(idp)` only inserts when the category is still Active (it could have been suspended meanwhile, US44) and the owner exists.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again (no `InteriorDesignerLoginController`).
 
 ## Diagram/code mapping
 
-| Element | Implementation |
+| Diagram element | Code |
 |---|---|
-| Boundary `AddCurrentIDPPage` | `boundary/addCurrentIDPPage.py` |
-| Control `AddCurrentIDPController` | `control/addCurrentIDPController.py` |
-| Reused control `SearchIDPCategoryController` | Existing US45 `control/searchIDPCategoryController.py` (category drop-down) |
-| Entity `IDP` | `entity/idp.py`, table `idp` in `database/schema.sql` |
-| Route | GET/POST `/designer/idps/add` in `app.py` |
+| Boundary `AddCurrentIDPPage` — `clickAddCurrentIDP()`, `getAvailableCategories(): list`, `displayAddForm(msg=None)`, `validateInput(idp): bool`, `submitCurrentIDP(title, categoryId, description, location)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)` | `boundary/addCurrentIDPPage.py`, `templates/addCurrentIDP.html` |
+| Control `AddCurrentIDPController` — `addCurrentIDP(idp): bool` | `control/addCurrentIDPController.py` |
+| Borrowed control (from US45) `SearchIDPCategoryController` — `searchIDPCategories(keyword): list` | `control/searchIDPCategoryController.py` |
+| Entity `IDP` — `addCurrentIDP(idp): bool` | `entity/idp.py` (table `idp`) |
+| Route | GET / POST `/designer/idps/add` (`@designerLoginRequired`) → `addCurrentIDP()` in `app.py` |
 
-Class, method, attribute and variable names in the diagrams are the same as in the code.
+Messages: `MSG_ADDED` "Current IDP added successfully", `MSG_FIX_FIELDS` "Please fix the highlighted fields", `MSG_NO_CATEGORIES` "No IDP categories are available yet. Please try again later", `MSG_FAILED` "Current IDP could not be added. Please try again".
 
-```text
-US20 Add current IDP.drawio
-diagrams/
-  2 Use Case Diagram.png
-  4a Wireframe - Add button.png
-  4b Wireframe - Add form.png
-  4c Wireframe - Form errors.png
-  4d Wireframe - IDP added.png
-  4e Wireframe - No categories yet.png
-  5 BCE Class Diagram.png
-  6 Sequence Diagram.png
+## Files
+
+- `US20 Add current IDP.drawio` — every diagram, one page each
+- `US20 Add current IDP.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Add button.png`
+  - `4b Wireframe - Add form.png`
+  - `4c Wireframe - Form errors.png`
+  - `4d Wireframe - IDP added.png`
+  - `4e Wireframe - No categories yet.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
+
+## Tests
+
 ```
-
-The draw.io file contains 8 editable pages. PNGs are locally rendered vector illustrations of the same pages, not browser screenshots.
-
-## Automated pass/fail tests
-
-Open a terminal at the repository root:
-
-```powershell
 python -m pytest tests/test_us20_addCurrentIDP.py -v
-python -m pytest -q
 ```

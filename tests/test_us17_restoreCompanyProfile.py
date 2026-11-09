@@ -9,6 +9,7 @@ from database.db import getConnection
 from entity.userAccount import UserAccount
 from entity.companyProfile import CompanyProfile
 from control.restoreCompanyProfileController import RestoreCompanyProfileController
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def companyData():
@@ -19,7 +20,7 @@ def companyData():
 
 def createSuspendedCompany():
     UserAccount().createUserAccount(UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="", phone="", profileId=2))
-    userId = UserAccount().verifyCredentials("designer13", "Design@123").userId
+    userId = UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     assert CompanyProfile().createCompanyProfile(CompanyProfile(designerId=userId, **companyData())) is True
     profile = CompanyProfile().getCompanyProfile(userId)
     assert CompanyProfile().suspendCompanyProfile(userId, profile.companyId, profile.revision) is True

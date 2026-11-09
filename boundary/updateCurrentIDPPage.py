@@ -1,108 +1,108 @@
-# Boundary: UpdateCurrentIDPPage - UC22 Update a current IDP.
-import secrets
+# Boundary: UpdateCurrentIDPPage - UC22 Update current IDP (US22)
+# templates: updateCurrentIDP.html, currentIDPNotFound.html
+# precondition: the designer is already logged in (US13), so there's no extra access check here.
+# no form token - the entity only updates the owner's Active Current IDP
 
 from flask import flash, redirect, render_template, session, url_for
 
 from control.updateCurrentIDPController import UpdateCurrentIDPController
+from control.searchIDPCategoryController import SearchIDPCategoryController
+from entity.idp import IDP
 
-FORM_FIELDS = ("title", "categoryId", "description", "location")
 MSG_UPDATED = "Current IDP updated successfully"
 MSG_FIX_FIELDS = "Please fix the highlighted fields"
 MSG_NOT_FOUND = "Current IDP not found"
-MSG_FAILED = "Current IDP could not be updated. Please try again"
-MSG_INVALID_FORM = "This update form is no longer valid. Reopen it and try again"
+MSG_FIELD_REQUIRED = "This field is required"
+MSG_TITLE_LENGTH = "Title must be 3-100 characters"
+MSG_CHOOSE_CATEGORY = "Choose an available category"
+
+FIELD_LIMITS = {"title": 100, "description": 2000, "location": 200}
 
 
 class UpdateCurrentIDPPage:
+    # UC22 Update current IDP
+    # starts with no IDP and no errors
     def __init__(self):
         self.updateCurrentIDPController = UpdateCurrentIDPController()
         self.idpId = None
-        self.idpData = {}
+        self.idp = IDP()            # what's in the form
         self.fieldErrors = {}
 
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("interiorDesignerLogin"))
-        if not self.updateCurrentIDPController.canUpdateCurrentIDP(session["userId"]):
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return None
-
-    def prepareUpdateToken(self):
-        tokens = dict(session.get("currentIDPUpdateTokens", {}))
-        token = secrets.token_urlsafe(32)
-        tokens[str(self.idpId)] = {"token": token, "designerId": session["userId"]}
-        # Keep the signed session cookie small when several projects are open.
-        while len(tokens) > 8:
-            del tokens[next(iter(tokens))]
-        session["currentIDPUpdateTokens"] = tokens
-        return token
-
-    def validateUpdateToken(self, updateToken):
-        expected = session.get("currentIDPUpdateTokens", {}).get(str(self.idpId), {})
-        return (expected.get("designerId") == session["userId"]
-                and isinstance(updateToken, str)
-                and bool(expected.get("token"))
-                and secrets.compare_digest(updateToken.encode("utf-8"), expected["token"].encode("utf-8")))
-
+    # UC22 Update current IDP
+    # designer clicked "Update current IDP" on the preview - fill the form with the saved details
     def clickUpdate(self, idpId):
         self.idpId = idpId
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        try:
-            idp = self.updateCurrentIDPController.getCurrentIDP(session["userId"], idpId)
-            if idp is None:
-                return self.displayNotFoundMessage()
-            self.idpData = {field: getattr(idp, field) for field in FORM_FIELDS}
+        idp = self.updateCurrentIDPController.getCurrentIDP(session["userId"], idpId)
+        if idp is not None:
+            self.idp = idp
             return self.displayUpdateForm()
-        except PermissionError:
-            return render_template("interiorDesignerAccessDenied.html"), 403
+        return self.displayNotFoundMessage()
 
+    # UC22 Update current IDP
+    # shows the form with the current (or typed) values and any errors
     def displayUpdateForm(self, msg=None):
-        categories = self.updateCurrentIDPController.getActiveIDPCategories(session["userId"])
-        return render_template("updateCurrentIDP.html", idpId=self.idpId, idpData=self.idpData,
-                               categories=categories, fieldErrors=self.fieldErrors, errorMessage=msg,
-                               updateToken=self.prepareUpdateToken(), activePage="currentIDPs")
+        categories = self.getAvailableCategories()
+        return render_template("updateCurrentIDP.html", idpId=self.idpId, idp=self.idp,
+                               categories=categories, fieldErrors=self.fieldErrors,
+                               errorMessage=msg, activePage="currentIDPs")
 
-    def validateInput(self, idpData):
-        self.fieldErrors = self.updateCurrentIDPController.getFieldErrors(idpData)
-        return not self.fieldErrors
+    # UC22 Update current IDP
+    # the drop-down only offers Active categories (US44). listing the categories is US45's job
+    # (search with an empty keyword), so we borrow that controller, same as US20
+    def getAvailableCategories(self):
+        categories = SearchIDPCategoryController().searchIDPCategories("")
+        return sorted([category for category in categories if category.isActive()],
+                      key=lambda category: category.categoryName.lower())
 
-    def submitUpdate(self, idpId, idpData, updateToken):
+    # UC22 Update current IDP
+    # the same field rules as US20 - title and description are required, the category must be one
+    # of the Active ones in the drop-down. true if there's nothing wrong
+    def validateInput(self, idp):
+        self.fieldErrors = {}
+        for field, limit in FIELD_LIMITS.items():
+            value = getattr(idp, field)
+            if field in ("title", "description") and not value:
+                self.fieldErrors[field] = MSG_FIELD_REQUIRED
+            elif len(value) > limit:
+                self.fieldErrors[field] = "Maximum " + str(limit) + " characters"
+        if idp.title and len(idp.title) < 3:
+            self.fieldErrors["title"] = MSG_TITLE_LENGTH
+
+        availableIds = [category.categoryId for category in self.getAvailableCategories()]
+        if idp.categoryId not in availableIds:
+            self.fieldErrors["categoryId"] = MSG_CHOOSE_CATEGORY
+        return len(self.fieldErrors) == 0
+
+    # UC22 Update current IDP
+    # designer pressed "Save changes" - trim the input, put it into an IDP, check it, then update
+    def submitUpdate(self, idpId, title, categoryId, description, location):
         self.idpId = idpId
-        self.idpData = idpData
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        designerId = session["userId"]
-        try:
-            if self.updateCurrentIDPController.getCurrentIDP(designerId, idpId) is None:
-                return self.displayNotFoundMessage()
-            if not self.validateUpdateToken(updateToken):
-                return render_template("currentIDPUpdateError.html", errorMessage=MSG_INVALID_FORM,
-                                       idpId=idpId, activePage="currentIDPs"), 403
-            if not self.validateInput(idpData):
-                return self.displayErrorMessage(MSG_FIX_FIELDS)
-            if self.updateCurrentIDPController.updateCurrentIDP(designerId, idpId, idpData):
-                return self.displaySuccessMessage(MSG_UPDATED)
-            if self.updateCurrentIDPController.getCurrentIDP(designerId, idpId) is None:
-                return self.displayNotFoundMessage()
-            # A destination category may have been suspended after input validation.
-            self.validateInput(idpData)
-            return self.displayErrorMessage(MSG_FIX_FIELDS if self.fieldErrors else MSG_FAILED)
-        except PermissionError:
-            return render_template("interiorDesignerAccessDenied.html"), 403
+        # the owner is always the logged-in designer, never a form field
+        self.idp = IDP(idpId, session["userId"], categoryId, title.strip(), description.strip(),
+                       location.strip())
 
+        # bad input -> controller never gets called (outer alt in the seq diagram)
+        if not self.validateInput(self.idp):
+            return self.displayErrorMessage(MSG_FIX_FIELDS)
+        updated = self.updateCurrentIDPController.updateCurrentIDP(self.idp)
+        if updated:
+            return self.displaySuccessMessage(MSG_UPDATED)
+        # the IDP or its category was suspended meanwhile, or it isn't this designer's
+        return self.displayNotFoundMessage()
+
+    # UC22 Update current IDP
+    # back to the preview with a green message
     def displaySuccessMessage(self, msg):
-        tokens = dict(session.get("currentIDPUpdateTokens", {}))
-        tokens.pop(str(self.idpId), None)
-        session["currentIDPUpdateTokens"] = tokens
         flash(msg, "success")
         return redirect(url_for("viewCurrentIDP", idpId=self.idpId))
 
+    # UC22 Update current IDP
+    # same form again with the message on top + the bad fields in red, typed values kept
     def displayErrorMessage(self, msg):
         return self.displayUpdateForm(msg)
 
+    # UC22 Update current IDP
+    # HTTP 404 with no project details
     def displayNotFoundMessage(self):
         return render_template("currentIDPNotFound.html", errorMessage=MSG_NOT_FOUND,
                                activePage="currentIDPs"), 404

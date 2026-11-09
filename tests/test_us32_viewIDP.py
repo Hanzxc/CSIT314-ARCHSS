@@ -1,10 +1,17 @@
 """US32 customer detail view uses isolated database fixtures."""
+import inspect
+
 import pytest
 
 from app import app
+from control.customerLoginController import CustomerLoginController, REQUIRED_CUSTOMER_PERMISSIONS
+from control.viewCompanyProfileController import ViewCompanyProfileController
 from control.viewIDPController import ViewIDPController
+from database.db import getConnection
 from entity.companyProfile import CompanyProfile
 from entity.idp import IDP
+from entity.idpAnalytics import IDPAnalytics
+from entity.savedIDP import SavedIDP
 from entity.userAccount import UserAccount
 from test_us22_updateCurrentIDP import data, execute, snapshot
 
@@ -15,7 +22,7 @@ def projects(data):
         'VALUES (?,?,?,?,?,?,?)', (data['owner'], 'Studio Thirty Two', 'Thoughtful home interiors.',
         'Space planning and carpentry.', 'private-business@example.test', '12345678', 'Office address'))
     return {**data, 'company': company,
-            'customer': UserAccount().verifyCredentials('cust001', 'Cust@123').userId}
+            'customer': UserAccount().verifyCredentials('cust001', 'Cust@123', REQUIRED_CUSTOMER_PERMISSIONS).userId}
 
 
 @pytest.fixture
@@ -29,78 +36,104 @@ def url(idpId):
     return f'/customer/idps/{idpId}'
 
 
+def viewRows(idpId=None):
+    conn = getConnection()
+    try:
+        if idpId is None:
+            return conn.execute('SELECT COUNT(*) FROM idp_view').fetchone()[0]
+        return conn.execute('SELECT COUNT(*) FROM idp_view WHERE idpId=?', (idpId,)).fetchone()[0]
+    finally:
+        conn.close()
+
+
+def spyCompanyProfile(monkeypatch):
+    # records what the borrowed US15 controller is asked for and what it gives back
+    calls = []
+    original = ViewCompanyProfileController.viewCompanyProfile
+    def spy(self, designerId):
+        company = original(self, designerId)
+        calls.append((designerId, company))
+        return company
+    monkeypatch.setattr(ViewCompanyProfileController, 'viewCompanyProfile', spy)
+    return calls
+
+
 def test_ut32_1_currentProject(projects):
-    p = IDP().getIDP(projects['own'])
+    p = IDP().viewIDP(projects['own'], False)
     assert p.title == 'Own Current Project' and p.categoryName == 'Living Room'
     assert p.projectType == 'Current' and p.location == 'Tampines'
 
 
 def test_ut32_2_pastProject(projects):
-    assert IDP().getIDP(projects['past']).projectType == 'Past'
+    assert IDP().viewIDP(projects['past'], False).projectType == 'Past'
 
 
 def test_ut32_3_anotherDesigner(projects):
-    assert IDP().getIDP(projects['foreign']).designerId == projects['other']
+    assert IDP().viewIDP(projects['foreign'], False).designerId == projects['other']
 
 
 @pytest.mark.parametrize('key', ['suspended', 'hidden', 'missing'])
 def test_ut32_4_hiddenOrMissingEntity(projects, key):
-    assert IDP().getIDP(projects.get(key, 999999)) is None
+    assert IDP().viewIDP(projects.get(key, 999999), True) is None
+    assert viewRows() == 0
 
 
 @pytest.mark.parametrize('value', [-1, 0, 999999, "1 OR 1=1", None])
 def test_ut32_5_invalidEntityId(projects, value):
-    assert IDP().getIDP(value) is None
+    before = snapshot()
+    assert IDP().viewIDP(value, True) is None
+    assert snapshot() == before
 
 
-def test_ut32_6_controllerDetailsAndCompany(projects):
-    result = ViewIDPController().viewIDP(projects['customer'], projects['own'])
-    assert result['idp'].idpId == projects['own']
-    assert result['companyProfile'].companyName == 'Studio Thirty Two'
-    assert result['companyProfile'].designerId == result['idp'].designerId
+def test_ut32_6_controllerOneEntityCall(projects, monkeypatch):
+    calls = []
+    monkeypatch.setattr(IDP, 'viewIDP', lambda self, idpId, countView: calls.append((idpId, countView)) or 'idp')
+    def unexpected(*args): pytest.fail('the controller must not look up the company')
+    monkeypatch.setattr(CompanyProfile, 'getCompanyProfile', unexpected)
+    assert ViewIDPController().viewIDP(projects['own'], True) == 'idp'
+    assert calls == [(projects['own'], True)]
 
 
-def test_ut32_7_missingCompany(projects):
-    result = ViewIDPController().viewIDP(projects['customer'], projects['foreign'])
-    assert result['idp'] is not None and result['companyProfile'] is None
+def test_ut32_7_missingCompany(client, projects, monkeypatch):
+    calls = spyCompanyProfile(monkeypatch)
+    response = client.get(url(projects['foreign']))
+    assert calls == [(projects['other'], None)]
+    assert response.status_code == 200 and b'Other Designer Project' in response.data
 
 
-def test_ut32_8_suspendedCompany(projects):
+def test_ut32_8_suspendedCompany(client, projects, monkeypatch):
     execute("UPDATE company_profile SET status='Suspended' WHERE companyId=?", (projects['company'],))
-    result = ViewIDPController().viewIDP(projects['customer'], projects['own'])
-    assert result['idp'] is not None and result['companyProfile'] is None
+    calls = spyCompanyProfile(monkeypatch)
+    response = client.get(url(projects['own']))
+    assert calls == [(projects['owner'], None)]
+    assert b'Designer information is not currently available.' in response.data
 
 
-def test_ut32_9_denyBeforeQueries(projects, monkeypatch):
-    monkeypatch.setattr(ViewIDPController, 'getCustomer', lambda *args: None)
-    def forbidden(*args): pytest.fail('Denied requests must not query project/company')
-    monkeypatch.setattr(IDP, 'getIDP', forbidden)
-    monkeypatch.setattr(CompanyProfile, 'getCompanyProfile', forbidden)
-    with pytest.raises(PermissionError): ViewIDPController().viewIDP(1, projects['own'])
+def test_ut32_9_controllerDoesNotCheckCustomer(projects, monkeypatch):
+    def refused(*args): pytest.fail('the controller must not check the customer again')
+    monkeypatch.setattr(CustomerLoginController, 'login', refused)
+    monkeypatch.setattr(UserAccount, 'getUserAccount', refused)
+    assert list(inspect.signature(ViewIDPController.viewIDP).parameters) == ['self', 'idpId', 'countView']
+    # no session / customerId at all - still one entity call, no error
+    assert ViewIDPController().viewIDP(projects['own'], False).idpId == projects['own']
+    assert ViewIDPController().viewIDP(999999, False) is None
 
 
-def test_ut32_10_hiddenStopsCompanyQuery(projects, monkeypatch):
-    def forbidden(*args): pytest.fail('Unavailable project must not retrieve company')
-    monkeypatch.setattr(CompanyProfile, 'getCompanyProfile', forbidden)
-    assert ViewIDPController().viewIDP(projects['customer'], projects['hidden']) is None
+def test_ut32_10_hiddenSkipsCompanyLookup(client, projects, monkeypatch):
+    def unexpected(*args): pytest.fail('an unavailable IDP must not look up the company')
+    monkeypatch.setattr(ViewCompanyProfileController, 'viewCompanyProfile', unexpected)
+    assert client.get(url(projects['hidden'])).status_code == 404
 
 
-def test_ut32_11_companyUsesSavedOwner(projects, monkeypatch):
-    seen = []
-    monkeypatch.setattr(CompanyProfile, 'getCompanyProfile', lambda self, owner: seen.append(owner))
-    ViewIDPController().viewIDP(projects['customer'], projects['foreign'])
-    assert seen == [projects['other']]
+def test_ut32_11_companyUsesSavedOwner(client, projects, monkeypatch):
+    calls = spyCompanyProfile(monkeypatch)
+    client.get(url(projects['foreign']), query_string=dict(designerId=projects['owner']))
+    assert [designerId for designerId, company in calls] == [projects['other']]
 
 
-@pytest.mark.parametrize('condition', ['active', 'account', 'profile', 'permission', 'admin', 'missing'])
-def test_ut32_12_customerAccess(projects, condition):
-    customer = projects['customer']
-    if condition == 'account': execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (customer,))
-    elif condition == 'profile': execute("UPDATE user_profile SET status='Suspended' WHERE profileId=3")
-    elif condition == 'permission': execute("UPDATE user_profile SET permissions='[]' WHERE profileId=3")
-    elif condition == 'admin': customer = 1
-    elif condition == 'missing': customer = 999999
-    assert (ViewIDPController().getCustomer(customer) is not None) == (condition == 'active')
+def test_ut32_12_normalViewAddsOneRow(client, projects):
+    assert client.get(url(projects['own'])).status_code == 200
+    assert viewRows(projects['own']) == 1 and viewRows() == 1
 
 
 def test_ut32_13_fullDetailsPage(client, projects):
@@ -124,13 +157,13 @@ def test_ut32_14_noSession(projects):
 
 
 @pytest.mark.parametrize('profileId', [1, 2, 4])
-def test_ut32_15_otherRoles(projects, profileId):
-    UserAccount().createUserAccount(UserAccount(username='other32', password='Other@123', fullName='Other', email='', phone='', profileId=profileId))
-    account = UserAccount().verifyCredentials('other32', 'Other@123')
+def test_ut32_15_roleNotCheckedAgain(projects, profileId):
+    # being a customer is the precondition (customerLoginRequired only checks there's a session)
     client = app.test_client()
     with client.session_transaction() as state:
-        state.update(userId=account.userId, username=account.username, profileId=profileId)
-    assert client.get(url(projects['own'])).status_code == 403
+        state.update(userId=1, username='other32', profileId=profileId)
+    response = client.get(url(projects['own']))
+    assert response.status_code == 200 and b'Own Current Project' in response.data
 
 
 @pytest.mark.parametrize('key', ['suspended', 'hidden', 'missing'])
@@ -181,9 +214,13 @@ def test_ut32_21_directLinkAndPast(client, projects):
     "UPDATE user_profile SET status='Suspended' WHERE profileId=3",
     "UPDATE user_profile SET permissions='[]' WHERE profileId=3",
     "DELETE FROM user_account WHERE username='cust001'"])
-def test_ut32_22_accessRevoked(client, projects, sql):
+def test_ut32_22_notCheckedAgainAfterLogin(client, projects, sql):
     execute(sql)
-    assert client.get(url(projects['own'])).status_code == 403
+    assert client.get(url(projects['own'])).status_code == 200
+    # the next customer login is refused
+    client.post('/customer/logout')
+    response = client.post('/customer/login', data=dict(username='cust001', password='Cust@123'))
+    assert b'Invalid login details or access unavailable' in response.data
 
 
 @pytest.mark.parametrize('target', ['idp', 'category'])
@@ -244,20 +281,23 @@ def test_ut32_29_missingOptionalLocation(client, projects):
     assert response.status_code == 200 and b'<strong>Location:</strong>' not in response.data
 
 
-def test_ut32_30_secondAccessCheck(client, projects, monkeypatch):
-    original = ViewIDPController.getCustomer
+def test_ut32_30_pageCallsControllerOnce(client, projects, monkeypatch):
+    def refused(*args): pytest.fail('the page must not check the customer again')
+    monkeypatch.setattr(CustomerLoginController, 'login', refused)
     calls = []
-    def changed(self, userId):
-        calls.append(userId)
-        return original(self, userId) if len(calls) == 1 else None
-    monkeypatch.setattr(ViewIDPController, 'getCustomer', changed)
-    assert client.get(url(projects['own'])).status_code == 403
-    assert len(calls) == 2
+    original = ViewIDPController.viewIDP
+    def spy(self, *args):
+        calls.append(args)
+        return original(self, *args)
+    monkeypatch.setattr(ViewIDPController, 'viewIDP', spy)
+    assert client.get(url(projects['own'])).status_code == 200
+    assert calls == [(projects['own'], True)]
 
 
-def test_ut32_31_sessionIdentity(client, projects):
-    with client.session_transaction() as state:
-        state.update(username='admin01', profileId=1)
+def test_ut32_31_headerFromSession(client, projects, monkeypatch):
+    def refused(*args): pytest.fail('the page must not load the account again')
+    monkeypatch.setattr(UserAccount, 'getUserAccount', refused)
+    monkeypatch.setattr(UserAccount, 'verifyCredentials', refused)
     response = client.get(url(projects['own']))
     assert b'Logged in as cust001 (Customer)' in response.data
 
@@ -265,3 +305,44 @@ def test_ut32_31_sessionIdentity(client, projects):
 def test_ut32_32_emptySearchReturn(client, projects):
     response = client.get(url(projects['own']), query_string=dict(keyword='   '))
     assert b'href="/customer/idps/search?keyword="' in response.data
+
+
+def test_ut32_33_viewWithoutCounting(projects):
+    assert IDP().viewIDP(projects['own'], False).idpId == projects['own']
+    assert viewRows() == 0
+
+
+def test_ut32_34_savedRedirectNotCounted(client, projects):
+    response = client.get(url(projects['own']), query_string=dict(saved='1'))
+    assert response.status_code == 200 and b'Own Current Project' in response.data
+    assert viewRows() == 0
+
+
+def test_ut32_35_saveButtonAlwaysShown(client, projects):
+    assert SavedIDP().createSavedRecord(projects['customer'], projects['own'])
+    response = client.get(url(projects['own']))
+    assert b'>Save IDP</button>' in response.data and b'Saved</span>' not in response.data
+
+
+# ---------- system tests (Flask test client) ----------
+
+def views(projects, idpId):
+    return next(row['views'] for row in IDPAnalytics().getViewStatistics(projects['owner']) if row['idpId'] == idpId)
+
+
+def test_tc32_12_saveDoesNotCountAView(client, projects):
+    assert client.get(url(projects['own'])).status_code == 200
+    assert views(projects, projects['own']) == 1
+    assert client.post(f'/customer/idps/{projects["own"]}/save').status_code == 302
+    # the page shown after Save (?saved=1) adds no view
+    response = client.get(url(projects['own']), query_string=dict(saved='1'))
+    assert response.status_code == 200 and b'IDP saved to your saved list' in response.data
+    assert views(projects, projects['own']) == 1
+
+
+def test_tc32_13_saveButtonShownForSavedIDP(client, projects):
+    assert client.post(f'/customer/idps/{projects["own"]}/save').status_code == 302
+    response = client.get(url(projects['own']))
+    assert b'>Save IDP</button>' in response.data
+    response = client.post(f'/customer/idps/{projects["own"]}/save', follow_redirects=True)
+    assert b'This IDP is already in your saved list' in response.data

@@ -10,6 +10,7 @@ from entity.userAccount import UserAccount
 from entity.idpAnalytics import IDPAnalytics
 from control.generateDailyReportController import GenerateDailyReportController
 from boundary.generateDailyReportPage import MSG_INVALID_DATE, MSG_FUTURE_DATE, MSG_NO_ACTIVITY
+from control.platformManagerLoginController import REQUIRED_MANAGER_PERMISSIONS
 from test_us37_viewIDPViewStatistics import (createDesigner, customerId, createCategory,
                                              addIDP, addView, addSave)
 
@@ -17,7 +18,7 @@ from test_us37_viewIDPViewStatistics import (createDesigner, customerId, createC
 def createManager(username="manager46"):
     UserAccount().createUserAccount(UserAccount(username=username, password="Manager@123", fullName="Report Manager",
                                     email=username + "@archss.com", phone="", profileId=4))
-    return UserAccount().verifyCredentials(username, "Manager@123").userId
+    return UserAccount().verifyCredentials(username, "Manager@123", REQUIRED_MANAGER_PERMISSIONS).userId
 
 
 def loggedInManager():

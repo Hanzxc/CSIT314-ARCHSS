@@ -2,65 +2,51 @@
 
 > As an interior designer, I want to update a current IDP so that customers can see its latest progress.
 
-## Using the feature
+## Behaviour
 
-1. Sign in as an Interior Designer and open **Current IDPs**.
-2. View a project, then select **Update current IDP**.
-3. Edit the prefilled fields and select **Save changes**. The updated preview appears with **Current IDP updated successfully**.
-4. **Cancel** returns to the preview without saving.
+- "Update current IDP" on the preview (`clickUpdate(idpId)`) loads the IDP with the controller's own loader `getCurrentIDP(designerId, idpId)` (`designerId = session["userId"]`).
+- Found → `displayUpdateForm()` shows the form filled in with the saved details. The category drop-down comes from `getAvailableCategories()`, which borrows US45's `SearchIDPCategoryController.searchIDPCategories("")` and keeps the Active ones, sorted by name. None → "Current IDP not found" (HTTP 404, `displayNotFoundMessage()`).
+- "Cancel" is a plain link back to the preview - nothing is saved.
+- On "Save changes" (`submitUpdate(idpId, title, categoryId, description, location)`) the page trims the input and builds `idp = IDP(idpId, session userId, categoryId, title, description, location)`. A designerId, project type, status or created date in the form is ignored. There is no form token.
+- `validateInput(idp)` has the same rules as US20: title required, 3-100 characters; description required, up to 2000; location optional, up to 200; the category must be one of the Active ones (`getAvailableCategories()` again). Bad input → "Please fix the highlighted fields", the typed values stay and nothing is saved.
+- Otherwise `updateCurrentIDP(idp)` → the entity changes only title, categoryId, description and location of the owner's Active Current IDP, and only if its old and its new category are both Active.
+- Updated → the preview with "Current IDP updated successfully". Not updated (the IDP or a category was suspended meanwhile) → "Current IDP not found" (HTTP 404).
 
-The existing optional demo setup works for US22: `python -m database.seedData`, `python -m database.seedCurrentIDPData`, then `python app.py`. Sign in at `/designer/login` as `idpdemo001 / Demo@123` or `idpdemo002 / Demo@123`. Both own current projects. US20's add form is still on its separate branch; US22 does not require merging it.
+## Who checks what
 
-## Behaviour and scope
+- **Boundary** (`UpdateCurrentIDPPage`): trims the input, takes the owner from the session, builds the `IDP` object and checks every field rule and the category itself (`validateInput(idp)`).
+- **Control** (`UpdateCurrentIDPController`): `getCurrentIDP(designerId, idpId)` (US22's own loader for the form) and `updateCurrentIDP(idp)` just call the entity and return the result - no checks, no field rules, no category list.
+- **Borrowed control** (`SearchIDPCategoryController`, from US45): `searchIDPCategories("")` lists the categories for the drop-down.
+- **Entity** (`IDP`): `updateCurrentIDP(idp)` updates `WHERE idpId = ? AND designerId = ? AND projectType = 'Current' AND status = 'Active'` and only if the old and the new category are Active; 0 rows → False.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again (no `InteriorDesignerLoginController`).
 
-| Editable field | Rules |
+## Diagram/code mapping
+
+| Diagram element | Code |
 |---|---|
-| `title` | Required, 3–100 characters after trimming |
-| `categoryId` | Must identify an existing Active category |
-| `description` | Required, 1–2000 characters after trimming; includes latest project progress |
-| `location` | Optional, at most 200 characters after trimming |
+| Boundary `UpdateCurrentIDPPage` — `clickUpdate(idpId)`, `displayUpdateForm(msg=None)`, `getAvailableCategories(): list`, `validateInput(idp): bool`, `submitUpdate(idpId, title, categoryId, description, location)`, `displaySuccessMessage(msg)`, `displayErrorMessage(msg)`, `displayNotFoundMessage()` | `boundary/updateCurrentIDPPage.py`, `templates/updateCurrentIDP.html`, `templates/currentIDPNotFound.html` |
+| Control `UpdateCurrentIDPController` — `getCurrentIDP(designerId, idpId): IDP \| None`, `updateCurrentIDP(idp): bool` | `control/updateCurrentIDPController.py` |
+| Borrowed control (from US45) `SearchIDPCategoryController` — `searchIDPCategories(keyword): list` | `control/searchIDPCategoryController.py` |
+| Entity `IDP` — `getCurrentIDP(designerId, idpId): IDP \| None`, `updateCurrentIDP(idp): bool` | `entity/idp.py` (table `idp`) |
+| Route | GET / POST `/designer/idps/current/<idpId>/update` (`@designerLoginRequired`) → `updateCurrentIDP(idpId)` in `app.py`; POST passes `title`, `categoryId` (int), `description`, `location` |
 
-Ownership is obtained from `session["userId"]`. The selected URL `idpId` is filtered by that owner, `projectType = "Current"`, `status = "Active"`, and an Active source category. No additional company-profile prerequisite is imposed. Missing, other-owner, Past, Suspended or hidden-category projects return HTTP 404 for both form display and submission.
+Messages: `MSG_UPDATED` "Current IDP updated successfully", `MSG_FIX_FIELDS` "Please fix the highlighted fields", `MSG_NOT_FOUND` "Current IDP not found"; field messages as US20 ("This field is required", "Title must be 3-100 characters", "Choose an available category").
 
-US13 access is rechecked on every request and again in controller operations. A missing session redirects to designer login; invalid/inactive designer access returns HTTP 403. The form contains a hidden token scoped to the signed-in user and IDP. Missing, forged, stale, cross-project/cross-user or already-consumed tokens return 403 without saving. Reopen the form to obtain a new token. Loading another form for the same project invalidates its earlier form token.
+## Files
 
-Invalid fields return the form with **Please fix the highlighted fields**, inline field errors and retained input. The category selector lists only Active categories. The entity's conditional SQL UPDATE also checks ownership, project visibility and Active source/destination categories at the write itself. If a destination category becomes unavailable during submission, the form reports its category error. A source that becomes unavailable returns 404. Other unsuccessful updates show a retry message.
+- `US22 Update current IDP.drawio` — every diagram, one page each
+- `US22 Update current IDP.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Update action.png`
+  - `4b Wireframe - Prefilled update form.png`
+  - `4c Wireframe - Validation errors.png`
+  - `4d Wireframe - Updated preview.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-Only the four fields above can change. `idpId`, `designerId`, `projectType`, `status` and `createdDate` are preserved; forged posted metadata is ignored. No extra progress-percentage, image-upload, edit-history or completion workflow is introduced. Later valid edits replace earlier values; optimistic version-conflict detection is outside this story. The reusable `idpDetailContent.html` partial shows the saved fields in the US21 preview and can be used by the future US32 customer route.
+## Tests
 
-## Code and route mapping
-
-| Layer | File and operations |
-|---|---|
-| Boundary | `boundary/updateCurrentIDPPage.py`: access, prefill, input/token checks, errors and success redirect |
-| Control | `control/updateCurrentIDPController.py`: designer access, category/field validation and save delegation |
-| Entity | `entity/idp.py`: existing `getCurrentIDP()` plus `updateCurrentIDP()` |
-| Entity | `entity/idpCategory.py`: US20-compatible category fields and active-category retrieval |
-| Reused control | `InteriorDesignerLoginController.getAuthenticatedDesigner()` |
-| Route | GET/POST `/designer/idps/current/<idpId>/update` |
-| UI | `templates/updateCurrentIDP.html`, `templates/currentIDPUpdateError.html`, update link in `templates/viewCurrentIDP.html` |
-
-US22 uses the tables already introduced for US21 and requires no schema migration. Names and field limits follow the US20 feature branch. Existing records and previous user stories are retained.
-
-## Diagrams and document
-
-- `US22 Update current IDP.docx` follows the retained US13 sample in `sources/document-templates/`: assumptions, user story/criteria/tasks, use case diagram/description, four wireframes, BCE diagram/responsibilities, one combined sequence, 12 manual system scenarios and 30 unit cases.
-- `US22 Update current IDP.drawio` contains seven editable pages.
-- `diagrams/2 Use Case Diagram.png`
-- `diagrams/4a Wireframe - Update action.png`
-- `diagrams/4b Wireframe - Prefilled update form.png`
-- `diagrams/4c Wireframe - Validation errors.png`
-- `diagrams/4d Wireframe - Updated preview.png`
-- `diagrams/5 BCE Class Diagram.png`
-- `diagrams/6 Sequence Diagram.png`
-
-The wireframes follow the actual designer templates and shared CSS: dark header, Dashboard/Current IDPs sidebar, Active navigation styling, 600px form, required labels, category selector, highlighted errors, Save changes and Cancel. No new navigation design is introduced. The sequence remains a single diagram on one landscape document page; `ref` frames summarise reused access/category/validation interactions.
-
-## Validation
-
-Verified on 2 November 2026: **569 tests passed**, including **86 US22 checks** and all 483 previous tests. The 30 numbered US22 test functions expand through parametrisation to cover field boundaries, owner/visibility filtering, category changes during saving, immutable fields, escaped text, Cancel, token scope/replay and access revocation. Unit results are recorded in the Word document; manual system result cells remain blank.
-
-```text
-python -m pytest tests/test_us22_updateCurrentIDP.py -q
-python -m pytest -q
+```
+python -m pytest tests/test_us22_updateCurrentIDP.py -v
 ```

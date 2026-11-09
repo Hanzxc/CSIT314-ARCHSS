@@ -9,6 +9,7 @@ from control.searchSavedListController import SearchSavedListController
 from boundary.savedListPage import SavedListPage, MSG_NO_RESULTS, MSG_KEYWORD_TOO_LONG
 from test_us37_viewIDPViewStatistics import createDesigner, customerId, createCategory, addIDP
 from test_us33_saveIDP import loggedInCustomer
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
 
 
 def savedProjects():
@@ -36,7 +37,7 @@ def test_ut34_1_search_onlyInTheSavedList_anyCapitals():
 def test_ut34_2_search_otherCustomersListNotIncluded():
     savedProjects()
     UserAccount().createUserAccount(UserAccount(username="cust034", password="Cust@123", fullName="Other Customer", email="c34@archss.com", phone="", profileId=3))
-    other = UserAccount().verifyCredentials("cust034", "Cust@123").userId
+    other = UserAccount().verifyCredentials("cust034", "Cust@123", REQUIRED_CUSTOMER_PERMISSIONS).userId
     assert SavedIDP().searchSavedRecords(other, "kitchen") == []
 
 

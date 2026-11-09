@@ -1,12 +1,13 @@
-import re
-
 import pytest
+from flask import session
 
 from app import app
+from boundary.updateCurrentIDPPage import UpdateCurrentIDPPage
+from control.interiorDesignerLoginController import InteriorDesignerLoginController, REQUIRED_DESIGNER_PERMISSIONS
+from control.searchIDPCategoryController import SearchIDPCategoryController
 from control.updateCurrentIDPController import UpdateCurrentIDPController
 from database.db import getConnection
 from entity.idp import IDP
-from entity.idpCategory import IDPCategory
 from entity.userAccount import UserAccount
 
 
@@ -39,7 +40,7 @@ def data():
     owners = []
     for username in ("update22", "other22"):
         UserAccount().createUserAccount(UserAccount(username=username, password="Design@123", fullName=username, email="", phone="", profileId=2))
-        owners.append(UserAccount().verifyCredentials(username, "Design@123").userId)
+        owners.append(UserAccount().verifyCredentials(username, "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId)
     categories = [execute("INSERT INTO idp_category (categoryName, status) VALUES (?, ?)", values)
                   for values in [("Living Room", "Active"), ("Kitchen", "Active"), ("Hidden", "Suspended")]]
     ids = []
@@ -65,21 +66,32 @@ def client(data):
 
 
 def validData(data, **changes):
+    # what the form posts (text fields)
     values = dict(title="Updated Current Project", categoryId=str(data["target"]),
                   description="Carpentry installed. Painting in progress.", location="Bedok")
     values.update(changes)
     return values
 
 
-def formToken(client, idpId):
-    response = client.get(updateUrl(idpId))
-    assert response.status_code == 200
-    return re.search(rb'name="updateToken" value="([^"]+)"', response.data).group(1).decode()
+def validIDP(data, idpId=None, designerId=None, **changes):
+    # the IDP object the page builds and passes on
+    values = dict(title="Updated Current Project", categoryId=data["target"],
+                  description="Carpentry installed. Painting in progress.", location="Bedok")
+    values.update(changes)
+    return IDP(idpId or data["own"], designerId or data["owner"], values["categoryId"], values["title"],
+               values["description"], values["location"])
 
 
 def submit(client, data, **changes):
-    token = formToken(client, data["own"])
-    return client.post(updateUrl(data["own"]), data={**validData(data, **changes), "updateToken": token})
+    return client.post(updateUrl(data["own"]), data=validData(data, **changes))
+
+
+def designerSession(data):
+    # a request context with the designer's session, for calling the page directly
+    context = app.test_request_context()
+    context.push()
+    session.update(userId=data["owner"], profileId=2, username="update22")
+    return context
 
 
 def test_ut22_1_loadOwnCurrentProject(data):
@@ -94,70 +106,96 @@ def test_ut22_2_unavailableProject(data, key):
     assert UpdateCurrentIDPController().getCurrentIDP(data["owner"], idpId) is None
 
 
-def test_ut22_3_activeCategories(data):
-    result = UpdateCurrentIDPController().getActiveIDPCategories(data["owner"])
+def test_ut22_3_availableCategoriesBorrowedFromUS45(data, monkeypatch):
+    keywords = []
+    original = SearchIDPCategoryController.searchIDPCategories
+    def spy(self, keyword):
+        keywords.append(keyword)
+        return original(self, keyword)
+    monkeypatch.setattr(SearchIDPCategoryController, "searchIDPCategories", spy)
+    result = UpdateCurrentIDPPage().getAvailableCategories()
     assert [category.categoryName for category in result] == ["Kitchen", "Living Room"]
+    assert keywords == [""]
 
 
-@pytest.mark.parametrize("value,valid", [("", False), ("   ", False), ("AB", False), ("ABC", True),
-                                          ("A" * 100, True), ("A" * 101, False), ("  ABC  ", True)])
+@pytest.mark.parametrize("value,valid", [("", False), ("AB", False), ("ABC", True),
+                                          ("A" * 100, True), ("A" * 101, False)])
 def test_ut22_4_titleBoundaries(data, value, valid):
-    errors = UpdateCurrentIDPController().getFieldErrors(validData(data, title=value))
-    assert ("title" not in errors) == valid
+    page = UpdateCurrentIDPPage()
+    page.validateInput(validIDP(data, title=value))
+    assert ("title" not in page.fieldErrors) == valid
 
 
-@pytest.mark.parametrize("value,valid", [("", False), ("   ", False), ("A", True), ("A" * 2000, True), ("A" * 2001, False)])
+@pytest.mark.parametrize("value,valid", [("", False), ("A", True), ("A" * 2000, True), ("A" * 2001, False)])
 def test_ut22_5_descriptionBoundaries(data, value, valid):
-    errors = UpdateCurrentIDPController().getFieldErrors(validData(data, description=value))
-    assert ("description" not in errors) == valid
+    page = UpdateCurrentIDPPage()
+    page.validateInput(validIDP(data, description=value))
+    assert ("description" not in page.fieldErrors) == valid
 
 
 @pytest.mark.parametrize("value,valid", [("", True), ("A" * 200, True), ("A" * 201, False)])
 def test_ut22_6_locationBoundaries(data, value, valid):
-    errors = UpdateCurrentIDPController().getFieldErrors(validData(data, location=value))
-    assert ("location" not in errors) == valid
+    page = UpdateCurrentIDPPage()
+    assert page.validateInput(validIDP(data, location=value)) == valid
+    assert ("location" not in page.fieldErrors) == valid
 
 
-@pytest.mark.parametrize("value", [None, "", "0", "-1", "999999", "abc", "1 OR 1=1", "hidden"])
+@pytest.mark.parametrize("value", [None, 0, -1, 999999, "hidden"])
 def test_ut22_7_invalidCategory(data, value):
     if value == "hidden":
-        value = str(data["hiddenCategory"])
-    assert "categoryId" in UpdateCurrentIDPController().getFieldErrors(validData(data, categoryId=value))
+        value = data["hiddenCategory"]
+    page = UpdateCurrentIDPPage()
+    assert page.validateInput(validIDP(data, categoryId=value)) is False
+    assert page.fieldErrors["categoryId"] == "Choose an available category"
 
 
-def test_ut22_8_updateTrimsAndChangesCategory(data):
-    controller = UpdateCurrentIDPController()
-    assert controller.updateCurrentIDP(data["owner"], data["own"],
-                                       validData(data, title="  Updated title  ", description="  Latest progress  ", location="  Bedok  "))
+def test_ut22_8_pageTrimsBeforeSaving(data):
+    context = designerSession(data)
+    try:
+        response = UpdateCurrentIDPPage().submitUpdate(data["own"], "  Updated title  ", data["target"],
+                                                       "  Latest progress  ", "  Bedok  ")
+    finally:
+        context.pop()
+    assert response.status_code == 302
     project = IDP().getCurrentIDP(data["owner"], data["own"])
     assert (project.title, project.description, project.location, project.categoryName) == (
         "Updated title", "Latest progress", "Bedok", "Kitchen")
 
 
-def test_ut22_9_invalidInputDoesNotWrite(data):
+def test_ut22_9_invalidInputSkipsController(data, monkeypatch):
+    def unexpected(*args):
+        pytest.fail("bad input must not reach the controller")
+    monkeypatch.setattr(UpdateCurrentIDPController, "updateCurrentIDP", unexpected)
     before = snapshot()
-    assert UpdateCurrentIDPController().updateCurrentIDP(data["owner"], data["own"], validData(data, title="AB")) is False
+    context = designerSession(data)
+    try:
+        page = UpdateCurrentIDPPage()
+        response = page.submitUpdate(data["own"], "AB", data["target"], "Some progress", "Bedok")
+    finally:
+        context.pop()
+    assert page.fieldErrors["title"] == "Title must be 3-100 characters"
+    assert "Please fix the highlighted fields" in response
     assert snapshot() == before
 
 
 def test_ut22_10_entityGuardsOwner(data):
     before = snapshot()
-    assert IDP().updateCurrentIDP(data["owner"], data["foreign"], validData(data)) is False
+    assert IDP().updateCurrentIDP(validIDP(data, idpId=data["foreign"])) is False
     assert snapshot() == before
 
 
 @pytest.mark.parametrize("key", ["past", "suspended", "hidden", "missing"])
 def test_ut22_11_entityGuardsSource(data, key):
     before = snapshot()
-    assert IDP().updateCurrentIDP(data["owner"], data.get(key, 999999), validData(data)) is False
+    assert IDP().updateCurrentIDP(validIDP(data, idpId=data.get(key, 999999))) is False
     assert snapshot() == before
 
 
 @pytest.mark.parametrize("category", ["hidden", "missing"])
 def test_ut22_12_entityGuardsDestination(data, category):
     before = snapshot()
-    assert IDP().updateCurrentIDP(data["owner"], data["own"],
-                                 validData(data, categoryId=data["hiddenCategory"] if category == "hidden" else 999999)) is False
+    categoryId = data["hiddenCategory"] if category == "hidden" else 999999
+    assert IDP().updateCurrentIDP(validIDP(data, categoryId=categoryId)) is False
     assert snapshot() == before
 
 
@@ -170,48 +208,39 @@ def test_ut22_13_onlyEditableFieldsChange(data, client):
     after = IDP().getCurrentIDP(data["owner"], data["own"])
     for field in ("idpId", "designerId", "projectType", "status", "createdDate"):
         assert getattr(after, field) == getattr(original, field)
+    assert (after.title, after.categoryId) == ("Updated Current Project", data["target"])
     assert IDP().getCurrentIDP(data["other"], data["foreign"]).__dict__ == otherBefore
 
 
 def test_ut22_14_unchangedSaveIsSuccessful(data):
     original = IDP().getCurrentIDP(data["owner"], data["own"])
-    values = {key: getattr(original, key) for key in ("title", "categoryId", "description", "location")}
-    assert IDP().updateCurrentIDP(data["owner"], data["own"], values) is True
+    assert IDP().updateCurrentIDP(original) is True
 
 
-@pytest.mark.parametrize("change", ["active", "account", "profile", "permissions", "admin", "customer", "missing"])
-def test_ut22_15_designerAccess(data, change):
-    owner = data["owner"]
-    if change == "account":
-        execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (owner,))
-    elif change == "profile":
-        execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    elif change == "permissions":
-        execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    elif change != "active":
-        owner = {"admin": 1, "customer": 3, "missing": 999999}[change]
-    assert UpdateCurrentIDPController().canUpdateCurrentIDP(owner) == (change == "active")
+def test_ut22_15_controllerOnlyCallsTheEntity():
+    import control.updateCurrentIDPController as module
+    methods = {name for name in vars(UpdateCurrentIDPController) if not name.startswith("_")}
+    assert methods == {"getCurrentIDP", "updateCurrentIDP"}
+    assert not hasattr(module, "InteriorDesignerLoginController")
+    assert not hasattr(module, "IDPCategory")
 
 
-@pytest.mark.parametrize("operation", ["get", "categories", "update"])
-def test_ut22_16_controllerDenialStopsQueries(data, monkeypatch, operation):
-    monkeypatch.setattr(UpdateCurrentIDPController, "canUpdateCurrentIDP", lambda *args: False)
-    def unexpected(*args):
-        pytest.fail("Denied requests must stop before entity access")
-    monkeypatch.setattr(IDP, "getCurrentIDP", unexpected)
-    monkeypatch.setattr(IDP, "updateCurrentIDP", unexpected)
-    monkeypatch.setattr(IDPCategory, "getActiveIDPCategories", unexpected)
-    control = UpdateCurrentIDPController()
-    with pytest.raises(PermissionError):
-        if operation == "get":
-            control.getCurrentIDP(data["owner"], data["own"])
-        elif operation == "categories":
-            control.getActiveIDPCategories(data["owner"])
-        else:
-            control.updateCurrentIDP(data["owner"], data["own"], validData(data))
+def test_ut22_16_noLoginControllerOneEntityCall(data, monkeypatch):
+    def refused(*args):
+        pytest.fail("the controller must not check the designer again")
+    monkeypatch.setattr(InteriorDesignerLoginController, "login", lambda self, username, password: None)
+    monkeypatch.setattr(UserAccount, "verifyCredentials", refused)
+    monkeypatch.setattr(UserAccount, "getUserAccount", refused)
+    calls = []
+    monkeypatch.setattr(IDP, "getCurrentIDP", lambda self, designerId, idpId: calls.append("get") or "idp")
+    monkeypatch.setattr(IDP, "updateCurrentIDP", lambda self, idp: calls.append("update") or True)
+    controller = UpdateCurrentIDPController()
+    assert controller.getCurrentIDP(data["owner"], data["own"]) == "idp"
+    assert controller.updateCurrentIDP(validIDP(data)) is True
+    assert calls == ["get", "update"]
 
 
-def test_ut22_17_formPrefilledAndMatchesSharedLayout(data, client):
+def test_ut22_17_formPrefilledWithoutToken(data, client):
     response = client.get(updateUrl(data["own"]))
     assert response.status_code == 200
     for text in [b'"profile-form"', b'"/static/style.css"', b'Designer navigation', b'Logged in as update22',
@@ -219,7 +248,7 @@ def test_ut22_17_formPrefilledAndMatchesSharedLayout(data, client):
         assert text in response.data
     assert f'value="{data["category"]}" selected'.encode() in response.data
     assert b'>Hidden</option>' not in response.data
-    assert b'name="updateToken"' in response.data
+    assert b'type="hidden"' not in response.data and b'Token' not in response.data
 
 
 @pytest.mark.parametrize("method", ["get", "post"])
@@ -231,11 +260,13 @@ def test_ut22_18_signedOutRedirects(data, method):
 
 
 @pytest.mark.parametrize("method", ["get", "post"])
-def test_ut22_19_nonDesignerForbidden(data, method):
+def test_ut22_19_roleNotCheckedAgain(data, method):
+    # admin01 has a session, so the page runs - but the IDP isn't admin01's, so it's not found
     client = app.test_client()
     client.post('/login', data=dict(username='admin01', password='Admin@123'))
     before = snapshot()
-    assert getattr(client, method)(updateUrl(data["own"])).status_code == 403
+    response = getattr(client, method)(updateUrl(data["own"]), data=validData(data))
+    assert response.status_code == 404
     assert snapshot() == before
 
 
@@ -264,10 +295,10 @@ def test_ut22_22_cancelDoesNotSave(data, client):
     assert snapshot() == before
 
 
-@pytest.mark.parametrize("change,status", [("account", 403), ("profile", 403), ("permission", 403),
+@pytest.mark.parametrize("change,status", [("account", 302), ("profile", 302), ("permission", 302),
                                           ("project", 404), ("category", 404), ("past", 404)])
-def test_ut22_23_recheckAtSubmission(data, client, change, status):
-    token = formToken(client, data["own"])
+def test_ut22_23_changesAfterFormOpened(data, client, change, status):
+    assert client.get(updateUrl(data["own"])).status_code == 200
     statements = {
         "account": ("UPDATE user_account SET status='Suspended' WHERE userId=?", data["owner"]),
         "profile": ("UPDATE user_profile SET status='Suspended' WHERE profileId=?", 2),
@@ -278,40 +309,38 @@ def test_ut22_23_recheckAtSubmission(data, client, change, status):
     }
     sql, value = statements[change]
     execute(sql, (value,))
-    before = snapshot()
-    response = client.post(updateUrl(data["own"]), data={**validData(data), 'updateToken': token})
+    before = snapshot('idp')
+    response = submit(client, data)
     assert response.status_code == status
-    assert snapshot() == before
+    if status == 302:
+        # the account isn't checked again (precondition UC13) - the save goes through
+        conn = getConnection()
+        title = conn.execute("SELECT title FROM idp WHERE idpId=?", (data["own"],)).fetchone()["title"]
+        conn.close()
+        assert title == "Updated Current Project"
+    else:
+        assert snapshot('idp') == before
 
 
-@pytest.mark.parametrize("kind", ["missing", "bad", "unicode", "stale", "replayed"])
-def test_ut22_24_invalidFormToken(data, client, kind):
-    token = formToken(client, data["own"])
-    if kind == "missing": token = ""
-    elif kind == "bad": token = "forged-token"
-    elif kind == "unicode": token = "无效"
-    elif kind == "stale": formToken(client, data["own"])
-    elif kind == "replayed":
-        assert client.post(updateUrl(data["own"]), data={**validData(data), 'updateToken': token}).status_code == 302
-    before = snapshot()
-    response = client.post(updateUrl(data["own"]), data={**validData(data, title="Replay should not save"), 'updateToken': token})
-    assert response.status_code == 403
-    assert b'This update form is no longer valid' in response.data
-    assert snapshot() == before
+def test_ut22_24_noFormToken(data, client):
+    assert submit(client, data, title="First save").status_code == 302
+    assert submit(client, data, title="Second save", updateToken="forged-token").status_code == 302
+    assert IDP().getCurrentIDP(data["owner"], data["own"]).title == "Second save"
+    with client.session_transaction() as state:
+        assert set(state) <= {"userId", "profileId", "username", "_flashes"}
 
 
 @pytest.mark.parametrize("source", [False, True])
-def test_ut22_25_atomicCategoryRecheck(data, client, monkeypatch, source):
+def test_ut22_25_categorySuspendedJustBeforeUpdate(data, client, monkeypatch, source):
     original = IDP.updateCurrentIDP
-    def suspendThenWrite(self, designerId, idpId, idpData):
+    def suspendThenWrite(self, idp):
         execute("UPDATE idp_category SET status='Suspended' WHERE categoryId=?",
                 (data["category"] if source else data["target"],))
-        return original(self, designerId, idpId, idpData)
+        return original(self, idp)
     monkeypatch.setattr(IDP, 'updateCurrentIDP', suspendThenWrite)
     before = snapshot('idp')
     response = submit(client, data)
-    assert response.status_code == (404 if source else 200)
-    if not source: assert b'Choose an available category' in response.data
+    assert response.status_code == 404 and b'Current IDP not found' in response.data
     assert snapshot('idp') == before
 
 
@@ -319,7 +348,7 @@ def test_ut22_25_atomicCategoryRecheck(data, client, monkeypatch, source):
 @pytest.mark.parametrize("method", ["get", "post"])
 def test_ut22_26_unavailableRouteHasNoDetails(data, client, key, method):
     before = snapshot()
-    response = getattr(client, method)(updateUrl(data.get(key, 999999)))
+    response = getattr(client, method)(updateUrl(data.get(key, 999999)), data=validData(data))
     assert response.status_code == 404
     assert b'Initial progress' not in response.data and b'Other Designer Project' not in response.data
     assert snapshot() == before
@@ -341,21 +370,40 @@ def test_ut22_28_updateLinkAndForeignOwnerIgnored(data, client):
     assert response.status_code == 404
 
 
-def test_ut22_29_controllerRecheckHandled(data, client, monkeypatch):
-    checks = iter([True, False])
-    monkeypatch.setattr(UpdateCurrentIDPController, 'canUpdateCurrentIDP', lambda *args: next(checks))
+def test_ut22_29_formStillOpensAfterProfileSuspended(data, client):
+    execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
     response = client.get(updateUrl(data['own']))
-    assert response.status_code == 403
+    assert response.status_code == 200 and b'Own Current Project' in response.data
 
 
-def test_ut22_30_formTokenBoundToProjectAndUser(data, client):
-    token = formToken(client, data['own'])
-    second = execute("INSERT INTO idp (designerId, categoryId, title, description) VALUES (?, ?, 'Second Project', 'Progress')",
-                     (data['owner'], data['category']))
-    before = snapshot()
-    response = client.post(updateUrl(second), data={**validData(data), 'updateToken': token})
-    assert response.status_code == 403 and snapshot() == before
+def test_ut22_30_anotherDesignerCannotUpdate(data, client):
     client.post('/designer/logout')
-    client.post('/designer/login', data=dict(username='other22', password='Design@123'))
-    response = client.post(updateUrl(data['foreign']), data={**validData(data), 'updateToken': token})
-    assert response.status_code == 403 and snapshot() == before
+    assert client.post('/designer/login', data=dict(username='other22', password='Design@123')).status_code == 302
+    before = snapshot()
+    response = submit(client, data)
+    assert response.status_code == 404
+    assert snapshot() == before
+
+
+# ---------- system tests (Flask test client) ----------
+
+def test_tc22_9_profileSuspendedWhileEditing(data, client):
+    assert client.get(updateUrl(data["own"])).status_code == 200
+    execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
+    # being logged in is the precondition (UC13), so the save still goes through
+    response = submit(client, data)
+    assert response.status_code == 302
+    assert IDP().getCurrentIDP(data["owner"], data["own"]).title == "Updated Current Project"
+    # the next login is refused
+    client.post('/designer/logout')
+    response = client.post('/designer/login', data=dict(username='update22', password='Design@123'))
+    assert b'Invalid login details or access unavailable' in response.data
+
+
+def test_tc22_11_sameFormSentTwice(data, client):
+    assert client.get(updateUrl(data["own"])).status_code == 200
+    assert submit(client, data).status_code == 302
+    # Back, then the same form again - there's no form token, so it saves again
+    assert submit(client, data).status_code == 302
+    project = IDP().getCurrentIDP(data["owner"], data["own"])
+    assert (project.title, project.categoryId, project.location) == ("Updated Current Project", data["target"], "Bedok")

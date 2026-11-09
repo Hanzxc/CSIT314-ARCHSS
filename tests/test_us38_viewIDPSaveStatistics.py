@@ -7,6 +7,7 @@ from entity.userAccount import UserAccount
 from entity.idpAnalytics import IDPAnalytics
 from control.viewIDPSaveStatisticsController import ViewIDPSaveStatisticsController
 from boundary.viewIDPSaveStatisticsPage import MSG_NO_IDPS
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
 from test_us37_viewIDPViewStatistics import (createDesigner, loginAsDesigner, customerId,
                                              createCategory, addIDP, addSave, addView)
 
@@ -14,7 +15,7 @@ from test_us37_viewIDPViewStatistics import (createDesigner, loginAsDesigner, cu
 def createCustomer(username):
     UserAccount().createUserAccount(UserAccount(username=username, password="Cust@123", fullName="Another Customer",
                                     email=username + "@archss.com", phone="", profileId=3))
-    return UserAccount().verifyCredentials(username, "Cust@123").userId
+    return UserAccount().verifyCredentials(username, "Cust@123", REQUIRED_CUSTOMER_PERMISSIONS).userId
 
 
 # ---------- IDPAnalytics.getSaveStatistics() ----------

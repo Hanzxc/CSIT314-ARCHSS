@@ -1,12 +1,13 @@
-"""US36: end the current browser session without querying account records."""
-from flask import session
+# Control: CustomerLogoutController - UC36 Customer log out (US36)
+# no entity class needed, it only ends the session
 
-from control.logoutController import LogoutController
+from flask import session
 
 
 class CustomerLogoutController:
+    # UC36 Customer log out
     def logout(self):
-        loggedOut = LogoutController().logout()
-        # Discard orphaned session data even when authentication has already ended.
-        session.clear()
+        # True if a session was ended, False if there was no session left to end
+        loggedOut = "userId" in session
+        session.clear()     # removes the logged-in customer so the session can't be used again
         return loggedOut

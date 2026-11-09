@@ -1,44 +1,43 @@
-"""US32 Boundary: protected customer detail view with a search return link."""
-from flask import redirect, render_template, session, url_for
+# Boundary: ViewIDPPage - UC32 View IDP (US32)
+# templates: customerViewIDP.html, customerIDPNotFound.html
+# precondition: the customer is already logged in (US30), so there's no extra access check here.
+# showing the designer's company profile is US15's job, so we borrow that controller
+
+from flask import render_template
 
 from control.viewIDPController import ViewIDPController
+from control.viewCompanyProfileController import ViewCompanyProfileController
 
 
 class ViewIDPPage:
+    # UC32 View IDP
+    # starts with an empty keyword
     def __init__(self):
         self.viewIDPController = ViewIDPController()
-        self.account = None
         self.keyword = ""
-        self.isSaved = False
 
-    def checkAccess(self):
-        if session.get("userId") is None:
-            return redirect(url_for("customerLogin"))
-        self.account = self.viewIDPController.getCustomer(session["userId"])
-        if self.account is None:
-            return render_template("customerAccessDenied.html"), 403
-        return None
-
-    def selectIDP(self, idpId, keyword=""):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
+    # UC32 View IDP
+    # customer clicked View on a search result. the keyword is only kept for "Back to search".
+    # saved is True only when US33's Save sends the customer back here (?saved=1) - that reload
+    # isn't counted as a view
+    def selectIDP(self, idpId, keyword, saved=False):
         self.keyword = (keyword or "").strip()
-        try:
-            result = self.viewIDPController.viewIDP(session["userId"], idpId)
-        except PermissionError:
-            return render_template("customerAccessDenied.html"), 403
-        if result is None:
-            return self.displayNotFoundMessage()
-        self.isSaved = result["isSaved"]
-        return self.displayIDP(result["idp"], result["companyProfile"])
+        countView = not saved
+        idp = self.viewIDPController.viewIDP(idpId, countView)
+        if idp is not None:
+            companyProfile = ViewCompanyProfileController().viewCompanyProfile(idp.designerId)
+            return self.displayIDP(idp, companyProfile)
+        return self.displayNotFoundMessage()
 
+    # UC32 View IDP
+    # the IDP's details + the designer's company (fallback text if companyProfile is None).
+    # the Save IDP button (US33) is always shown
     def displayIDP(self, idp, companyProfile):
-        return render_template("customerViewIDP.html", account=self.account, idp=idp,
-                               companyProfile=companyProfile, keyword=self.keyword,
-                               isSaved=self.isSaved,
-                               activePage="searchIDPs")
+        return render_template("customerViewIDP.html", idp=idp, companyProfile=companyProfile,
+                               keyword=self.keyword, activePage="searchIDPs")
 
+    # UC32 View IDP
+    # HTTP 404 with no project or designer details
     def displayNotFoundMessage(self):
-        return render_template("customerIDPNotFound.html", account=self.account,
-                               keyword=self.keyword, activePage="searchIDPs"), 404
+        return render_template("customerIDPNotFound.html", keyword=self.keyword,
+                               activePage="searchIDPs"), 404

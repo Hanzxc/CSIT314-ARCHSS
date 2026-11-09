@@ -9,12 +9,13 @@ from database.db import getConnection
 from entity.userAccount import UserAccount
 from entity.companyProfile import CompanyProfile
 from control.interiorDesignerLogoutController import InteriorDesignerLogoutController
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def createDesigner13():
     UserAccount().createUserAccount(
         UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer13", "Design@123").userId
+    return UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def companyData():

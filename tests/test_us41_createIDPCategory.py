@@ -8,6 +8,7 @@ from entity.userAccount import UserAccount
 from entity.idpCategory import IDPCategory
 from control.createIDPCategoryController import CreateIDPCategoryController
 from boundary.createIDPCategoryPage import CreateIDPCategoryPage
+from control.platformManagerLoginController import REQUIRED_MANAGER_PERMISSIONS
 
 
 def makeCategory(categoryName, description=""):
@@ -18,7 +19,7 @@ def makeCategory(categoryName, description=""):
 def createManager41():
     UserAccount().createUserAccount(
         UserAccount(username="manager41", password="Manager@123", fullName="Daniel Tan", email="manager41@archss.com", phone="", profileId=4))
-    return UserAccount().verifyCredentials("manager41", "Manager@123").userId
+    return UserAccount().verifyCredentials("manager41", "Manager@123", REQUIRED_MANAGER_PERMISSIONS).userId
 
 
 def loginAsManager41(client):

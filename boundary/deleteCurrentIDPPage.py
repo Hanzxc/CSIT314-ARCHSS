@@ -1,5 +1,7 @@
-# Boundary: DeleteCurrentIDPPage - UC23 Delete current IDP.
-from secrets import compare_digest, token_urlsafe
+# Boundary: DeleteCurrentIDPPage - UC23 Delete current IDP (US23)
+# templates: deleteCurrentIDP.html (the "are you sure?" box), currentIDPNotFound.html
+# precondition: the designer is already logged in (US13), so there's no extra access check here.
+# no token and nothing kept in the session - the entity only suspends the owner's Active Current IDP
 
 from flask import flash, redirect, render_template, session, url_for
 
@@ -7,94 +9,57 @@ from control.deleteCurrentIDPController import DeleteCurrentIDPController
 
 MSG_DELETED = "Current IDP deleted successfully"
 MSG_NOT_FOUND = "Current IDP not found"
-MSG_CONFIRM_AGAIN = "Please reopen the delete confirmation and try again"
-MSG_CHANGED = "This IDP changed after confirmation was opened. Please review it and confirm again"
 
 
 class DeleteCurrentIDPPage:
+    # UC23 Delete current IDP
+    # just sets up the controller
     def __init__(self):
         self.deleteCurrentIDPController = DeleteCurrentIDPController()
 
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("interiorDesignerLogin"))
-        if not self.deleteCurrentIDPController.canDeleteCurrentIDP(session["userId"]):
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return None
-
+    # UC23 Delete current IDP
+    # designer clicked "Delete current IDP" on the preview - show the box if it's still theirs
     def clickDelete(self, idpId):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        try:
-            idp = self.deleteCurrentIDPController.getCurrentIDP(session["userId"], idpId)
-            if idp is None:
-                return self.displayNotFoundMessage()
+        idp = self.deleteCurrentIDPController.getCurrentIDP(session["userId"], idpId)
+        if idp is not None:
             return self.displayConfirmation(idp)
-        except PermissionError:
-            return render_template("interiorDesignerAccessDenied.html"), 403
+        return self.displayNotFoundMessage()
 
+    # UC23 Delete current IDP
+    # the box names the IDP, with Delete and Cancel - nothing is deleted yet
     def displayConfirmation(self, idp):
-        token = token_urlsafe(32)
-        session["currentIDPDeleteConfirmation"] = {
-            "designerId": session["userId"], "idpId": idp.idpId, "token": token,
-            "expectedSnapshot": self.deleteCurrentIDPController.getSnapshot(idp)}
-        return render_template("deleteCurrentIDP.html", idp=idp, confirmationToken=token,
-                               activePage="currentIDPs")
+        return render_template("deleteCurrentIDP.html", idp=idp, activePage="currentIDPs")
 
-    def validateConfirmation(self, idpId, confirmationToken):
-        confirmation = session.get("currentIDPDeleteConfirmation", {})
-        return (confirmation.get("designerId") == session["userId"]
-                and confirmation.get("idpId") == idpId
-                and isinstance(confirmationToken, str) and bool(confirmationToken)
-                and isinstance(confirmation.get("expectedSnapshot"), str)
-                and len(confirmation["expectedSnapshot"]) == 64
-                and compare_digest(confirmation.get("token", "").encode("utf-8"), confirmationToken.encode("utf-8")))
-
-    def submitDelete(self, idpId, choice, confirmationToken):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        try:
-            if self.deleteCurrentIDPController.getCurrentIDP(session["userId"], idpId) is None:
-                return self.displayNotFoundMessage()
-            if not self.validateConfirmation(idpId, confirmationToken):
-                return self.displayErrorMessage(idpId, MSG_CONFIRM_AGAIN, 403)
-            if choice == "cancel":
-                return self.cancelDelete(idpId)
-            if choice != "delete":
-                return self.displayErrorMessage(idpId, MSG_CONFIRM_AGAIN, 400)
+    # UC23 Delete current IDP
+    # works out if they clicked Delete or Cancel in the box. only "delete" deletes anything,
+    # any other choice is treated like Cancel
+    def submitDelete(self, idpId, choice):
+        if choice == "delete":
             return self.confirmDelete(idpId)
-        except PermissionError:
-            return render_template("interiorDesignerAccessDenied.html"), 403
+        return self.cancelDelete(idpId)
 
+    # UC23 Delete current IDP
+    # the owner always comes from the session, never the form
     def confirmDelete(self, idpId):
-        # Only called after submitDelete has validated access and the bound confirmation.
-        confirmation = session.pop("currentIDPDeleteConfirmation")
-        if self.deleteCurrentIDPController.deleteCurrentIDP(session["userId"], idpId, confirmation["expectedSnapshot"]):
-            tokens = dict(session.get("currentIDPUpdateTokens", {}))
-            tokens.pop(str(idpId), None)
-            session["currentIDPUpdateTokens"] = tokens
+        deleted = self.deleteCurrentIDPController.deleteCurrentIDP(session["userId"], idpId)
+        if deleted:
             return self.displaySuccessMessage(MSG_DELETED)
-        if self.deleteCurrentIDPController.getCurrentIDP(session["userId"], idpId) is None:
-            return self.displayNotFoundMessage()
-        return self.displayErrorMessage(idpId, MSG_CHANGED, 409)
+        # already deleted, its category was suspended meanwhile, or it isn't this designer's
+        return self.displayNotFoundMessage()
 
+    # UC23 Delete current IDP
+    # alt flow - nothing changes, back to the preview
     def cancelDelete(self, idpId):
-        session.pop("currentIDPDeleteConfirmation", None)
-        return self.closeConfirmation(idpId)
-
-    def closeConfirmation(self, idpId):
         return redirect(url_for("viewCurrentIDP", idpId=idpId))
 
+    # UC23 Delete current IDP
+    # back to the Current IDPs list with a green message
     def displaySuccessMessage(self, msg):
         flash(msg, "success")
         return redirect(url_for("viewCurrentIDPs"))
 
-    def displayErrorMessage(self, idpId, msg, status=400):
-        return render_template("currentIDPDeleteError.html", idpId=idpId, errorMessage=msg,
-                               activePage="currentIDPs"), status
-
+    # UC23 Delete current IDP
+    # HTTP 404 with no project details
     def displayNotFoundMessage(self):
         return render_template("currentIDPNotFound.html", errorMessage=MSG_NOT_FOUND,
                                activePage="currentIDPs"), 404

@@ -9,18 +9,20 @@ from entity.idp import IDP
 from entity.idpCategory import IDPCategory
 from control.viewIDPCategoryController import ViewIDPCategoryController
 from control.addCurrentIDPController import AddCurrentIDPController
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
+from control.platformManagerLoginController import REQUIRED_MANAGER_PERMISSIONS
 
 
 def createManager42():
     UserAccount().createUserAccount(
         UserAccount(username="manager42", password="Manager@123", fullName="Daniel Tan", email="manager42@archss.com", phone="", profileId=4))
-    return UserAccount().verifyCredentials("manager42", "Manager@123").userId
+    return UserAccount().verifyCredentials("manager42", "Manager@123", REQUIRED_MANAGER_PERMISSIONS).userId
 
 
 def createDesigner42():
     UserAccount().createUserAccount(
         UserAccount(username="designer42", password="Design@123", fullName="Tengku Uda Designer", email="designer42@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer42", "Design@123").userId
+    return UserAccount().verifyCredentials("designer42", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def loginAsManager42(client):

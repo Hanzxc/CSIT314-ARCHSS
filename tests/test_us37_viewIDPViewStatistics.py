@@ -10,12 +10,14 @@ from entity.idpCategory import IDPCategory
 from entity.idpAnalytics import IDPAnalytics
 from control.viewIDPViewStatisticsController import ViewIDPViewStatisticsController
 from boundary.viewIDPViewStatisticsPage import MSG_NO_IDPS
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def createDesigner(username="designer37"):
     UserAccount().createUserAccount(UserAccount(username=username, password="Design@123", fullName="Statistics Designer",
                                     email=username + "@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials(username, "Design@123").userId
+    return UserAccount().verifyCredentials(username, "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def loginAsDesigner(client, username="designer37"):
@@ -23,7 +25,7 @@ def loginAsDesigner(client, username="designer37"):
 
 
 def customerId():
-    return UserAccount().verifyCredentials("cust001", "Cust@123").userId
+    return UserAccount().verifyCredentials("cust001", "Cust@123", REQUIRED_CUSTOMER_PERMISSIONS).userId
 
 
 def createCategory(name="Kitchen", status="Active"):

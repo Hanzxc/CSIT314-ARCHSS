@@ -17,14 +17,10 @@
         {% endif %}
     </section>
     <div class="form-buttons">
-        {# US33 Save IDP #}
-        {% if isSaved %}
-            <span class="btn-small btn-grey" aria-disabled="true">&#10003; Saved</span>
-        {% else %}
-            <form method="POST" action="{{ url_for('saveIDP', idpId=idp.idpId) }}">
-                <button type="submit" class="btn-small btn-blue">Save IDP</button>
-            </form>
-        {% endif %}
+        {# US33 Save IDP - always shown, US33 handles an IDP that is already saved #}
+        <form method="POST" action="{{ url_for('saveIDP', idpId=idp.idpId) }}">
+            <button type="submit" class="btn-small btn-blue">Save IDP</button>
+        </form>
         <a href="{{ url_for('searchIDPs', keyword=keyword) }}" class="btn-small btn-grey">Back to search</a>
     </div>
 {% endblock %}

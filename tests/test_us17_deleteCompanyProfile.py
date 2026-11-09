@@ -10,7 +10,7 @@ from database.db import getConnection
 from entity.userAccount import UserAccount
 from entity.companyProfile import CompanyProfile
 from control.deleteCompanyProfileController import DeleteCompanyProfileController
-from control.interiorDesignerLoginController import InteriorDesignerLoginController
+from control.interiorDesignerLoginController import InteriorDesignerLoginController, REQUIRED_DESIGNER_PERMISSIONS
 
 
 def companyData():
@@ -27,12 +27,12 @@ def makeCompany(designerId, data):
 def createDesigner13():
     UserAccount().createUserAccount(
         UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer13", "Design@123").userId
+    return UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def createDesigner17():
     UserAccount().createUserAccount(UserAccount(username="designer17", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer17", "Design@123").userId
+    return UserAccount().verifyCredentials("designer17", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def createCompanyForDesigner13():

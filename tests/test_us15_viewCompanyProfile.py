@@ -7,12 +7,13 @@ from database.db import getConnection
 from entity.userAccount import UserAccount
 from entity.companyProfile import CompanyProfile
 from control.viewCompanyProfileController import ViewCompanyProfileController
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def createDesigner13():
     UserAccount().createUserAccount(
         UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer13", "Design@123").userId
+    return UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def companyData():
@@ -84,7 +85,7 @@ def test_ut15_8_getCompanyProfile_allFields():
 def test_ut15_9_getCompanyProfile_differentOwner():
     createCompanyForDesigner13()
     UserAccount().createUserAccount(UserAccount(username="designer15", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
-    otherId = UserAccount().verifyCredentials("designer15", "Design@123").userId
+    otherId = UserAccount().verifyCredentials("designer15", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     assert CompanyProfile().getCompanyProfile(otherId) is None
 
 
@@ -133,7 +134,7 @@ def test_ut15_14_viewPage_optionalFieldsEmpty():
 def test_ut15_15_viewPage_ignoresForgedOwner():
     createCompanyForDesigner13()
     UserAccount().createUserAccount(UserAccount(username="designer15", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
-    otherId = UserAccount().verifyCredentials("designer15", "Design@123").userId
+    otherId = UserAccount().verifyCredentials("designer15", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     data = companyData()
     data["companyName"] = "Other Designer Private Company"
     CompanyProfile().createCompanyProfile(makeCompany(otherId, data))

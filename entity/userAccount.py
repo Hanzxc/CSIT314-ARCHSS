@@ -39,7 +39,7 @@ class UserAccount:
     # US1 - UT1.1 to UT1.5
     # returns the UserAccount only if the password is right, the account is Active, its profile is
     # Active and the profile has every permission in requiredPermissions - otherwise None
-    def verifyCredentials(self, username, password, requiredPermissions=None):
+    def verifyCredentials(self, username, password, requiredPermissions):
         # one query for the account + its profile's status and permissions
         # (LEFT JOIN so an account with a missing profile is still found, then fails the checks below)
         conn = getConnection()
@@ -54,10 +54,6 @@ class UserAccount:
         if row is None:
             return None
         account = rowToAccount(row)
-
-        # only US30 still calls this with 2 arguments (password only) until Sprint 3 is fixed
-        if requiredPermissions is None:
-            return account
 
         permissions = json.loads(row["profilePermissions"]) if row["profilePermissions"] else []
         if (account.isActive() and row["profileStatus"] == "Active"

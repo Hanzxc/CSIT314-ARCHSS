@@ -9,7 +9,6 @@
             <p>Are you sure you want to delete <strong>{{ idp.title }}</strong>?</p>
             <p>This project will no longer be shown on the platform.</p>
             <form method="POST" action="{{ url_for('deleteCurrentIDP', idpId=idp.idpId) }}">
-                <input type="hidden" name="confirmationToken" value="{{ confirmationToken }}">
                 <div class="form-buttons">
                     <button type="submit" name="choice" value="delete" class="btn-small btn-red">Delete current IDP</button>
                     <button type="submit" name="choice" value="cancel" class="btn-small btn-grey">Cancel</button>

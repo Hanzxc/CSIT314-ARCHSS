@@ -85,9 +85,9 @@ def loginRequired(routeFunction):
 
 
 def designerLoginRequired(routeFunction):
-    # US13 dashboard + US14 - US18, US20: being logged in as a designer is the precondition of these
-    # use cases (US13), so the pages don't re-check it (lecturer's feedback). this only stops a crash
-    # when there's no session at all
+    # US13 dashboard + US14 - US18, US20 - US24: being logged in as a designer is the precondition of
+    # these use cases (US13), so the pages don't re-check it (lecturer's feedback). this only stops a
+    # crash when there's no session at all
     @wraps(routeFunction)
     def wrapper(*args, **kwargs):
         if "userId" not in session:
@@ -97,8 +97,8 @@ def designerLoginRequired(routeFunction):
 
 
 def customerLoginRequired(routeFunction):
-    # US33 - US35: being logged in as a customer is the precondition of these use cases (US30),
-    # so the pages don't re-check it. this only stops a crash when there's no session at all
+    # US30 dashboard + US31 - US35: being logged in as a customer is the precondition of these use
+    # cases (US30), so the pages don't re-check it. this only stops a crash when there's no session at all
     @wraps(routeFunction)
     def wrapper(*args, **kwargs):
         if "userId" not in session:
@@ -145,7 +145,8 @@ def login():
     return page.openLoginPage()
 
 
-# US30: customer login reuses existing credentials and the customer permission.
+# UC30 Customer log in
+# customers log in on their own page (the shared /login is only for User Admins, US1)
 @app.route("/customer/login", methods=["GET", "POST"])
 def customerLogin():
     page = CustomerLoginPage()
@@ -154,26 +155,35 @@ def customerLogin():
     return page.openLoginPage()
 
 
+# UC30 Customer log in
+# the customer's home page after logging in
 @app.route("/customer/dashboard", methods=["GET"])
+@customerLoginRequired
 def customerDashboard():
     return CustomerLoginPage().openDashboard()
 
 
-# US36: logout stays available after access revocation or session expiry.
+# UC36 Customer log out
+# no decorator - with no session the customer just gets "Your session has already ended"
 @app.route("/customer/logout", methods=["POST"])
 def customerLogout():
     return CustomerLogoutPage().clickLogout()
 
 
-# US31: read-only customer catalogue search, guarded by the US30 access rules.
+# UC31 Search IDPs
 @app.route("/customer/idps/search", methods=["GET"])
+@customerLoginRequired
 def searchIDPs():
     return SearchIDPPage().searchIDPs(request.args.get("keyword", ""))
 
 
+# UC32 View IDP
+# saved=1 is only there when US33's Save sends the customer back here - that reload isn't counted as a view
 @app.route("/customer/idps/<int(signed=True):idpId>", methods=["GET"])
+@customerLoginRequired
 def viewIDP(idpId):
-    return ViewIDPPage().selectIDP(idpId, request.args.get("keyword", ""))
+    return ViewIDPPage().selectIDP(idpId, request.args.get("keyword", ""),
+                                   request.args.get("saved") == "1")
 
 
 # US13: dedicated designer entry point, using the same CSS and entities.
@@ -193,38 +203,50 @@ def interiorDesignerDashboard():
     return InteriorDesignerLoginPage().openDashboard()
 
 
-# US21: owner identity is read from the session by the boundary.
+# UC21 View current IDPs
+# the owner always comes from the session in the boundary, never the URL
 @app.route("/designer/idps/current", methods=["GET"])
+@designerLoginRequired
 def viewCurrentIDPs():
     return ViewCurrentIDPPage().clickViewCurrentIDPs()
 
 
+# UC24 Search current IDPs
 @app.route("/designer/idps/current/search", methods=["GET"])
+@designerLoginRequired
 def searchCurrentIDPs():
     return SearchCurrentIDPPage().searchCurrentIDPs(request.args.get("keyword", ""))
 
 
+# UC21 View current IDPs (one IDP's preview)
 @app.route("/designer/idps/current/<int(signed=True):idpId>", methods=["GET"])
+@designerLoginRequired
 def viewCurrentIDP(idpId):
     return ViewCurrentIDPPage().selectCurrentIDP(idpId)
 
 
+# UC22 Update current IDP
+# categoryId comes from the drop-down as text, type=int turns it into a number (None if nothing picked)
 @app.route("/designer/idps/current/<int(signed=True):idpId>/update", methods=["GET", "POST"])
+@designerLoginRequired
 def updateCurrentIDP(idpId):
     page = UpdateCurrentIDPPage()
     if request.method == "POST":
-        idpData = {field: request.form.get(field, "")
-                   for field in ("title", "categoryId", "description", "location")}
-        return page.submitUpdate(idpId, idpData, request.form.get("updateToken", ""))
+        return page.submitUpdate(idpId, request.form.get("title", ""),
+                                 request.form.get("categoryId", type=int),
+                                 request.form.get("description", ""),
+                                 request.form.get("location", ""))
     return page.clickUpdate(idpId)
 
 
+# UC23 Delete current IDP
+# POST = Delete or Cancel in the confirmation box (no token, the idpId comes from the URL)
 @app.route("/designer/idps/current/<int(signed=True):idpId>/delete", methods=["GET", "POST"])
+@designerLoginRequired
 def deleteCurrentIDP(idpId):
     page = DeleteCurrentIDPPage()
     if request.method == "POST":
-        return page.submitDelete(idpId, request.form.get("choice", ""),
-                                 request.form.get("confirmationToken", ""))
+        return page.submitDelete(idpId, request.form.get("choice", ""))
     return page.clickDelete(idpId)
 
 

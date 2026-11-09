@@ -1,36 +1,31 @@
-import re
-
 import pytest
 
 from app import app
 from control.deleteCurrentIDPController import DeleteCurrentIDPController
+from control.interiorDesignerLoginController import InteriorDesignerLoginController
 from entity.idp import IDP
-from test_us22_updateCurrentIDP import data, client, execute, snapshot, validData, formToken, updateUrl
+from entity.userAccount import UserAccount
+from test_us22_updateCurrentIDP import data, client, execute, snapshot, validData, updateUrl
 
 
 def deleteUrl(idpId):
     return f"/designer/idps/current/{idpId}/delete"
 
 
-def confirmationToken(client, idpId):
-    response = client.get(deleteUrl(idpId))
-    assert response.status_code == 200
-    return re.search(rb'name="confirmationToken" value="([^"]+)"', response.data).group(1).decode()
+def status(idpId):
+    return next(row for row in snapshot('idp') if row[0] == idpId)[7]
 
 
-def expectedData(data):
-    project = IDP().getCurrentIDP(data['owner'], data['own'])
-    return project.getSnapshot()
+def postDelete(client, idpId, **extra):
+    return client.post(deleteUrl(idpId), data=dict(choice='delete', **extra))
 
 
-@pytest.mark.parametrize('condition', ['active', 'account', 'profile', 'permissions', 'admin', 'customer', 'missing'])
-def test_ut23_1_designerAccess(data, condition):
-    owner = data['owner']
-    if condition == 'account':execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (owner,))
-    elif condition == 'profile':execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    elif condition == 'permissions':execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    elif condition != 'active':owner = {'admin': 1, 'customer': 3, 'missing': 999999}[condition]
-    assert DeleteCurrentIDPController().canDeleteCurrentIDP(owner) == (condition == 'active')
+def test_ut23_1_controllerOnlyCallsTheEntity():
+    import control.deleteCurrentIDPController as module
+    methods = {name for name in vars(DeleteCurrentIDPController) if not name.startswith('_')}
+    assert methods == {'getCurrentIDP', 'deleteCurrentIDP'}
+    assert not hasattr(module, 'InteriorDesignerLoginController')
+    assert not hasattr(IDP, 'getSnapshot')
 
 
 def test_ut23_2_loadOwnProject(data):
@@ -68,64 +63,74 @@ def test_ut23_6_entityGuardsVisibility(data, key):
     assert snapshot() == before
 
 
-def test_ut23_7_matchingSnapshot(data):
-    assert IDP().suspendCurrentIDP(data['owner'], data['own'], expectedData(data)) is True
+def test_ut23_7_onlyTheTwoIds(data):
+    assert IDP().suspendCurrentIDP(data['owner'], data['own']) is True
+    assert status(data['own']) == 'Suspended'
 
 
 @pytest.mark.parametrize('field,value', [('title', 'Revised Project'), ('description', 'New progress'),
-                                        ('location', 'Bedok'), ('categoryId', 2), ('createdDate', '2000-01-01')])
-def test_ut23_8_changedSnapshotCannotDelete(data, field, value):
-    reviewed = expectedData(data)
+                                        ('location', 'Bedok'), ('categoryId', 'target')])
+def test_ut23_8_detailsNotCompared(data, field, value):
+    if value == 'target':
+        value = data['target']
     execute('UPDATE idp SET ' + field + '=? WHERE idpId=?', (value, data['own']))
-    before = snapshot()
-    assert IDP().suspendCurrentIDP(data['owner'], data['own'], reviewed) is False
-    assert snapshot() == before
+    assert IDP().suspendCurrentIDP(data['owner'], data['own']) is True
+    row = next(row for row in snapshot('idp') if row[0] == data['own'])
+    assert value in row and row[7] == 'Suspended'
 
 
-def test_ut23_9_incompleteSnapshotCannotDelete(data):
+def test_ut23_9_sameDeleteTwice(data):
+    assert IDP().suspendCurrentIDP(data['owner'], data['own']) is True
     before = snapshot()
-    assert IDP().suspendCurrentIDP(data['owner'], data['own'], '') is False
+    assert IDP().suspendCurrentIDP(data['owner'], data['own']) is False
     assert snapshot() == before
 
 
 def test_ut23_10_controllerDeletesOwnProject(data):
-    assert DeleteCurrentIDPController().deleteCurrentIDP(data['owner'], data['own'], expectedData(data)) is True
-    assert IDP().getCurrentIDP(data['owner'], data['own']) is None
+    assert DeleteCurrentIDPController().deleteCurrentIDP(data['owner'], data['own']) is True
+    assert DeleteCurrentIDPController().getCurrentIDP(data['owner'], data['own']) is None
 
 
-@pytest.mark.parametrize('operation', ['get', 'delete'])
-def test_ut23_11_controllerDenialStopsQueries(data, monkeypatch, operation):
-    monkeypatch.setattr(DeleteCurrentIDPController, 'canDeleteCurrentIDP', lambda *args: False)
-    def unexpected(*args):pytest.fail('Denied access must stop before entity queries')
-    monkeypatch.setattr(IDP, 'getCurrentIDP', unexpected)
-    monkeypatch.setattr(IDP, 'suspendCurrentIDP', unexpected)
+def test_ut23_11_noLoginControllerOneEntityCall(data, monkeypatch):
+    def refused(*args):
+        pytest.fail('the controller must not check the designer again')
+    monkeypatch.setattr(InteriorDesignerLoginController, 'login', lambda self, username, password: None)
+    monkeypatch.setattr(UserAccount, 'verifyCredentials', refused)
+    monkeypatch.setattr(UserAccount, 'getUserAccount', refused)
+    calls = []
+    monkeypatch.setattr(IDP, 'getCurrentIDP', lambda self, designerId, idpId: calls.append('get') or 'idp')
+    monkeypatch.setattr(IDP, 'suspendCurrentIDP', lambda self, designerId, idpId: calls.append('suspend') or True)
     controller = DeleteCurrentIDPController()
-    with pytest.raises(PermissionError):
-        if operation == 'get':controller.getCurrentIDP(data['owner'], data['own'])
-        else:controller.deleteCurrentIDP(data['owner'], data['own'])
+    assert controller.getCurrentIDP(data['owner'], data['own']) == 'idp'
+    assert controller.deleteCurrentIDP(data['owner'], data['own']) is True
+    assert calls == ['get', 'suspend']
 
 
-def test_ut23_12_confirmationGetIsReadOnlyAndUsesTemplate(data, client):
+def test_ut23_12_confirmationGetIsReadOnly(data, client):
+    with client.session_transaction() as state:
+        sessionBefore = dict(state)
     before = snapshot()
     response = client.get(deleteUrl(data['own']))
+    assert response.status_code == 200
     for text in [b'Own Current Project', b'Initial progress', b'role="dialog"', b'aria-modal="true"',
-                 b'Delete current IDP?', b'value="delete"', b'value="cancel"', b'name="confirmationToken"', b'Designer navigation']:
+                 b'Delete current IDP?', b'value="delete"', b'value="cancel"', b'Designer navigation']:
         assert text in response.data
-    assert response.status_code == 200 and snapshot() == before
+    assert b'type="hidden"' not in response.data and b'Token' not in response.data
+    with client.session_transaction() as state:
+        assert dict(state) == sessionBefore
+    assert snapshot() == before
 
 
 def test_ut23_13_cancelPreservesData(data, client):
-    token = confirmationToken(client, data['own'])
+    assert client.get(deleteUrl(data['own'])).status_code == 200
     before = snapshot()
-    response = client.post(deleteUrl(data['own']), data=dict(choice='cancel', confirmationToken=token))
+    response = client.post(deleteUrl(data['own']), data=dict(choice='cancel'))
     assert response.status_code == 302 and response.headers['Location'].endswith(f'/current/{data["own"]}')
     assert snapshot() == before
-    with client.session_transaction() as session:assert 'currentIDPDeleteConfirmation' not in session
 
 
 def test_ut23_14_deleteHidesListPreviewAndUpdate(data, client):
-    token = confirmationToken(client, data['own'])
-    response = client.post(deleteUrl(data['own']), data=dict(choice='delete', confirmationToken=token), follow_redirects=True)
+    response = client.post(deleteUrl(data['own']), data=dict(choice='delete'), follow_redirects=True)
     assert response.status_code == 200 and b'Current IDP deleted successfully' in response.data
     assert b'Own Current Project' not in response.data
     assert client.get(f'/designer/idps/current/{data["own"]}').status_code == 404
@@ -134,8 +139,8 @@ def test_ut23_14_deleteHidesListPreviewAndUpdate(data, client):
 
 
 def test_ut23_15_lastVisibleProjectGivesEmptyState(data, client):
-    token = confirmationToken(client, data['own'])
-    response = client.post(deleteUrl(data['own']), data=dict(choice='delete', confirmationToken=token), follow_redirects=True)
+    response = client.post(deleteUrl(data['own']), data=dict(choice='delete'), follow_redirects=True)
+    assert b'Current IDP deleted successfully' in response.data
     assert b'You have no current IDPs to display' in response.data
 
 
@@ -148,11 +153,13 @@ def test_ut23_16_signedOutRedirect(data, method):
 
 
 @pytest.mark.parametrize('method', ['get', 'post'])
-def test_ut23_17_nonDesignerForbidden(data, method):
+def test_ut23_17_roleNotCheckedAgain(data, method):
+    # admin01 has a session, so the page runs - but the IDP isn't admin01's, so nothing is found
     browser = app.test_client()
     browser.post('/login', data=dict(username='admin01', password='Admin@123'))
     before = snapshot()
-    assert getattr(browser, method)(deleteUrl(data['own'])).status_code == 403
+    response = getattr(browser, method)(deleteUrl(data['own']), data=dict(choice='delete'))
+    assert response.status_code == 404
     assert snapshot() == before
 
 
@@ -160,82 +167,82 @@ def test_ut23_17_nonDesignerForbidden(data, method):
 @pytest.mark.parametrize('method', ['get', 'post'])
 def test_ut23_18_excludedRouteNoDisclosure(data, client, key, method):
     before = snapshot()
-    response = getattr(client, method)(deleteUrl(data.get(key, 999999)))
+    response = getattr(client, method)(deleteUrl(data.get(key, 999999)), data=dict(choice='delete'))
     assert response.status_code == 404
     assert b'Initial progress' not in response.data and b'Other Designer Project' not in response.data
     assert snapshot() == before
 
 
-@pytest.mark.parametrize('kind', ['missing', 'forged', 'unicode', 'stale'])
-def test_ut23_19_badConfirmationToken(data, client, kind):
-    token = confirmationToken(client, data['own'])
-    if kind == 'missing':token = ''
-    elif kind == 'forged':token = 'not-the-token'
-    elif kind == 'unicode':token = '无效'
-    else:confirmationToken(client, data['own'])
-    before = snapshot()
-    assert client.post(deleteUrl(data['own']), data=dict(choice='delete', confirmationToken=token)).status_code == 403
-    assert snapshot() == before
+@pytest.mark.parametrize('token', [None, 'old', 'forged'])
+def test_ut23_19_noConfirmationToken(data, client, token):
+    extra = {} if token is None else {'confirmationToken': token}
+    if token == 'old':
+        assert client.get(deleteUrl(data['own'])).status_code == 200
+    response = postDelete(client, data['own'], **extra)
+    assert response.status_code == 302 and response.headers['Location'].endswith('/designer/idps/current')
+    assert status(data['own']) == 'Suspended'
 
 
 @pytest.mark.parametrize('choice', ['', 'yes', 'DELETE'])
-def test_ut23_20_explicitDeleteChoiceRequired(data, client, choice):
-    token = confirmationToken(client, data['own'])
+def test_ut23_20_onlyDeleteChoiceDeletes(data, client, choice):
     before = snapshot()
-    assert client.post(deleteUrl(data['own']), data=dict(choice=choice, confirmationToken=token)).status_code == 400
+    response = client.post(deleteUrl(data['own']), data=dict(choice=choice))
+    assert response.status_code == 302 and response.headers['Location'].endswith(f'/current/{data["own"]}')
     assert snapshot() == before
+    assert status(data['own']) == 'Active'
 
 
-@pytest.mark.parametrize('change,status', [('account',403),('profile',403),('permissions',403),
-                                         ('project',404),('category',404),('past',404)])
-def test_ut23_21_rechecksAtConfirmation(data, client, change, status):
-    token = confirmationToken(client, data['own'])
+@pytest.mark.parametrize('change,code', [('account', 302), ('profile', 302), ('permissions', 302),
+                                         ('project', 404), ('category', 404), ('past', 404)])
+def test_ut23_21_changesAfterBoxOpened(data, client, change, code):
+    assert client.get(deleteUrl(data['own'])).status_code == 200
     statements = {
-        'account':("UPDATE user_account SET status='Suspended' WHERE userId=?",data['owner']),
-        'profile':("UPDATE user_profile SET status='Suspended' WHERE profileId=?",2),
-        'permissions':("UPDATE user_profile SET permissions='[]' WHERE profileId=?",2),
-        'project':("UPDATE idp SET status='Suspended' WHERE idpId=?",data['own']),
-        'category':("UPDATE idp_category SET status='Suspended' WHERE categoryId=?",data['category']),
-        'past':("UPDATE idp SET projectType='Past' WHERE idpId=?",data['own'])}
-    sql,value = statements[change];execute(sql,(value,))
+        'account': ("UPDATE user_account SET status='Suspended' WHERE userId=?", data['owner']),
+        'profile': ("UPDATE user_profile SET status='Suspended' WHERE profileId=?", 2),
+        'permissions': ("UPDATE user_profile SET permissions='[]' WHERE profileId=?", 2),
+        'project': ("UPDATE idp SET status='Suspended' WHERE idpId=?", data['own']),
+        'category': ("UPDATE idp_category SET status='Suspended' WHERE categoryId=?", data['category']),
+        'past': ("UPDATE idp SET projectType='Past' WHERE idpId=?", data['own'])}
+    sql, value = statements[change]
+    execute(sql, (value,))
     before = snapshot()
-    assert client.post(deleteUrl(data['own']), data=dict(choice='delete',confirmationToken=token)).status_code == status
-    assert snapshot() == before
+    assert postDelete(client, data['own']).status_code == code
+    if code == 302:
+        # the account isn't checked again (precondition UC13) - the IDP is deleted
+        assert status(data['own']) == 'Suspended'
+    else:
+        assert snapshot() == before
 
 
-def test_ut23_22_editAfterConfirmationNeedsFreshReview(data, client):
-    token = confirmationToken(client, data['own'])
-    updateToken = formToken(client, data['own'])
-    assert client.post(updateUrl(data['own']), data={**validData(data),'updateToken':updateToken}).status_code == 302
+def test_ut23_22_deleteAfterAnEdit(data, client):
+    assert client.get(deleteUrl(data['own'])).status_code == 200
+    assert client.post(updateUrl(data['own']), data=validData(data)).status_code == 302
+    response = postDelete(client, data['own'])
+    assert response.status_code == 302
+    row = next(row for row in snapshot('idp') if row[0] == data['own'])
+    assert row[3] == 'Updated Current Project' and row[7] == 'Suspended'
+
+
+@pytest.mark.parametrize('change,code', [('edit', 302), ('category', 404)])
+def test_ut23_23_changeJustBeforeUpdate(data, client, monkeypatch, change, code):
+    original = IDP.suspendCurrentIDP
+    def changeThenDelete(self, designerId, idpId):
+        if change == 'edit':
+            execute("UPDATE idp SET description='New progress' WHERE idpId=?", (idpId,))
+        else:
+            execute("UPDATE idp_category SET status='Suspended' WHERE categoryId=?", (data['category'],))
+        return original(self, designerId, idpId)
+    monkeypatch.setattr(IDP, 'suspendCurrentIDP', changeThenDelete)
+    assert postDelete(client, data['own']).status_code == code
+    assert status(data['own']) == ('Suspended' if change == 'edit' else 'Active')
+
+
+def test_ut23_24_sameDeleteSentTwice(data, client):
+    assert postDelete(client, data['own']).status_code == 302
     before = snapshot()
-    response = client.post(deleteUrl(data['own']),data=dict(choice='delete',confirmationToken=token))
-    assert response.status_code == 409 and b'This IDP changed' in response.data
+    response = postDelete(client, data['own'])
+    assert response.status_code == 404 and b'Current IDP not found' in response.data
     assert snapshot() == before
-    token = confirmationToken(client,data['own'])
-    assert client.post(deleteUrl(data['own']),data=dict(choice='delete',confirmationToken=token)).status_code == 302
-
-
-@pytest.mark.parametrize('change,status',[('edit',409),('category',404)])
-def test_ut23_23_atomicGuard(data,client,monkeypatch,change,status):
-    token=confirmationToken(client,data['own'])
-    original=IDP.suspendCurrentIDP
-    def changeThenDelete(self,designerId,idpId,expectedSnapshot=None):
-        if change=='edit':execute("UPDATE idp SET description='New progress' WHERE idpId=?",(idpId,))
-        else:execute("UPDATE idp_category SET status='Suspended' WHERE categoryId=?",(data['category'],))
-        return original(self,designerId,idpId,expectedSnapshot)
-    monkeypatch.setattr(IDP,'suspendCurrentIDP',changeThenDelete)
-    assert client.post(deleteUrl(data['own']),data=dict(choice='delete',confirmationToken=token)).status_code==status
-    row=next(row for row in snapshot('idp') if row[0]==data['own'])
-    assert row[7]=='Active'
-
-
-@pytest.mark.parametrize('firstChoice,repeatStatus',[('cancel',403),('delete',404)])
-def test_ut23_24_confirmationSingleUse(data,client,firstChoice,repeatStatus):
-    token=confirmationToken(client,data['own'])
-    assert client.post(deleteUrl(data['own']),data=dict(choice=firstChoice,confirmationToken=token)).status_code==302
-    before=snapshot()
-    assert client.post(deleteUrl(data['own']),data=dict(choice='delete',confirmationToken=token)).status_code==repeatStatus
-    assert snapshot()==before
 
 
 def test_ut23_25_confirmationEscapesProjectText(data,client):
@@ -244,29 +251,26 @@ def test_ut23_25_confirmationEscapesProjectText(data,client):
     assert b'<script>' not in response.data and b'&lt;script&gt;' in response.data
 
 
-def test_ut23_26_oldUpdateTokenRemoved(data,client):
-    formToken(client,data['own'])
-    token=confirmationToken(client,data['own'])
-    client.post(deleteUrl(data['own']),data=dict(choice='delete',confirmationToken=token))
-    with client.session_transaction() as session:assert str(data['own']) not in session.get('currentIDPUpdateTokens',{})
+def test_ut23_26_nothingKeptInSession(data, client):
+    assert client.get(updateUrl(data['own'])).status_code == 200
+    assert client.get(deleteUrl(data['own'])).status_code == 200
+    assert postDelete(client, data['own']).status_code == 302
+    with client.session_transaction() as state:
+        assert set(state) <= {'userId', 'profileId', 'username', '_flashes'}
 
 
-def test_ut23_27_recheckFailureHandled(data,client,monkeypatch):
-    checks=iter([True,False])
-    monkeypatch.setattr(DeleteCurrentIDPController,'canDeleteCurrentIDP',lambda *args:next(checks))
-    assert client.get(deleteUrl(data['own'])).status_code==403
+def test_ut23_27_boxStillOpensAfterProfileSuspended(data, client):
+    execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
+    response = client.get(deleteUrl(data['own']))
+    assert response.status_code == 200 and b'Delete current IDP?' in response.data
 
 
-def test_ut23_28_confirmationBoundToTargetAndSession(data,client):
-    token=confirmationToken(client,data['own'])
-    second=execute("INSERT INTO idp (designerId,categoryId,title,description) VALUES (?,?,'Second Project','Progress')",
-                   (data['owner'],data['category']))
-    before=snapshot()
-    assert client.post(deleteUrl(second),data=dict(choice='delete',confirmationToken=token)).status_code==403
+def test_ut23_28_anotherDesignerCannotDelete(data, client):
     client.post('/designer/logout')
-    client.post('/designer/login',data=dict(username='other22',password='Design@123'))
-    assert client.post(deleteUrl(data['foreign']),data=dict(choice='delete',confirmationToken=token)).status_code==403
-    assert snapshot()==before
+    assert client.post('/designer/login', data=dict(username='other22', password='Design@123')).status_code == 302
+    before = snapshot()
+    assert postDelete(client, data['own']).status_code == 404
+    assert snapshot() == before
 
 
 def test_ut23_29_getCannotDeleteAndPreviewHasLink(data,client):
@@ -277,23 +281,62 @@ def test_ut23_29_getCannotDeleteAndPreviewHasLink(data,client):
     assert deleteUrl(data['own']).encode() in client.get(f'/designer/idps/current/{data["own"]}').data
 
 
-def test_ut23_30_postedMetadataCannotRetarget(data,client):
-    token=confirmationToken(client,data['own'])
-    otherBefore=IDP().getCurrentIDP(data['other'],data['foreign']).__dict__
-    response=client.post(deleteUrl(data['own']),data=dict(choice='delete',confirmationToken=token,
-        designerId=data['other'],idpId=data['foreign'],status='Active',expectedData='forged'))
-    assert response.status_code==302
-    assert IDP().getCurrentIDP(data['owner'],data['own']) is None
-    assert IDP().getCurrentIDP(data['other'],data['foreign']).__dict__==otherBefore
+def test_ut23_30_postedMetadataCannotRetarget(data, client):
+    otherBefore = IDP().getCurrentIDP(data['other'], data['foreign']).__dict__
+    response = client.post(deleteUrl(data['own']), data=dict(choice='delete', designerId=data['other'],
+                                                              idpId=data['foreign'], status='Active'))
+    assert response.status_code == 302
+    assert IDP().getCurrentIDP(data['owner'], data['own']) is None
+    assert IDP().getCurrentIDP(data['other'], data['foreign']).__dict__ == otherBefore
 
 
-def test_ut23_31_confirmationStaysCompactForLongUnicodeDescription(data,client):
-    description=''.join(chr(0x4e00+i) for i in range(2000))
-    execute('UPDATE idp SET description=? WHERE idpId=?',(description,data['own']))
-    response=client.get(deleteUrl(data['own']))
-    assert response.status_code==200
-    with client.session_transaction() as session:
-        confirmation=session['currentIDPDeleteConfirmation']
-        assert len(confirmation['expectedSnapshot'])==64
-        assert description not in str(confirmation)
-    assert all(len(header)<4093 for header in response.headers.getlist('Set-Cookie'))
+def test_ut23_31_longUnicodeDescriptionNotKeptInSession(data, client):
+    description = ''.join(chr(0x4e00 + i) for i in range(2000))
+    execute('UPDATE idp SET description=? WHERE idpId=?', (description, data['own']))
+    response = client.get(deleteUrl(data['own']))
+    assert response.status_code == 200
+    with client.session_transaction() as state:
+        assert set(state) <= {'userId', 'profileId', 'username'}
+        assert description[:20] not in str(dict(state))
+    assert response.headers.getlist('Set-Cookie') == []
+
+
+# ---------- system tests (Flask test client) ----------
+
+def test_tc23_8_profileSuspendedAfterBoxOpened(data, client):
+    assert client.get(deleteUrl(data['own'])).status_code == 200
+    execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
+    # being logged in is the precondition (UC13), so the delete still goes through
+    assert postDelete(client, data['own']).status_code == 302
+    assert status(data['own']) == 'Suspended'
+    # the next login is refused
+    client.post('/designer/logout')
+    response = client.post('/designer/login', data=dict(username='update22', password='Design@123'))
+    assert b'Invalid login details or access unavailable' in response.data
+
+
+def test_tc23_9_deleteWithoutOpeningTheBox(data, client):
+    response = postDelete(client, data['own'])
+    assert response.status_code == 302 and response.headers['Location'].endswith('/designer/idps/current')
+    assert status(data['own']) == 'Suspended'
+
+
+def test_tc23_10_editedAfterTheBoxOpened(data, client):
+    assert client.get(deleteUrl(data['own'])).status_code == 200
+    assert client.post(updateUrl(data['own']), data=validData(data, title='Changed title')).status_code == 302
+    response = postDelete(client, data['own'])
+    assert response.status_code == 302 and response.headers['Location'].endswith('/designer/idps/current')
+    assert status(data['own']) == 'Suspended'
+
+
+def test_tc23_11_sentTwiceOrAnotherDesigner(data, client):
+    second = execute("INSERT INTO idp (designerId, categoryId, title, description) VALUES (?, ?, 'Second Project', 'Progress')",
+                     (data['owner'], data['category']))
+    assert postDelete(client, data['own']).status_code == 302
+    before = snapshot()
+    assert postDelete(client, data['own']).status_code == 404
+    other = app.test_client()
+    assert other.post('/designer/login', data=dict(username='other22', password='Design@123')).status_code == 302
+    assert postDelete(other, second).status_code == 404
+    assert snapshot() == before
+    assert status(second) == 'Active'

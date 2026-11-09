@@ -77,7 +77,8 @@ def test_ut33_7_page_clickSave_savesAndShowsSavedState():
     client = loggedInCustomer()
     response = client.post(f"/customer/idps/{idpId}/save", follow_redirects=True)
     html = response.get_data(as_text=True)
-    assert MSG_SAVED in html and "Saved</span>" in html and ">Save IDP</button>" not in html
+    # US32 always shows the Save IDP button now (no "Saved" badge) - the saved record is what counts
+    assert MSG_SAVED in html and ">Save IDP</button>" in html
     assert countSaved(customerId(), idpId) == 1
 
 

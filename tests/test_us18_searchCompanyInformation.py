@@ -7,6 +7,7 @@ from database.db import getConnection
 from entity.userAccount import UserAccount
 from entity.companyProfile import CompanyProfile
 from control.searchCompanyInformationController import SearchCompanyInformationController
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def companyData():
@@ -23,7 +24,7 @@ def makeCompany(designerId, data):
 def createDesigner13():
     UserAccount().createUserAccount(
         UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer13", "Design@123").userId
+    return UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def createCompanyForDesigner13():
@@ -119,7 +120,7 @@ def test_ut18_11_entity_byAddress():
 def test_ut18_12_entity_otherOwnerExcluded():
     createCompanyForDesigner13()
     UserAccount().createUserAccount(UserAccount(username="designer18", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
-    otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
+    otherId = UserAccount().verifyCredentials("designer18", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     assert CompanyProfile().searchCompanyInformation(otherId, "Uda") is None
 
 
@@ -198,7 +199,7 @@ def test_ut18_21_searchPage_noProfile():
 def test_ut18_22_searchPage_ignoresForgedOwner():
     createCompanyForDesigner13()
     UserAccount().createUserAccount(UserAccount(username="designer18", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
-    otherId = UserAccount().verifyCredentials("designer18", "Design@123").userId
+    otherId = UserAccount().verifyCredentials("designer18", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     data = companyData()
     data["services"] = "Other designer confidential service"
     CompanyProfile().createCompanyProfile(makeCompany(otherId, data))

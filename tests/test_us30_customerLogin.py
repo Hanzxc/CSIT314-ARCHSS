@@ -5,7 +5,7 @@ import pytest
 
 from app import app
 from boundary.customerLoginPage import CustomerLoginPage
-from control.customerLoginController import CustomerLoginController
+from control.customerLoginController import CustomerLoginController, REQUIRED_CUSTOMER_PERMISSIONS
 from database.db import getConnection
 from entity.userAccount import UserAccount
 
@@ -41,13 +41,14 @@ def test_ut30_2_invalidCredentials(username, password):
     assert CustomerLoginController().login(username, password) is None
 
 
-@pytest.mark.parametrize('username,password', [('', 'x'), ('   ', 'x'),
-    (None, 'x'), ('cust001', ''), ('cust001', None)])
-def test_ut30_3_emptyControllerInput(username, password, monkeypatch):
-    def forbidden(*args):
-        pytest.fail('Empty input must not query credentials')
-    monkeypatch.setattr(UserAccount, 'verifyCredentials', forbidden)
-    assert CustomerLoginController().login(username, password) is None
+def test_ut30_3_oneEntityCallNoInputCheck(monkeypatch):
+    calls = []
+    def stub(self, username, password, requiredPermissions):
+        calls.append((username, password, requiredPermissions))
+        return 'account'
+    monkeypatch.setattr(UserAccount, 'verifyCredentials', stub)
+    assert CustomerLoginController().login('cust001', 'Cust@123') == 'account'
+    assert calls == [('cust001', 'Cust@123', REQUIRED_CUSTOMER_PERMISSIONS)]
 
 
 def test_ut30_4_suspendedAccount():
@@ -65,9 +66,9 @@ def test_ut30_6_missingPermission():
     assert CustomerLoginController().login('cust001', 'Cust@123') is None
 
 
-def test_ut30_7_missingProfile(monkeypatch):
-    from entity.userProfile import UserProfile
-    monkeypatch.setattr(UserProfile, 'getUserProfile', lambda *args: None)
+def test_ut30_7_missingProfile():
+    # the account's profileId points at no user_profile row - verifyCredentials() finds no Active profile
+    change("UPDATE user_account SET profileId=999 WHERE username='cust001'")
     assert CustomerLoginController().login('cust001', 'Cust@123') is None
 
 
@@ -90,11 +91,10 @@ def test_ut30_10_exactCredentials():
     assert CustomerLoginController().login('spaces30', ' with spaces ') is not None
 
 
-def test_ut30_11_getAuthenticatedCustomer():
-    account = CustomerLoginController().login('cust001', 'Cust@123')
-    assert CustomerLoginController().getAuthenticatedCustomer(account.userId).username == 'cust001'
-    assert CustomerLoginController().getAuthenticatedCustomer(-1) is None
-    assert CustomerLoginController().isCustomer(None) is False
+def test_ut30_11_verifyCredentialsWithCustomerPermission():
+    account = UserAccount().verifyCredentials('cust001', 'Cust@123', REQUIRED_CUSTOMER_PERMISSIONS)
+    assert account.username == 'cust001'
+    assert UserAccount().verifyCredentials('admin01', 'Admin@123', REQUIRED_CUSTOMER_PERMISSIONS) is None
 
 
 @pytest.mark.parametrize('username,password,expected', [
@@ -167,14 +167,14 @@ def test_ut30_18_dashboardNoSession(client):
 
 
 @pytest.mark.parametrize('profileId', [1, 2, 4])
-def test_ut30_19_dashboardOtherRole(client, profileId):
+def test_ut30_19_dashboardJustRenders(client, profileId):
+    # being a customer is the precondition (customerLoginRequired only checks there's a session)
     UserAccount().createUserAccount(UserAccount(username='other30', password='Other@123', fullName='Other', email='other@x.test', phone='', profileId=profileId))
-    account = UserAccount().verifyCredentials('other30', 'Other@123')
     with client.session_transaction() as state:
-        state.update(userId=account.userId, username=account.username, profileId=profileId)
+        state.update(userId=999, username='other30', profileId=profileId)
     response = client.get('/customer/dashboard')
-    assert response.status_code == 403
-    assert b'Access unavailable' in response.data
+    assert response.status_code == 200
+    assert b'Welcome back, other30' in response.data
 
 
 @pytest.mark.parametrize('sql', [
@@ -183,22 +183,26 @@ def test_ut30_19_dashboardOtherRole(client, profileId):
     "UPDATE user_profile SET permissions='[]' WHERE profileId=3",
     "UPDATE user_account SET profileId=1 WHERE username='cust001'",
     "DELETE FROM user_account WHERE username='cust001'"])
-def test_ut30_20_accessRevokedAfterLogin(client, sql):
+def test_ut30_20_notCheckedAgainAfterLogin(client, sql):
     login(client)
     change(sql)
-    assert client.get('/customer/dashboard').status_code == 403
+    assert client.get('/customer/dashboard').status_code == 200
+    # the next login is refused
+    client.post('/customer/logout')
+    response = login(client)
+    assert b'Invalid login details or access unavailable' in response.data
 
 
-def test_ut30_21_forgedSessionMetadata(client):
+def test_ut30_21_dashboardUsesSessionUsername(client, monkeypatch):
     login(client)
-    with client.session_transaction() as state:
-        state.update(username='admin01', profileId=1)
+    def refused(*args):
+        pytest.fail('the dashboard must not load the account again')
+    monkeypatch.setattr(UserAccount, 'getUserAccount', refused)
+    monkeypatch.setattr(UserAccount, 'verifyCredentials', refused)
+    change("UPDATE user_account SET username='renamed30' WHERE username='cust001'")
     response = client.get('/customer/dashboard')
-    assert b'Welcome back, cust001' in response.data
-    change("UPDATE user_account SET profileId=1 WHERE username='cust001'")
-    with client.session_transaction() as state:
-        state['profileId'] = 3
-    assert client.get('/customer/dashboard').status_code == 403
+    assert response.status_code == 200
+    assert b'Welcome back, cust001' in response.data and b'renamed30' not in response.data
 
 
 def test_ut30_22_sharedLogin(client):
@@ -224,9 +228,10 @@ def test_ut30_24_otherAreasDenied(client, path):
     assert b'Invalid login details or access unavailable' in response.data
 
 
-def test_ut30_25_existingLogout(client):
+def test_ut30_25_customerLogout(client):
     login(client)
-    assert client.post('/logout').status_code == 200
+    response = client.post('/customer/logout')
+    assert response.status_code == 302 and response.headers['Location'].endswith('/customer/login')
     with client.session_transaction() as state:
         assert 'userId' not in state
     assert client.get('/customer/dashboard').headers['Location'].endswith('/customer/login')
@@ -271,4 +276,30 @@ def test_ut30_30_noCredentialsInSession(client):
     login(client)
     with client.session_transaction() as state:
         assert 'Cust@123' not in json.dumps(dict(state))
-        assert UserAccount().verifyCredentials('cust001', 'Cust@123').password not in json.dumps(dict(state))
+        assert UserAccount().verifyCredentials('cust001', 'Cust@123', REQUIRED_CUSTOMER_PERMISSIONS).password not in json.dumps(dict(state))
+
+
+def test_ut30_31_pageTrimsUsername(client):
+    response = login(client, username='  cust001  ')
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/customer/dashboard')
+
+
+# ---------- system tests (Flask test client) ----------
+
+def test_tc30_9_profileSuspendedAfterLogin(client):
+    login(client)
+    change("UPDATE user_profile SET status='Suspended' WHERE profileId=3")
+    # the role isn't checked again, so the dashboard still opens for this session
+    response = client.get('/customer/dashboard')
+    assert response.status_code == 200 and b'Welcome back, cust001' in response.data
+    client.post('/customer/logout')
+    response = login(client)
+    assert b'Invalid login details or access unavailable' in response.data
+
+
+def test_tc30_13_spacesAroundUsername(client):
+    response = login(client, username='  cust001  ')
+    assert response.headers['Location'].endswith('/customer/dashboard')
+    response = client.get('/customer/dashboard')
+    assert response.status_code == 200 and b'Welcome back, cust001' in response.data

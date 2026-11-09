@@ -1,5 +1,8 @@
-"""US31 Boundary: customer access, keyword form and search results."""
-from flask import redirect, render_template, session, url_for
+# Boundary: SearchIDPPage - UC31 Search IDPs (US31)
+# template: customerSearchIDPs.html
+# precondition: the customer is already logged in (US30), so there's no extra access check here
+
+from flask import render_template
 
 from control.searchIDPController import SearchIDPController
 
@@ -8,35 +11,31 @@ MSG_NO_IDPS = "No IDPs are currently available"
 
 
 class SearchIDPPage:
+    # UC31 Search IDPs
+    # starts with an empty keyword
     def __init__(self):
         self.searchIDPController = SearchIDPController()
         self.keyword = ""
-        self.account = None
 
-    def checkAccess(self):
-        if session.get("userId") is None:
-            return redirect(url_for("customerLogin"))
-        self.account = self.searchIDPController.getCustomer(session["userId"])
-        if self.account is None:
-            return render_template("customerAccessDenied.html"), 403
-        return None
-
+    # UC31 Search IDPs
+    # customer searched (or pressed Clear) - the page trims the keyword and keeps it in the search box.
+    # an empty keyword lists every IDP a customer can see
     def searchIDPs(self, keyword):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
         self.keyword = (keyword or "").strip()
-        try:
-            idps = self.searchIDPController.searchIDPs(session["userId"], self.keyword)
-        except PermissionError:
-            return render_template("customerAccessDenied.html"), 403
-        return self.displayResults(idps) if idps else self.displayNoResultsMessage()
+        idps = self.searchIDPController.searchIDPs(self.keyword)
+        if idps:
+            return self.displayResults(idps)
+        return self.displayNoResultsMessage()
 
+    # UC31 Search IDPs
+    # the matching IDP cards, newest first
     def displayResults(self, idps):
-        return render_template("customerSearchIDPs.html", account=self.account,
-                               idps=idps, keyword=self.keyword, activePage="searchIDPs")
+        return render_template("customerSearchIDPs.html", idps=idps, keyword=self.keyword,
+                               activePage="searchIDPs")
 
+    # UC31 Search IDPs
+    # nothing matched - or, with an empty keyword, there's nothing to show at all
     def displayNoResultsMessage(self):
-        return render_template("customerSearchIDPs.html", account=self.account,
-                               idps=[], keyword=self.keyword, activePage="searchIDPs",
-                               noResultsMessage=MSG_NO_RESULTS if self.keyword else MSG_NO_IDPS)
+        return render_template("customerSearchIDPs.html", idps=[], keyword=self.keyword,
+                               noResultsMessage=MSG_NO_RESULTS if self.keyword else MSG_NO_IDPS,
+                               activePage="searchIDPs")

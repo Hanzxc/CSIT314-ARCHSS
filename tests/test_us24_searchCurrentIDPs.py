@@ -4,8 +4,9 @@ from app import app
 from control.searchCurrentIDPController import SearchCurrentIDPController
 from control.updateCurrentIDPController import UpdateCurrentIDPController
 from control.deleteCurrentIDPController import DeleteCurrentIDPController
+from control.interiorDesignerLoginController import InteriorDesignerLoginController
 from entity.idp import IDP
-from test_us22_updateCurrentIDP import data, client, execute, snapshot, validData
+from test_us22_updateCurrentIDP import data, client, execute, snapshot, validIDP
 
 SEARCH_URL='/designer/idps/current/search'
 
@@ -43,12 +44,23 @@ def test_ut24_5_unicodeAndCaseInsensitive(searchable,keyword):
 
 
 @pytest.mark.parametrize('keyword',['',None,'   ','\t\n'])
-def test_ut24_6_emptyShowsAll(searchable,keyword):
-    assert ids(searchable['owner'],keyword)==[searchable['second'],searchable['own']]
+def test_ut24_6_pageTrimsEmptyKeyword(searchable,client,monkeypatch,keyword):
+    seen=[]
+    original=IDP.searchCurrentIDPs
+    monkeypatch.setattr(IDP,'searchCurrentIDPs',lambda self,owner,word:seen.append(word) or original(self,owner,word))
+    # None = no keyword in the URL at all
+    response=client.get(SEARCH_URL,query_string={} if keyword is None else {'keyword':keyword})
+    assert response.status_code==200 and seen==['']
+    assert response.data.index(b'Kitchen 100%_Plan')<response.data.index(b'Own Current Project')
 
 
-def test_ut24_7_trimmedKeyword(searchable):
-    assert ids(searchable['owner'],'  Own Current  ')==[searchable['own']]
+def test_ut24_7_pageTrimsKeyword(searchable,client,monkeypatch):
+    seen=[]
+    original=IDP.searchCurrentIDPs
+    monkeypatch.setattr(IDP,'searchCurrentIDPs',lambda self,owner,word:seen.append(word) or original(self,owner,word))
+    response=client.get(SEARCH_URL,query_string={'keyword':'  Own Current  '})
+    assert seen==['Own Current']
+    assert b'Own Current Project' in response.data and b'Kitchen 100%_Plan' not in response.data
 
 
 def test_ut24_8_newestFirst(searchable):
@@ -93,28 +105,26 @@ def test_ut24_15_noDuplicatesForMultipleMatchingFields(searchable):
     assert ids(searchable['owner'],'kitchen')==[searchable['second']]
 
 
-@pytest.mark.parametrize('condition',['active','account','profile','permissions','admin','customer','missing'])
-def test_ut24_16_designerAccess(searchable,condition):
-    owner=searchable['owner']
-    if condition=='account':execute("UPDATE user_account SET status='Suspended' WHERE userId=?",(owner,))
-    elif condition=='profile':execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    elif condition=='permissions':execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    elif condition!='active':owner={'admin':1,'customer':3,'missing':999999}[condition]
-    assert SearchCurrentIDPController().canSearchCurrentIDPs(owner)==(condition=='active')
+def test_ut24_16_controllerOnlyHasSearch():
+    import control.searchCurrentIDPController as module
+    methods={name for name in vars(SearchCurrentIDPController) if not name.startswith('_')}
+    assert methods=={'searchCurrentIDPs'}
+    assert not hasattr(module,'InteriorDesignerLoginController')
 
 
-def test_ut24_17_deniedControllerStopsBeforeQuery(searchable,monkeypatch):
-    monkeypatch.setattr(SearchCurrentIDPController,'canSearchCurrentIDPs',lambda *args:False)
-    def unexpected(*args):pytest.fail('Denied requests must not query IDPs')
-    monkeypatch.setattr(IDP,'searchCurrentIDPs',unexpected)
-    with pytest.raises(PermissionError):SearchCurrentIDPController().searchCurrentIDPs(searchable['owner'],'x')
+def test_ut24_17_noLoginControllerOneEntityCall(searchable,monkeypatch):
+    monkeypatch.setattr(InteriorDesignerLoginController,'login',lambda self,username,password:None)
+    calls=[]
+    monkeypatch.setattr(IDP,'searchCurrentIDPs',lambda self,owner,keyword:calls.append(owner) or ['found'])
+    assert SearchCurrentIDPController().searchCurrentIDPs(searchable['owner'],'x')==['found']
+    assert calls==[searchable['owner']]
 
 
-def test_ut24_18_controllerUsesOwnerAndTrimmedKeyword(searchable,monkeypatch):
+def test_ut24_18_controllerDoesNotTrim(searchable,monkeypatch):
     seen=[]
     monkeypatch.setattr(IDP,'searchCurrentIDPs',lambda self,owner,keyword:seen.append((owner,keyword)) or [])
     assert SearchCurrentIDPController().searchCurrentIDPs(searchable['owner'],'  Kitchen  ')==[]
-    assert seen==[(searchable['owner'],'Kitchen')]
+    assert seen==[(searchable['owner'],'  Kitchen  ')]
 
 
 def test_ut24_19_signedOutRedirect(searchable):
@@ -124,9 +134,11 @@ def test_ut24_19_signedOutRedirect(searchable):
 
 # each role logs in on its own page (/login is only for User Admins, US1)
 @pytest.mark.parametrize('loginUrl,username,password',[('/login','admin01','Admin@123'),('/customer/login','cust001','Cust@123')])
-def test_ut24_20_nonDesignerForbidden(searchable,loginUrl,username,password):
+def test_ut24_20_roleNotCheckedAgain(searchable,loginUrl,username,password):
+    # the role isn't checked again (precondition UC13) - these users just own no current IDPs
     browser=app.test_client();browser.post(loginUrl,data=dict(username=username,password=password))
-    assert browser.get(SEARCH_URL).status_code==403
+    response=browser.get(SEARCH_URL)
+    assert response.status_code==200 and b'You have no current IDPs to display' in response.data
 
 
 def test_ut24_21_resultsAndKeywordRetained(searchable,client):
@@ -186,21 +198,20 @@ def test_ut24_27_navigationAndFreshDetailCheck(searchable,client):
 
 
 @pytest.mark.parametrize('condition',['account','profile','permissions'])
-def test_ut24_28_accessRevokedBetweenSearches(searchable,client,condition):
+def test_ut24_28_notCheckedAgainAfterLogin(searchable,client,condition):
     assert client.get(SEARCH_URL).status_code==200
     if condition=='account':execute("UPDATE user_account SET status='Suspended' WHERE userId=?",(searchable['owner'],))
     elif condition=='profile':execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
     else:execute("UPDATE user_profile SET permissions='[]' WHERE profileId=2")
-    assert client.get(SEARCH_URL).status_code==403
+    response=client.get(SEARCH_URL)
+    assert response.status_code==200 and b'Own Current Project' in response.data
 
 
 def test_ut24_29_searchReflectsUpdateAndDeletion(searchable,client):
-    assert UpdateCurrentIDPController().updateCurrentIDP(searchable['owner'],searchable['own'],
-                                                       validData(searchable,title='Fresh Progress Project'))
+    assert UpdateCurrentIDPController().updateCurrentIDP(validIDP(searchable,title='Fresh Progress Project'))
     assert ids(searchable['owner'],'Fresh Progress Project')==[searchable['own']]
     assert ids(searchable['owner'],'Own Current Project')==[]
-    project=IDP().getCurrentIDP(searchable['owner'],searchable['own'])
-    assert DeleteCurrentIDPController().deleteCurrentIDP(searchable['owner'],searchable['own'],project.getSnapshot())
+    assert DeleteCurrentIDPController().deleteCurrentIDP(searchable['owner'],searchable['own'])
     assert ids(searchable['owner'],'Fresh Progress Project')==[]
 
 
@@ -212,10 +223,15 @@ def test_ut24_30_keywordAndStoredTextEscaped(searchable,client):
     assert b'<script>' not in response.data
 
 
-def test_ut24_31_controllerRecheckHandled(searchable,client,monkeypatch):
-    checks=iter([True,False])
-    monkeypatch.setattr(SearchCurrentIDPController,'canSearchCurrentIDPs',lambda *args:next(checks))
-    assert client.get(SEARCH_URL).status_code==403
+def test_ut24_31_pageSearchesStraightAway(searchable,client,monkeypatch):
+    def refused(*args):pytest.fail('the page must not check the designer again')
+    monkeypatch.setattr(InteriorDesignerLoginController,'login',refused)
+    seen=[]
+    original=SearchCurrentIDPController.searchCurrentIDPs
+    monkeypatch.setattr(SearchCurrentIDPController,'searchCurrentIDPs',
+                        lambda self,owner,keyword:seen.append((owner,keyword)) or original(self,owner,keyword))
+    response=client.get(SEARCH_URL,query_string={'keyword':'Kitchen'})
+    assert response.status_code==200 and seen==[(searchable['owner'],'Kitchen')]
 
 
 def test_ut24_32_longKeywordSafe(searchable,client):
@@ -223,3 +239,14 @@ def test_ut24_32_longKeywordSafe(searchable,client):
     response=client.get(SEARCH_URL,query_string={'keyword':'x'*5000})
     assert response.status_code==200 and b'No matching current IDPs found' in response.data
     assert snapshot()==before
+
+
+# ---------- system test (Flask test client) ----------
+
+def test_tc24_9_notLoggedInOrProfileChanged(searchable,client):
+    result=app.test_client().get(SEARCH_URL)
+    assert result.status_code==302 and result.headers['Location'].endswith('/designer/login')
+    execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
+    # being logged in is the precondition (UC13), so the search still works for this session
+    response=client.get(SEARCH_URL,query_string={'keyword':'Plan'})
+    assert response.status_code==200 and b'Kitchen 100%_Plan' in response.data

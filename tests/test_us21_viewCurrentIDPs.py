@@ -2,7 +2,7 @@
 import pytest
 
 from app import app
-from control.interiorDesignerLoginController import InteriorDesignerLoginController
+from control.interiorDesignerLoginController import InteriorDesignerLoginController, REQUIRED_DESIGNER_PERMISSIONS
 from control.viewCurrentIDPController import ViewCurrentIDPController
 from database.db import getConnection, initDatabase
 from entity.idp import IDP
@@ -41,8 +41,8 @@ def projects():
     for username in ("designer21", "designer22"):
         assert UserAccount().createUserAccount(UserAccount(username=username, password="Design@123", fullName="Designer " + username,
                                               email=username + "@example.com", phone="", profileId=2))
-    owner = UserAccount().verifyCredentials("designer21", "Design@123").userId
-    other = UserAccount().verifyCredentials("designer22", "Design@123").userId
+    owner = UserAccount().verifyCredentials("designer21", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
+    other = UserAccount().verifyCredentials("designer22", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     category = execute("INSERT INTO idp_category (categoryName) VALUES ('Living Room')")
     hiddenCategory = execute("INSERT INTO idp_category (categoryName, status) VALUES ('Hidden Category', 'Suspended')")
     first = addProject(owner, category, "Warm Minimalist Apartment")
@@ -130,22 +130,25 @@ def test_ut21_11_getCurrentIDP_invalidId(projects, idpId):
     assert IDP().getCurrentIDP(projects["owner"], idpId) is None
 
 
-def test_ut21_12_canViewCurrentIDPs_validDesigner(projects):
-    assert ViewCurrentIDPController().canViewCurrentIDPs(projects["owner"]) is True
+def test_ut21_12_controllerOnlyHasTheTwoViewMethods():
+    import control.viewCurrentIDPController as module
+    methods = {name for name in vars(ViewCurrentIDPController) if not name.startswith("_")}
+    assert methods == {"viewCurrentIDPs", "viewCurrentIDP"}
+    assert not hasattr(module, "InteriorDesignerLoginController")
 
 
-@pytest.mark.parametrize("change", ["account", "profile", "permission", "admin", "customer", "missing"])
-def test_ut21_13_canViewCurrentIDPs_denied(projects, change):
-    owner = projects["owner"]
-    if change == "account":
-        execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (owner,))
-    elif change == "profile":
-        execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
-    elif change == "permission":
-        execute("UPDATE user_profile SET permissions='[\"Manage company profile\"]' WHERE profileId=2")
-    else:
-        owner = {"admin": 1, "customer": 3, "missing": 999999}[change]
-    assert ViewCurrentIDPController().canViewCurrentIDPs(owner) is False
+@pytest.mark.parametrize("change", ["account", "profile", "permission"])
+def test_ut21_13_designerNotCheckedAgain(projects, change):
+    # being logged in is the precondition (UC13) - a change after logging in isn't checked again
+    statements = {
+        "account": ("UPDATE user_account SET status='Suspended' WHERE userId=?", projects["owner"]),
+        "profile": ("UPDATE user_profile SET status='Suspended' WHERE profileId=?", 2),
+        "permission": ("UPDATE user_profile SET permissions='[]' WHERE profileId=?", 2),
+    }
+    sql, value = statements[change]
+    execute(sql, (value,))
+    titles = [idp.title for idp in ViewCurrentIDPController().viewCurrentIDPs(projects["owner"])]
+    assert titles == ["Modern Kitchen Renovation", "Warm Minimalist Apartment"]
 
 
 def test_ut21_14_viewCurrentIDPs_delegatesOwner(projects, monkeypatch):
@@ -163,18 +166,22 @@ def test_ut21_15_viewCurrentIDP_delegatesOwnerAndId(projects, monkeypatch):
 
 
 @pytest.mark.parametrize("detail", [False, True])
-def test_ut21_16_controllerRechecksAccessBeforeQuery(projects, monkeypatch, detail):
-    monkeypatch.setattr(InteriorDesignerLoginController, "getAuthenticatedDesigner", lambda self, userId: None)
-    def unexpectedQuery(*args):
-        pytest.fail("Denied requests must not query IDPs")
-    monkeypatch.setattr(IDP, "getCurrentIDPs", unexpectedQuery)
-    monkeypatch.setattr(IDP, "getCurrentIDP", unexpectedQuery)
+def test_ut21_16_noLoginControllerOneEntityCall(projects, monkeypatch, detail):
+    def refused(*args):
+        pytest.fail("the controller must not check the designer again")
+    monkeypatch.setattr(InteriorDesignerLoginController, "login", lambda self, username, password: None)
+    monkeypatch.setattr(UserAccount, "verifyCredentials", refused)
+    monkeypatch.setattr(UserAccount, "getUserAccount", refused)
+    calls = []
+    monkeypatch.setattr(IDP, "getCurrentIDPs", lambda self, designerId: calls.append(designerId) or ["list"])
+    monkeypatch.setattr(IDP, "getCurrentIDP", lambda self, designerId, idpId: calls.append(idpId) or "idp")
     controller = ViewCurrentIDPController()
-    with pytest.raises(PermissionError):
-        if detail:
-            controller.viewCurrentIDP(projects["owner"], projects["first"])
-        else:
-            controller.viewCurrentIDPs(projects["owner"])
+    if detail:
+        assert controller.viewCurrentIDP(projects["owner"], projects["first"]) == "idp"
+        assert calls == [projects["first"]]
+    else:
+        assert controller.viewCurrentIDPs(projects["owner"]) == ["list"]
+        assert calls == [projects["owner"]]
 
 
 @pytest.mark.parametrize("path", [LIST_URL, detailUrl(1)])
@@ -184,14 +191,19 @@ def test_ut21_17_signedOutRedirectsToLogin(path):
     assert response.headers["Location"].endswith("/designer/login")
 
 
-@pytest.mark.parametrize("path", [LIST_URL, detailUrl(1)])
 @pytest.mark.parametrize("loginUrl,username,password", [("/login", "admin01", "Admin@123"),
                                                         ("/customer/login", "cust001", "Cust@123")])
-def test_ut21_18_nonDesignerForbidden(path, loginUrl, username, password):
-    # each role logs in on its own page (/login is only for User Admins, US1)
+def test_ut21_18_roleNotCheckedAgain(projects, loginUrl, username, password):
+    # each role logs in on its own page (/login is only for User Admins, US1). the designer pages
+    # don't check the role again (precondition UC13) - these users just own no current IDPs
     client = app.test_client()
-    client.post(loginUrl, data={"username": username, "password": password})
-    assert client.get(path).status_code == 403
+    assert client.post(loginUrl, data={"username": username, "password": password}).status_code == 302
+    response = client.get(LIST_URL)
+    assert response.status_code == 200
+    assert b"You have no current IDPs to display" in response.data
+    response = client.get(detailUrl(projects["first"]))
+    assert response.status_code == 404
+    assert b"Warm Minimalist Apartment" not in response.data
 
 
 def test_ut21_19_emptyListShowsMessage(projects, designerClient):
@@ -231,9 +243,9 @@ def test_ut21_22_forgedOwnerIgnored(projects, designerClient):
     assert designerClient.get(detailUrl(projects["first"]) + query).status_code == 200
 
 
-@pytest.mark.parametrize("change,status", [("account", 403), ("profile", 403), ("permission", 403),
+@pytest.mark.parametrize("change,status", [("account", 200), ("profile", 200), ("permission", 200),
                                           ("project", 404), ("category", 404), ("past", 404)])
-def test_ut21_23_rechecksAfterListing(projects, designerClient, change, status):
+def test_ut21_23_changesAfterListing(projects, designerClient, change, status):
     assert designerClient.get(LIST_URL).status_code == 200
     statements = {
         "account": ("UPDATE user_account SET status='Suspended' WHERE userId=?", projects["owner"]),
@@ -245,9 +257,10 @@ def test_ut21_23_rechecksAfterListing(projects, designerClient, change, status):
     }
     sql, value = statements[change]
     execute(sql, (value,))
+    # the account isn't checked again (precondition UC13), only the IDP itself
     assert designerClient.get(detailUrl(projects["first"])).status_code == status
-    if status == 403:
-        assert designerClient.get(LIST_URL).status_code == 403
+    if status == 200:
+        assert designerClient.get(LIST_URL).status_code == 200
 
 
 def test_ut21_24_repeatedViewsAreReadOnly(projects, designerClient):
@@ -296,15 +309,6 @@ def test_ut21_28_routesRejectWrites(projects, designerClient, method):
     assert databaseSnapshot() == before
 
 
-@pytest.mark.parametrize("detail", [False, True])
-def test_ut21_29_revokedBetweenBoundaryAndController(projects, designerClient, monkeypatch, detail):
-    checks = iter([True, False])
-    monkeypatch.setattr(ViewCurrentIDPController, "canViewCurrentIDPs", lambda self, designerId: next(checks))
-    response = designerClient.get(detailUrl(projects["first"]) if detail else LIST_URL)
-    assert response.status_code == 403
-    assert b"Warm Minimalist Apartment" not in response.data
-
-
 def test_ut21_30_initialisationPreservesExistingData(projects):
     before = databaseSnapshot()
     initDatabase()
@@ -326,3 +330,18 @@ def test_ut21_31_demoDataCanBeViewedAndIsRepeatable():
     assert response.status_code == 200
     assert b"Warm Minimalist Apartment" in response.data
     assert b"Modern Kitchen Renovation" in response.data
+
+
+# ---------- system test (Flask test client) ----------
+
+def test_tc21_10_profileSuspendedAfterLogin(projects, designerClient):
+    execute("UPDATE user_profile SET status='Suspended' WHERE profileId=2")
+    # being logged in is the precondition (UC13), so the list still opens for this session
+    response = designerClient.get(LIST_URL)
+    assert response.status_code == 200 and b"Warm Minimalist Apartment" in response.data
+    # the next login is refused
+    designerClient.post("/designer/logout")
+    response = designerClient.post("/designer/login", data={"username": "designer21", "password": "Design@123"})
+    assert response.status_code == 200
+    assert b"Invalid login details or access unavailable" in response.data
+    assert designerClient.get(LIST_URL).headers["Location"].endswith("/designer/login")

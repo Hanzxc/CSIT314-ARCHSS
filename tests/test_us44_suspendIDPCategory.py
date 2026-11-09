@@ -10,6 +10,7 @@ from entity.idpCategory import IDPCategory
 from control.suspendIDPCategoryController import SuspendIDPCategoryController
 from control.addCurrentIDPController import AddCurrentIDPController
 from boundary.addCurrentIDPPage import AddCurrentIDPPage
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def createManager44():
@@ -20,7 +21,7 @@ def createManager44():
 def createDesigner44():
     UserAccount().createUserAccount(
         UserAccount(username="designer44", password="Design@123", fullName="Tengku Uda Designer", email="designer44@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer44", "Design@123").userId
+    return UserAccount().verifyCredentials("designer44", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def loginAsManager44(client):

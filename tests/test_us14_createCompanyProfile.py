@@ -8,12 +8,13 @@ from entity.userAccount import UserAccount
 from entity.companyProfile import CompanyProfile
 from control.createCompanyProfileController import CreateCompanyProfileController
 from boundary.createCompanyProfilePage import CreateCompanyProfilePage
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def createDesigner13():
     UserAccount().createUserAccount(
         UserAccount(username="designer13", password="Design@123", fullName="Tengku Uda Designer", email="designer13@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer13", "Design@123").userId
+    return UserAccount().verifyCredentials("designer13", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def companyData():
@@ -103,7 +104,7 @@ def test_ut14_11_entity_duplicateOwnerRejected():
 def test_ut14_12_profilesKeptSeparate():
     first = createDesigner13()
     UserAccount().createUserAccount(UserAccount(username="designer14", password="Design@123", fullName="Daniel Tan", email="", phone="", profileId=2))
-    second = UserAccount().verifyCredentials("designer14", "Design@123").userId
+    second = UserAccount().verifyCredentials("designer14", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
     assert CreateCompanyProfileController().createCompanyProfile(makeCompany(first, companyData())) is True
     assert CompanyProfile().getCompanyProfile(second) is None
     assert CreateCompanyProfileController().createCompanyProfile(makeCompany(second, companyData())) is True

@@ -5,6 +5,7 @@ from flask import session
 
 from app import app
 from boundary.customerLogoutPage import CustomerLogoutPage
+from control.customerLoginController import REQUIRED_CUSTOMER_PERMISSIONS
 from control.customerLogoutController import CustomerLogoutController
 from control.logoutController import LogoutController
 from entity.userAccount import UserAccount
@@ -54,16 +55,15 @@ def test_ut36_5_orphanedData():
         assert not session
 
 
-def test_ut36_6_delegatesSharedLogout(monkeypatch):
-    called = []
-    def shared(self):
-        called.append(True)
-        return True
-    monkeypatch.setattr(LogoutController, 'logout', shared)
+def test_ut36_6_doesNotUseSharedLogout(monkeypatch):
+    def refused(self):
+        pytest.fail("US36 must not call US2's LogoutController")
+    monkeypatch.setattr(LogoutController, 'logout', refused)
     with app.test_request_context():
+        session['userId'] = 3
         session['orphaned'] = 'value'
         assert CustomerLogoutController().logout() is True
-        assert called == [True] and not session
+        assert not session
 
 
 def test_ut36_7_boundaryDelegates(client, monkeypatch):
@@ -176,7 +176,7 @@ def test_ut36_22_noDatabaseChanges(client):
     before = snapshot()
     client.post('/customer/logout', follow_redirects=True)
     assert snapshot() == before
-    assert UserAccount().verifyCredentials('cust001', 'Cust@123') is not None
+    assert UserAccount().verifyCredentials('cust001', 'Cust@123', REQUIRED_CUSTOMER_PERMISSIONS) is not None
 
 
 def test_ut36_23_noStore(client):

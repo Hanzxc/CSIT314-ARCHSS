@@ -1,6 +1,4 @@
 """Exercise real login across the previously separate story branches."""
-import re
-
 import pytest
 
 from app import app
@@ -21,20 +19,19 @@ def test_addedProjectCanBeManagedFoundViewedSavedAndLoggedOut():
     project = conn.execute("SELECT idpId FROM idp WHERE title='Integrated Kitchen'").fetchone()['idpId']
     conn.close()
     assert b'Integrated Kitchen' in designer.get('/designer/idps/current').data
-    form = designer.get(f'/designer/idps/current/{project}/update')
-    token = re.search(rb'name="updateToken" value="([^"]+)"', form.data).group(1).decode()
+    assert designer.get(f'/designer/idps/current/{project}/update').status_code == 200
     designer.post(f'/designer/idps/current/{project}/update', data=dict(title='Integrated Kitchen',
-        categoryId=category, description='Carpentry completed', location='Bedok', updateToken=token))
+        categoryId=category, description='Carpentry completed', location='Bedok'))
     customer = app.test_client()
     customer.post('/customer/login', data=dict(username='cust001', password='Cust@123'))
     assert b'Integrated Kitchen' in customer.get('/customer/idps/search?keyword=integrated').data
     detail = customer.get(f'/customer/idps/{project}')
     assert b'Carpentry completed' in detail.data and b'>Save IDP</button>' in detail.data
-    # US33: saving goes back to the US32 details page, which now shows the IDP as saved
+    # US33: saving goes back to the US32 details page (the Save button is always shown there)
     saved = customer.post(f'/customer/idps/{project}/save', follow_redirects=True)
     assert saved.status_code == 200 and b'Integrated Kitchen' in saved.data
     assert b'IDP saved to your saved list' in saved.data
-    assert b'Saved</span>' in customer.get(f'/customer/idps/{project}').data
+    assert b'>Save IDP</button>' in customer.get(f'/customer/idps/{project}').data
     assert b'Integrated Kitchen' in customer.get('/customer/saved-list').data
     assert b'Integrated Kitchen' in customer.get('/customer/saved-list/search?keyword=Kitchen').data
     customer.post('/customer/logout', follow_redirects=True)

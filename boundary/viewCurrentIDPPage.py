@@ -1,5 +1,8 @@
-# Boundary: ViewCurrentIDPPage - UC21 View current IDPs.
-from flask import redirect, render_template, session, url_for
+# Boundary: ViewCurrentIDPPage - UC21 View current IDPs (US21)
+# templates: currentIDPs.html, viewCurrentIDP.html, currentIDPNotFound.html
+# precondition: the designer is already logged in (US13), so there's no extra access check here
+
+from flask import render_template, session
 
 from control.viewCurrentIDPController import ViewCurrentIDPController
 
@@ -8,50 +11,45 @@ MSG_NOT_FOUND = "Current IDP not found"
 
 
 class ViewCurrentIDPPage:
+    # UC21 View current IDPs
+    # just sets up the controller
     def __init__(self):
         self.viewCurrentIDPController = ViewCurrentIDPController()
 
-    def checkAccess(self):
-        if "userId" not in session:
-            return redirect(url_for("interiorDesignerLogin"))
-        if not self.viewCurrentIDPController.canViewCurrentIDPs(session["userId"]):
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        return None
-
+    # UC21 View current IDPs
+    # designer clicked "View current IDPs" - the owner is always the logged-in designer
     def clickViewCurrentIDPs(self):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        try:
-            idps = self.viewCurrentIDPController.viewCurrentIDPs(session["userId"])
-        except PermissionError:
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        if not idps:
-            return self.displayNoIDPsMessage()
-        return self.displayCurrentIDPs(idps)
+        idps = self.viewCurrentIDPController.viewCurrentIDPs(session["userId"])
+        if idps:
+            return self.displayCurrentIDPs(idps)
+        return self.displayNoIDPsMessage()
 
+    # UC21 View current IDPs
+    # designer clicked View on one IDP - someone else's / hidden / missing gives the not found page
     def selectCurrentIDP(self, idpId):
-        denied = self.checkAccess()
-        if denied is not None:
-            return denied
-        try:
-            idp = self.viewCurrentIDPController.viewCurrentIDP(session["userId"], idpId)
-        except PermissionError:
-            return render_template("interiorDesignerAccessDenied.html"), 403
-        if idp is None:
-            return self.displayErrorMessage(MSG_NOT_FOUND)
-        return self.displayCurrentIDP(idp)
+        idp = self.viewCurrentIDPController.viewCurrentIDP(session["userId"], idpId)
+        if idp is not None:
+            return self.displayCurrentIDP(idp)
+        return self.displayNotFoundMessage()
 
+    # UC21 View current IDPs
+    # the list of project cards, newest first (wireframe 4a)
     def displayCurrentIDPs(self, idps):
         return render_template("currentIDPs.html", idps=idps, activePage="currentIDPs")
 
+    # UC21 View current IDPs
+    # what customers would see for this IDP (wireframe 4b)
     def displayCurrentIDP(self, idp):
         return render_template("viewCurrentIDP.html", idp=idp, activePage="currentIDPs")
 
+    # UC21 View current IDPs
+    # empty list is a normal page with a message (wireframe 4c)
     def displayNoIDPsMessage(self):
         return render_template("currentIDPs.html", idps=[], emptyMessage=MSG_NO_IDPS,
                                activePage="currentIDPs")
 
-    def displayErrorMessage(self, msg):
-        return render_template("currentIDPNotFound.html", errorMessage=msg,
+    # UC21 View current IDPs
+    # HTTP 404 with no project details (wireframe 4d)
+    def displayNotFoundMessage(self):
+        return render_template("currentIDPNotFound.html", errorMessage=MSG_NOT_FOUND,
                                activePage="currentIDPs"), 404

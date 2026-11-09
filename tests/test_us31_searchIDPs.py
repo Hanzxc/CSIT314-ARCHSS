@@ -1,8 +1,10 @@
 """US31 customer catalogue search; isolated DB and existing US22 fixtures."""
 import pytest
+from flask import session
 
 from app import app
 from boundary.searchIDPPage import SearchIDPPage
+from control.customerLoginController import CustomerLoginController
 from control.searchIDPController import SearchIDPController
 from entity.idp import IDP
 from entity.userAccount import UserAccount
@@ -51,12 +53,22 @@ def test_ut31_5_unicodeCase(catalogue, keyword):
 
 
 @pytest.mark.parametrize('keyword', ['', None, '   ', '\t\n'])
-def test_ut31_6_emptyBrowse(catalogue, keyword):
-    assert ids(keyword) == [catalogue[k] for k in ('second', 'past', 'foreign', 'own')]
+def test_ut31_6_pageTrimsEmptyKeyword(catalogue, monkeypatch, keyword):
+    seen = []
+    original = SearchIDPController.searchIDPs
+    monkeypatch.setattr(SearchIDPController, 'searchIDPs', lambda self, word: seen.append(word) or original(self, word))
+    with app.test_request_context():
+        session.update(userId=3, profileId=3, username='cust001')
+        html = SearchIDPPage().searchIDPs(keyword)
+    assert seen == ['']
+    for title in ('Kitchen 100%_Plan', 'Own Past Project', 'Other Designer Project', 'Own Current Project'):
+        assert title in html
 
 
-def test_ut31_7_trim(catalogue):
-    assert ids('  Bedok  ') == [catalogue['second']]
+def test_ut31_7_entityDoesNotTrim(catalogue):
+    # the spaces are part of the search here - the page trims first (UT31.18)
+    assert ids('  Bedok  ') == []
+    assert ids('Bedok') == [catalogue['second']]
 
 
 def test_ut31_8_newestFirst(catalogue):
@@ -101,30 +113,26 @@ def test_ut31_15_noDuplicatesAndFields(catalogue):
     assert p.title == 'Kitchen 100%_Plan' and 'carpentry' in p.description
 
 
-@pytest.mark.parametrize('condition', ['active', 'account', 'profile', 'permission', 'admin', 'missing'])
-def test_ut31_16_customerAccess(catalogue, condition):
-    customerId = UserAccount().verifyCredentials('cust001', 'Cust@123').userId
-    if condition == 'account': execute("UPDATE user_account SET status='Suspended' WHERE userId=?", (customerId,))
-    elif condition == 'profile': execute("UPDATE user_profile SET status='Suspended' WHERE profileId=3")
-    elif condition == 'permission': execute("UPDATE user_profile SET permissions='[]' WHERE profileId=3")
-    elif condition == 'admin': customerId = 1
-    elif condition == 'missing': customerId = 999999
-    assert (SearchIDPController().getCustomer(customerId) is not None) == (condition == 'active')
+def test_ut31_16_controllerOneEntityCall(catalogue, monkeypatch):
+    calls = []
+    monkeypatch.setattr(IDP, 'searchIDPs', lambda self, keyword: calls.append(keyword) or ['found'])
+    assert SearchIDPController().searchIDPs('kitchen') == ['found']
+    assert calls == ['kitchen']
 
 
-def test_ut31_17_deniedController(catalogue, monkeypatch):
-    monkeypatch.setattr(SearchIDPController, 'getCustomer', lambda *args: None)
-    def forbidden(*args): pytest.fail('Denied search must not query IDPs')
-    monkeypatch.setattr(IDP, 'searchIDPs', forbidden)
-    with pytest.raises(PermissionError): SearchIDPController().searchIDPs(1, 'x')
-
-
-def test_ut31_18_controllerDelegation(catalogue, monkeypatch):
-    customerId = UserAccount().verifyCredentials('cust001', 'Cust@123').userId
+def test_ut31_17_controllerDoesNotTrim(catalogue, monkeypatch):
     seen = []
     monkeypatch.setattr(IDP, 'searchIDPs', lambda self, keyword: seen.append(keyword) or [])
-    assert SearchIDPController().searchIDPs(customerId, '  kitchen  ') == []
-    assert seen == ['kitchen']
+    assert SearchIDPController().searchIDPs('  kitchen  ') == []
+    assert seen == ['  kitchen  ']
+
+
+def test_ut31_18_pageTrimsKeyword(client, monkeypatch):
+    seen = []
+    original = SearchIDPController.searchIDPs
+    monkeypatch.setattr(SearchIDPController, 'searchIDPs', lambda self, word: seen.append(word) or original(self, word))
+    response = client.get(SEARCH_URL, query_string=dict(keyword='  kitchen  '))
+    assert response.status_code == 200 and seen == ['kitchen']
 
 
 def test_ut31_19_noSession(catalogue):
@@ -133,13 +141,13 @@ def test_ut31_19_noSession(catalogue):
 
 
 @pytest.mark.parametrize('profileId', [1, 2, 4])
-def test_ut31_20_otherRoles(catalogue, profileId):
-    UserAccount().createUserAccount(UserAccount(username='other31', password='Other@123', fullName='Other', email='', phone='', profileId=profileId))
-    account = UserAccount().verifyCredentials('other31', 'Other@123')
+def test_ut31_20_roleNotCheckedAgain(catalogue, profileId):
+    # being a customer is the precondition (customerLoginRequired only checks there's a session)
     client = app.test_client()
     with client.session_transaction() as state:
-        state.update(userId=account.userId, profileId=profileId, username=account.username)
-    assert client.get(SEARCH_URL).status_code == 403
+        state.update(userId=1, profileId=profileId, username='other31')
+    response = client.get(SEARCH_URL)
+    assert response.status_code == 200 and b'Own Current Project' in response.data
 
 
 def test_ut31_21_resultsAndTemplate(client, catalogue):
@@ -182,9 +190,13 @@ def test_ut31_24_clearAndNavigation(client):
     "UPDATE user_profile SET status='Suspended' WHERE profileId=3",
     "UPDATE user_profile SET permissions='[]' WHERE profileId=3",
     "DELETE FROM user_account WHERE username='cust001'"])
-def test_ut31_25_accessRevoked(client, sql):
+def test_ut31_25_notCheckedAgainAfterLogin(client, sql):
     execute(sql)
-    assert client.get(SEARCH_URL).status_code == 403
+    assert client.get(SEARCH_URL).status_code == 200
+    # the next customer login is refused
+    client.post('/customer/logout')
+    response = client.post('/customer/login', data=dict(username='cust001', password='Cust@123'))
+    assert b'Invalid login details or access unavailable' in response.data
 
 
 def test_ut31_26_forgedFilters(client):
@@ -226,20 +238,16 @@ def test_ut31_30_escapingAndSummary(client, catalogue):
     assert response.headers['Cache-Control'] == 'no-store'
 
 
-def test_ut31_31_secondAccessCheck(client, monkeypatch):
-    original = SearchIDPController.getCustomer
+def test_ut31_31_pageCallsControllerWithKeywordOnly(client, monkeypatch):
+    def refused(*args):
+        pytest.fail('the page must not check the customer again')
+    monkeypatch.setattr(CustomerLoginController, 'login', refused)
     calls = []
-    def changed(self, userId):
-        calls.append(userId)
-        return original(self, userId) if len(calls) == 1 else None
-    monkeypatch.setattr(SearchIDPController, 'getCustomer', changed)
-    response = client.get(SEARCH_URL)
-    assert response.status_code == 403 and len(calls) == 2
+    monkeypatch.setattr(SearchIDPController, 'searchIDPs', lambda *args: calls.append(args[1:]) or [])
+    response = client.get(SEARCH_URL, query_string=dict(keyword='kitchen'))
+    assert response.status_code == 200 and calls == [('kitchen',)]
 
 
-def test_ut31_32_longKeywordAndIdentity(client):
-    with client.session_transaction() as state:
-        state.update(username='admin01', profileId=1)
+def test_ut31_32_longKeyword(client):
     response = client.get(SEARCH_URL, query_string=dict(keyword='x'*5000))
     assert response.status_code == 200 and b'No matching IDPs found' in response.data
-    assert b'Logged in as cust001 (Customer)' in response.data

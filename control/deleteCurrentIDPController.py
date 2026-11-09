@@ -1,21 +1,16 @@
-# Control: DeleteCurrentIDPController - UC23 Delete current IDP.
-from control.interiorDesignerLoginController import InteriorDesignerLoginController
+# Control: DeleteCurrentIDPController - UC23 Delete current IDP (US23)
+# precondition: the designer is already logged in (US13), so there's no access check here
+
 from entity.idp import IDP
 
 
 class DeleteCurrentIDPController:
-    def canDeleteCurrentIDP(self, designerId):
-        return InteriorDesignerLoginController().getAuthenticatedDesigner(designerId) is not None
-
+    # UC23 Delete current IDP
+    # US23's own loader for the confirmation box - None if it isn't the designer's Active Current IDP
     def getCurrentIDP(self, designerId, idpId):
-        if not self.canDeleteCurrentIDP(designerId):
-            raise PermissionError("Designer access unavailable")
         return IDP().getCurrentIDP(designerId, idpId)
 
-    def deleteCurrentIDP(self, designerId, idpId, expectedSnapshot=None):
-        if not self.canDeleteCurrentIDP(designerId):
-            raise PermissionError("Designer access unavailable")
-        return IDP().suspendCurrentIDP(designerId, idpId, expectedSnapshot)
-
-    def getSnapshot(self, idp):
-        return idp.getSnapshot()
+    # UC23 Delete current IDP
+    # soft delete - the entity only suspends the owner's Active Current IDP
+    def deleteCurrentIDP(self, designerId, idpId):
+        return IDP().suspendCurrentIDP(designerId, idpId)

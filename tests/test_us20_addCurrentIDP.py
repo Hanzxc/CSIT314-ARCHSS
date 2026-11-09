@@ -11,12 +11,13 @@ from entity.idpCategory import IDPCategory
 from control.addCurrentIDPController import AddCurrentIDPController
 from control.suspendIDPCategoryController import SuspendIDPCategoryController
 from boundary.addCurrentIDPPage import AddCurrentIDPPage
+from control.interiorDesignerLoginController import REQUIRED_DESIGNER_PERMISSIONS
 
 
 def createDesigner20():
     UserAccount().createUserAccount(
         UserAccount(username="designer20", password="Design@123", fullName="Tengku Uda Designer", email="designer20@archss.com", phone="", profileId=2))
-    return UserAccount().verifyCredentials("designer20", "Design@123").userId
+    return UserAccount().verifyCredentials("designer20", "Design@123", REQUIRED_DESIGNER_PERMISSIONS).userId
 
 
 def loginAsDesigner20(client):
