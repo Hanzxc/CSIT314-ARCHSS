@@ -31,7 +31,7 @@ def test_ut38_2_getSaveStatistics_countsCustomersIncludingZero():
     unsaved = addIDP(designer, kitchen, "Old Kitchen", "Past")
     addSave(customerId(), popular)
     addSave(createCustomer("cust038"), popular)
-    counts = {row["idpId"]: row["saves"] for row in IDPAnalytics().getSaveStatistics(designer)}
+    counts = {row.idpId: row.saves for row in IDPAnalytics().getSaveStatistics(designer)}
     assert counts == {popular: 2, unsaved: 0}
 
 
@@ -41,7 +41,7 @@ def test_ut38_3_getSaveStatistics_onlyOwnIDPs():
     kitchen = createCategory("Kitchen")
     own = addIDP(designer, kitchen, "Own Kitchen")
     addSave(customerId(), addIDP(other, kitchen, "Someone Else's Kitchen"))
-    assert [row["idpId"] for row in IDPAnalytics().getSaveStatistics(designer)] == [own]
+    assert [row.idpId for row in IDPAnalytics().getSaveStatistics(designer)] == [own]
 
 
 def test_ut38_4_getSaveStatistics_skipsDeletedIDPs():
@@ -59,7 +59,7 @@ def test_ut38_5_getSaveStatistics_mostSavedFirst_viewsDontCount():
         addView(viewedOnly)
     addSave(customerId(), saved)
     rows = IDPAnalytics().getSaveStatistics(designer)
-    assert [(row["idpId"], row["saves"]) for row in rows] == [(saved, 1), (viewedOnly, 0)]
+    assert [(row.idpId, row.saves) for row in rows] == [(saved, 1), (viewedOnly, 0)]
 
 
 def test_ut38_6_customerSavingThroughUS33_isCounted():
@@ -68,16 +68,19 @@ def test_ut38_6_customerSavingThroughUS33_isCounted():
     from entity.savedIDP import SavedIDP
     SavedIDP().createSavedRecord(customerId(), idpId)             # US33 save
     SavedIDP().createSavedRecord(customerId(), idpId)             # saving twice doesn't count twice
-    assert IDPAnalytics().getSaveStatistics(designer)[0]["saves"] == 1
+    assert IDPAnalytics().getSaveStatistics(designer)[0].saves == 1
 
 
 # ---------- ViewIDPSaveStatisticsController.getSaveStatistics() ----------
 
 def test_ut38_7_controller_passesDesignerThrough():
     designer = createDesigner()
-    addSave(customerId(), addIDP(designer, createCategory("Kitchen"), "Modern Kitchen"))
-    assert ViewIDPSaveStatisticsController().getSaveStatistics(designer) == \
-        IDPAnalytics().getSaveStatistics(designer)
+    idpId = addIDP(designer, createCategory("Kitchen"), "Modern Kitchen")
+    addSave(customerId(), idpId)
+    fromController = ViewIDPSaveStatisticsController().getSaveStatistics(designer)
+    fromEntity = IDPAnalytics().getSaveStatistics(designer)
+    assert [(row.idpId, row.saves) for row in fromController] == \
+        [(row.idpId, row.saves) for row in fromEntity] == [(idpId, 1)]
 
 
 # ---------- ViewIDPSaveStatisticsPage (through the Flask route) ----------
@@ -116,3 +119,12 @@ def test_ut38_11_page_viewsAndSavesTabsLinkToEachOther():
     html = client.get("/designer/idps/statistics/saves").get_data(as_text=True)
     assert 'href="/designer/idps/statistics/views"' in html
     assert 'href="/designer/idps/statistics/saves"' in html
+
+
+def test_ut38_12_page_hintUnderTable_eachCustomerCountedOnce():
+    designer = createDesigner()
+    addSave(customerId(), addIDP(designer, createCategory("Kitchen"), "Modern Kitchen"))
+    client = app.test_client()
+    loginAsDesigner(client)
+    html = client.get("/designer/idps/statistics/saves").get_data(as_text=True)
+    assert html.index("</table>") < html.index("Each customer who saved the IDP is counted once.")

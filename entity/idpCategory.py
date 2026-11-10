@@ -118,12 +118,3 @@ class IDPCategory:
             (categoryId,)).fetchall()
         conn.close()
         return [IDP(**dict(row)) for row in rows]
-
-
-    def getActiveIDPCategories(self):
-        conn = getConnection()
-        try:
-            rows = conn.execute("SELECT * FROM idp_category WHERE status='Active' ORDER BY categoryName").fetchall()
-            return [IDPCategory(**dict(row)) for row in rows]
-        finally:
-            conn.close()

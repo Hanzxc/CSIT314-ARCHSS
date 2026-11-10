@@ -327,7 +327,7 @@ def test_ut32_35_saveButtonAlwaysShown(client, projects):
 # ---------- system tests (Flask test client) ----------
 
 def views(projects, idpId):
-    return next(row['views'] for row in IDPAnalytics().getViewStatistics(projects['owner']) if row['idpId'] == idpId)
+    return next(row.views for row in IDPAnalytics().getViewStatistics(projects['owner']) if row.idpId == idpId)
 
 
 def test_tc32_12_saveDoesNotCountAView(client, projects):

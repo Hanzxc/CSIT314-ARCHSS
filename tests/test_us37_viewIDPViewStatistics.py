@@ -81,7 +81,7 @@ def test_ut37_2_getViewStatistics_countsEachIDPIncludingZero():
     never = addIDP(designer, kitchen, "Old Kitchen", "Past")
     addView(viewed)
     addView(viewed)
-    counts = {row["idpId"]: row["views"] for row in IDPAnalytics().getViewStatistics(designer)}
+    counts = {row.idpId: row.views for row in IDPAnalytics().getViewStatistics(designer)}
     assert counts == {viewed: 2, never: 0}
 
 
@@ -91,7 +91,7 @@ def test_ut37_3_getViewStatistics_onlyOwnIDPs():
     kitchen = createCategory("Kitchen")
     own = addIDP(designer, kitchen, "Own Kitchen")
     addView(addIDP(other, kitchen, "Someone Else's Kitchen"))
-    assert [row["idpId"] for row in IDPAnalytics().getViewStatistics(designer)] == [own]
+    assert [row.idpId for row in IDPAnalytics().getViewStatistics(designer)] == [own]
 
 
 def test_ut37_4_getViewStatistics_skipsDeletedIDPs():
@@ -110,27 +110,32 @@ def test_ut37_5_getViewStatistics_mostViewedFirst_withCategoryAndType():
     for _ in range(3):
         addView(more)
     rows = IDPAnalytics().getViewStatistics(designer)
-    assert [row["idpId"] for row in rows] == [more, less]
-    assert rows[0]["categoryName"] == "Kitchen" and rows[0]["projectType"] == "Past"
+    assert [row.idpId for row in rows] == [more, less]
+    assert rows[0].categoryName == "Kitchen" and rows[0].projectType == "Past"
 
 
-# ---------- IDPAnalytics.recordView() (called by US32 View IDP) ----------
-
-def test_ut37_6_recordView_activeIDP():
-    idpId = addIDP(createDesigner(), createCategory("Kitchen"), "Modern Kitchen")
-    assert IDPAnalytics().recordView(idpId) is True
-    assert countViews(idpId) == 1
-
-
-def test_ut37_7_recordView_hiddenOrMissingIDP():
+def test_ut37_6_getViewStatistics_returnsIDPAnalyticsObjects():
     designer = createDesigner()
-    deleted = addIDP(designer, createCategory("Kitchen"), "Deleted", status="Suspended")
-    hiddenCategory = addIDP(designer, createCategory("Bedroom", "Suspended"), "Hidden")
-    assert IDPAnalytics().recordView(deleted) is False
-    assert IDPAnalytics().recordView(hiddenCategory) is False
-    assert IDPAnalytics().recordView(999999) is False
-    assert countViews(deleted) == 0 and countViews(hiddenCategory) == 0
+    idpId = addIDP(designer, createCategory("Kitchen"), "Modern Kitchen")
+    addView(idpId)
+    rows = IDPAnalytics().getViewStatistics(designer)
+    assert rows and all(isinstance(row, IDPAnalytics) for row in rows)
+    assert (rows[0].idpId, rows[0].title, rows[0].projectType, rows[0].categoryName, rows[0].views) == \
+        (idpId, "Modern Kitchen", "Current", "Kitchen", 1)
 
+
+# ---------- ViewIDPViewStatisticsController.getViewStatistics() ----------
+
+def test_ut37_7_controller_oneEntityCall_returnsListUnchanged(monkeypatch):
+    calls = []
+    statistics = [IDPAnalytics(idpId=1, views=3)]
+    monkeypatch.setattr(IDPAnalytics, "getViewStatistics",
+                        lambda self, designerId: calls.append(designerId) or statistics)
+    assert ViewIDPViewStatisticsController().getViewStatistics(37) is statistics
+    assert calls == [37]
+
+
+# ---------- views are added by UC32 View IDP (IDP.viewIDP) ----------
 
 def test_ut37_8_customerOpeningIDP_countsAView():
     idpId = addIDP(createDesigner(), createCategory("Kitchen"), "Modern Kitchen")
@@ -154,8 +159,10 @@ def test_ut37_10_controller_passesDesignerThrough():
     designer = createDesigner()
     idpId = addIDP(designer, createCategory("Kitchen"), "Modern Kitchen")
     addView(idpId)
-    assert ViewIDPViewStatisticsController().getViewStatistics(designer) == \
-        IDPAnalytics().getViewStatistics(designer)
+    fromController = ViewIDPViewStatisticsController().getViewStatistics(designer)
+    fromEntity = IDPAnalytics().getViewStatistics(designer)
+    assert [(row.idpId, row.views) for row in fromController] == \
+        [(row.idpId, row.views) for row in fromEntity] == [(idpId, 1)]
 
 
 # ---------- ViewIDPViewStatisticsPage (through the Flask route) ----------

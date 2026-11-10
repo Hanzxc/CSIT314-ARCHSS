@@ -31,13 +31,13 @@
                     <td><strong>{{ row.title }}</strong></td>
                     <td>{{ row.categoryName }}</td>
                     <td>{{ row.projectType }}</td>
-                    <td><strong>{{ row[metric] }}</strong></td>
+                    <td><strong>{{ row|attr(metric) }}</strong></td>
                 </tr>
             {% endfor %}
         </table>
         <p class="hint">
             {% if metric == 'views' %}A view is counted each time a customer opens the IDP.
-            {% else %}Each customer is counted once, for as long as the IDP stays in their saved list.{% endif %}
+            {% else %}Each customer who saved the IDP is counted once.{% endif %}
         </p>
     {% endif %}
 {% endblock %}

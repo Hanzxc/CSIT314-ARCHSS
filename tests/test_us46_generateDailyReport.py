@@ -9,7 +9,8 @@ from app import app
 from entity.userAccount import UserAccount
 from entity.idpAnalytics import IDPAnalytics
 from control.generateDailyReportController import GenerateDailyReportController
-from boundary.generateDailyReportPage import MSG_INVALID_DATE, MSG_FUTURE_DATE, MSG_NO_ACTIVITY
+from boundary.generateDailyReportPage import (GenerateDailyReportPage, MSG_INVALID_DATE, MSG_FUTURE_DATE,
+                                              MSG_NO_ACTIVITY)
 from control.platformManagerLoginController import REQUIRED_MANAGER_PERMISSIONS
 from test_us37_viewIDPViewStatistics import (createDesigner, customerId, createCategory,
                                              addIDP, addView, addSave)
@@ -43,23 +44,20 @@ def sampleData():
     return {"kitchen": kitchen, "bedroom": bedroom}
 
 
-def table(categories):
-    return [(row["categoryName"], row["views"], row["saves"]) for row in categories]
-
-
 # ---------- IDPAnalytics.getCategoryReport() ----------
 
 def test_ut46_1_getCategoryReport_oneDay_rankedByViewsThenSaves():
     sampleData()
     rows = IDPAnalytics().getCategoryReport(date(2026, 11, 5), date(2026, 11, 5))
-    assert table(rows) == [("Kitchen", 3, 1), ("Bedroom", 1, 0), ("Bathroom", 0, 0)]
+    assert [(row.categoryName, row.views, row.saves) for row in rows] == \
+        [("Kitchen", 3, 1), ("Bedroom", 1, 0), ("Bathroom", 0, 0)]
 
 
 def test_ut46_2_getCategoryReport_otherDaysNotCounted():
     sampleData()
     rows = IDPAnalytics().getCategoryReport(date(2026, 11, 4), date(2026, 11, 4))
-    assert table(rows)[0] == ("Bedroom", 1, 0)
-    assert IDPAnalytics().getCategoryReport(date(2026, 11, 6), date(2026, 11, 6))[0]["views"] == 0
+    assert (rows[0].categoryName, rows[0].views) == ("Bedroom", 1)
+    assert IDPAnalytics().getCategoryReport(date(2026, 11, 6), date(2026, 11, 6))[0].views == 0
 
 
 def test_ut46_3_getCategoryReport_tieOnViews_moreSavesFirst():
@@ -70,7 +68,7 @@ def test_ut46_3_getCategoryReport_tieOnViews_moreSavesFirst():
     addView(bedroom)
     addSave(customerId(), bedroom)
     rows = IDPAnalytics().getCategoryReport(date(2026, 11, 5), date(2026, 11, 5))
-    assert [row["categoryName"] for row in rows] == ["Bedroom", "Kitchen"]
+    assert [row.categoryName for row in rows] == ["Bedroom", "Kitchen"]
 
 
 def test_ut46_4_getCategoryReport_showsStatusAndActiveIDPCount():
@@ -80,10 +78,10 @@ def test_ut46_4_getCategoryReport_showsStatusAndActiveIDPCount():
     addIDP(designer, kitchen, "Two")
     addIDP(designer, kitchen, "Deleted", status="Suspended")
     createCategory("Old Style", "Suspended")
-    rows = {row["categoryName"]: row for row in
+    rows = {row.categoryName: row for row in
             IDPAnalytics().getCategoryReport(date(2026, 11, 5), date(2026, 11, 5))}
-    assert rows["Kitchen"]["totalIDPs"] == 2
-    assert rows["Old Style"]["status"] == "Suspended"
+    assert rows["Kitchen"].totalIDPs == 2
+    assert rows["Old Style"].status == "Suspended"
 
 
 def test_ut46_5_getCategoryReport_usesLocalDate():
@@ -91,18 +89,20 @@ def test_ut46_5_getCategoryReport_usesLocalDate():
     idpId = addIDP(createDesigner(), createCategory("Kitchen"), "Modern Kitchen")
     addView(idpId, "2026-11-05 20:00:00")
     localDay = datetime(2026, 11, 5, 20, tzinfo=timezone.utc).astimezone().date()
-    assert IDPAnalytics().getCategoryReport(localDay, localDay)[0]["views"] == 1
+    assert IDPAnalytics().getCategoryReport(localDay, localDay)[0].views == 1
     otherDay = localDay + timedelta(days=1) if localDay.day == 5 else localDay - timedelta(days=1)
-    assert IDPAnalytics().getCategoryReport(otherDay, otherDay)[0]["views"] == 0
+    assert IDPAnalytics().getCategoryReport(otherDay, otherDay)[0].views == 0
 
 
 # ---------- GenerateDailyReportController.generateDailyReport() ----------
 
-def test_ut46_6_controller_periodIsJustThatDay():
-    sampleData()
-    report = GenerateDailyReportController().generateDailyReport(date(2026, 11, 5))
-    assert report["startDate"] == report["endDate"] == date(2026, 11, 5)
-    assert table(report["categories"])[0] == ("Kitchen", 3, 1)
+def test_ut46_6_controller_oneEntityCall_returnsReportUnchanged(monkeypatch):
+    calls = []
+    report = IDPAnalytics(startDate=date(2026, 11, 5), endDate=date(2026, 11, 5))
+    monkeypatch.setattr(IDPAnalytics, "getDailyReport",
+                        lambda self, selectedDate: calls.append(selectedDate) or report)
+    assert GenerateDailyReportController().generateDailyReport(date(2026, 11, 5)) is report
+    assert calls == [date(2026, 11, 5)]
 
 
 # ---------- GenerateDailyReportPage (through the Flask route) ----------
@@ -155,3 +155,29 @@ def test_ut46_13_dashboardAndMenu_linkToReports():
     assert 'href="/manager/reports/weekly"' in dashboard and 'href="/manager/reports/monthly"' in dashboard
     menu = client.get("/manager/categories").get_data(as_text=True)
     assert 'href="/manager/reports/daily"' in menu
+
+
+# ---------- IDPAnalytics.getDailyReport() ----------
+
+def test_ut46_14_getDailyReport_periodIsJustThatDay():
+    sampleData()
+    report = IDPAnalytics().getDailyReport(date(2026, 11, 5))
+    assert isinstance(report, IDPAnalytics)
+    assert report.startDate == report.endDate == date(2026, 11, 5)
+    first = report.categories[0]
+    assert (first.categoryName, first.views, first.saves) == ("Kitchen", 3, 1)
+
+
+# ---------- GenerateDailyReportPage.validateDate() / displayReport() ----------
+
+def test_ut46_15_validateDate_onlyStrictYearMonthDay():
+    page = GenerateDailyReportPage()
+    assert page.validateDate("20261105") == MSG_INVALID_DATE
+    assert page.validateDate("2026-W45-4") == MSG_INVALID_DATE
+    assert page.validateDate("2026-11-05") is None
+
+
+def test_ut46_16_page_withActivity_noNoActivityMessage():
+    sampleData()
+    html = loggedInManager().get("/manager/reports/daily?date=2026-11-05").get_data(as_text=True)
+    assert "<table" in html and MSG_NO_ACTIVITY not in html

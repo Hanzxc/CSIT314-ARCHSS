@@ -14,17 +14,20 @@ logged in is the precondition - lecturer feedback). The first version (one share
 | US48 Generate monthly report | `GenerateMonthlyReportPage` | `GenerateMonthlyReportController` | `/manager/reports/monthly?date=...` |
 
 All five use one entity, `IDPAnalytics` (`entity/idpAnalytics.py`), the same way `IDP` is shared by
-US20 - US29: `getViewStatistics`, `getSaveStatistics`, `getCategoryReport(startDate, endDate)` and
-`recordView(idpId)`.
+US20 - US29: `getViewStatistics(designerId)`, `getSaveStatistics(designerId)`, `getDailyReport(selectedDate)`,
+`getWeeklyReport(selectedDate)`, `getMonthlyReport(selectedDate)` and `getCategoryReport(startDate, endDate)`.
+It returns `IDPAnalytics` objects (a list for the statistics, one report object with `startDate`, `endDate`
+and `categories` for the reports), never dicts. Each controller is one call to the entity.
 
 ## How the numbers are counted
-- **Views (US37, US46 - US48):** every time a customer opens an IDP in US32 View IDP,
-  `ViewIDPController.viewIDP()` calls `IDPAnalytics.recordView()`, which adds one row to `idp_view`.
-  Only Active IDPs in Active categories are counted. Refreshing counts again.
-- **Saves (US38, US46 - US48):** read from `saved_idp`, which US33 Save IDP fills. Unsaving deletes the
-  row, so it's "customers who have it saved now", not a history of every save.
+- **Views (US37, US46 - US48):** every time a customer opens an IDP in US32 View IDP, `IDP.viewIDP()` adds
+  one row to `idp_view` (only for an IDP customers can see). Refreshing counts again; the redirect after a
+  US33 Save (`?saved=1`) doesn't count.
+- **Saves (US38, US46 - US48):** read from `saved_idp`, which US33 Save IDP fills. Each customer is counted
+  once per IDP.
 - **Report periods:** daily = that day, weekly = Monday to Sunday of that week, monthly = 1st to last day.
-  The controller works out the period; the page only checks the date (real date, not in the future).
+  The entity (`getDailyReport` / `getWeeklyReport` / `getMonthlyReport`) works out the period; the page only
+  checks the date (a real `YYYY-MM-DD` date, not in the future).
 - **Time zone:** the database stores UTC (`CURRENT_TIMESTAMP`); the report compares local dates
   (`date(..., 'localtime')`), so a Singapore "today" report includes views from before 8am.
 
@@ -33,16 +36,5 @@ US20 - US29: `getViewStatistics`, `getSaveStatistics`, `getCategoryReport(startD
   `control/`, `entity/idpAnalytics.py`, templates `idpStatistics.html` and `idpCategoryReport.html`.
 - Tests: `tests/test_us37_viewIDPViewStatistics.py`, `test_us38_...`, `test_us46_...`, `test_us47_...`,
   `test_us48_...` (one per story; US47/US48 reuse the helpers in the US46 file).
-- Diagrams: `Sprint_5/US37 - .../` to `US48 - .../` - each has the `.drawio` (Use Case, BCE and
-  Sequence pages) and the exported PNGs in `diagrams/`. They were drawn from this code.
-- `User story diagram/` is the original first-draft diagrams, kept for reference only.
-
-## Changed outside Sprint 5
-- `control/viewIDPController.py` (US32): one line to record the view. US32's sequence diagram needs a
-  `recordView(idpId)` call added after `getIDP(idpId)`.
-- `tests/test_us32_viewIDP.py`: `test_ut32_26_readOnly` now allows the new `idp_view` row (and checks
-  exactly one is added per visible IDP).
-- Dashboards and side menus link to the new pages.
-
-## Still to do
-- The `.docx` write-ups and wireframes (4a, 4b, ...) for each story, like the other sprints.
+- Docs: `Sprint_5/US37 - .../` to `US48 - .../` - each has the `.drawio` (Use Case, wireframe, BCE and
+  Sequence pages), the exported PNGs in `diagrams/`, the use case description `.docx` and a `README.md`.

@@ -2,7 +2,7 @@
 # templates: idpCategoryReport.html, platformManagerBase.html
 # precondition: the platform manager is already logged in (US39), so there's no extra access check here
 
-from datetime import date
+from datetime import date, datetime
 
 from flask import render_template
 
@@ -36,7 +36,7 @@ class GenerateDailyReportPage:
     # the date has to be a real YYYY-MM-DD date and not after today. returns the error, or None if ok
     def validateDate(self, selectedDate):
         try:
-            chosen = date.fromisoformat(selectedDate)
+            chosen = datetime.strptime(selectedDate, "%Y-%m-%d").date()
         except ValueError:
             return MSG_INVALID_DATE
         if chosen > date.today():
@@ -51,15 +51,17 @@ class GenerateDailyReportPage:
         error = self.validateDate(self.selectedDate)
         if error:
             return self.displayErrorMessage(error)
-        report = self.generateDailyReportController.generateDailyReport(date.fromisoformat(self.selectedDate))
-        return self.displayReport(report)
+        selectedDate = datetime.strptime(self.selectedDate, "%Y-%m-%d").date()
+        report = self.generateDailyReportController.generateDailyReport(selectedDate)
+        # inner alt: the note only when no category was viewed or saved at all
+        if any(row.views or row.saves for row in report.categories):
+            return self.displayReport(report)
+        return self.displayReport(report, MSG_NO_ACTIVITY)
 
     # UC46 Generate daily report
-    # categories ranked by views then saves (wireframe 4b), or a note if nothing happened (4c)
-    def displayReport(self, report):
-        if all(row["views"] == 0 and row["saves"] == 0 for row in report["categories"]):
-            return self.displayReportForm(report, infoMessage=MSG_NO_ACTIVITY)
-        return self.displayReportForm(report)
+    # categories ranked by views then saves (wireframe 4b), or with MSG_NO_ACTIVITY above them (4c)
+    def displayReport(self, report, msg=None):
+        return self.displayReportForm(report, infoMessage=msg)
 
     # UC46 Generate daily report
     # same date box again with the message on top (wireframe 4d)
