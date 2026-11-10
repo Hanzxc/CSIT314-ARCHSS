@@ -8,6 +8,7 @@
 - Some past IDPs → `displayPastIDPList(pastIDPs)`: the designer's own Active past IDPs, newest first, each with its category, location and "View". None → `displayEmptyMessage(MSG_NO_PAST_IDPS)` "You have no past IDPs yet".
 - "View" (`selectPastIDP(idpId)`) calls `getPastIDPDetails(designerId, idpId)`. Found → `displayPastIDPDetails(idp)`: title, category, location and description as customers see them, with Update (US27), Delete (US28) and "Back to past IDPs". None (missing, someone else's, Current or deleted) → `displayNotFoundMessage(MSG_NOT_FOUND)` "Past IDP not found" (HTTP 404), no details.
 - Viewing changes nothing and isn't counted as a customer view (US32, US37). The list page also has "+ Add past IDP" (US25) and the search bar (US29).
+- A past IDP stays in the list even if its category is suspended later (US44): past IDPs are the designer's own finished work history. Current IDPs in a suspended category are hidden from the designer (US21), and customers never see IDPs in a suspended category (US31/US32).
 
 ## Who checks what
 

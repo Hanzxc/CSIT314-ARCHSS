@@ -26,33 +26,44 @@ class SavedIDP:
     # and the IDP must be one customers can see. true if a row was added
     def createSavedRecord(self, customerId, idpId):
         conn = getConnection()
-        cursor = conn.execute(
-            "INSERT OR IGNORE INTO saved_idp (customerId, idpId) "
-            "SELECT ?, idp.idpId FROM idp JOIN idp_category AS category ON category.categoryId = idp.categoryId "
-            "WHERE idp.idpId = ? AND idp.status = 'Active' AND category.status = 'Active'",
-            (customerId, idpId))
-        conn.commit()
-        added = cursor.rowcount == 1
-        conn.close()
-        return added
+        try:
+            cursor = conn.execute(
+                "INSERT OR IGNORE INTO saved_idp (customerId, idpId) "
+                "SELECT ?, idp.idpId FROM idp JOIN idp_category AS category ON category.categoryId = idp.categoryId "
+                "WHERE idp.idpId = ? AND idp.status = 'Active' AND category.status = 'Active'",
+                (customerId, idpId))
+            conn.commit()
+            return cursor.rowcount == 1
+        finally:
+            conn.close()
 
     # UC35 View saved list
     # the customer's saved IDPs, most recently saved first
     def getSavedRecords(self, customerId):
         conn = getConnection()
-        rows = conn.execute(SAVED_IDPS_SQL + " ORDER BY saved.savedDate DESC, saved.savedId DESC",
-                            (customerId,)).fetchall()
-        conn.close()
-        return [IDP(**dict(row)) for row in rows]
+        try:
+            rows = conn.execute(SAVED_IDPS_SQL + " ORDER BY saved.savedDate DESC, saved.savedId DESC",
+                                (customerId,)).fetchall()
+            return [IDP(**dict(row)) for row in rows]
+        finally:
+            conn.close()
 
     # UC34 Search saved list
-    # the customer's saved IDPs whose title, description, location or category contain the keyword
+    # the customer's saved IDPs whose title, description, location or category contain the keyword.
+    # literal, any-case match like US24 (% and _ are just text). the page already trimmed the keyword
     def searchSavedRecords(self, customerId, keyword):
-        pattern = "%" + keyword + "%"
+        keyword = keyword.casefold()
         conn = getConnection()
-        rows = conn.execute(
-            SAVED_IDPS_SQL + " AND (idp.title LIKE ? OR idp.description LIKE ? OR idp.location LIKE ? "
-            "OR category.categoryName LIKE ?) ORDER BY saved.savedDate DESC, saved.savedId DESC",
-            (customerId, pattern, pattern, pattern, pattern)).fetchall()
-        conn.close()
-        return [IDP(**dict(row)) for row in rows]
+        try:
+            conn.create_function("casefold", 1, lambda text: (text or "").casefold(), deterministic=True)
+            rows = conn.execute(
+                SAVED_IDPS_SQL +
+                " AND (instr(casefold(idp.title), ?) > 0 "
+                "OR instr(casefold(idp.description), ?) > 0 "
+                "OR instr(casefold(idp.location), ?) > 0 "
+                "OR instr(casefold(category.categoryName), ?) > 0) "
+                "ORDER BY saved.savedDate DESC, saved.savedId DESC",
+                (customerId, keyword, keyword, keyword, keyword)).fetchall()
+            return [IDP(**dict(row)) for row in rows]
+        finally:
+            conn.close()

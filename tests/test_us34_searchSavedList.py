@@ -48,6 +48,17 @@ def test_ut34_3_search_emptyKeywordGivesWholeList_noMatchGivesEmpty():
     assert SavedIDP().searchSavedRecords(customerId(), "zzz") == []
 
 
+def test_ut34_11_search_percentAndUnderscoreAreJustText():
+    savedProjects()
+    designer = createDesigner("designer34b")
+    special = addIDP(designer, createCategory("Bathroom"), "100% Recycled_Wood Bath")
+    SavedIDP().createSavedRecord(customerId(), special)
+    # % and _ used to be LIKE wildcards that matched every saved IDP
+    assert titles(SavedIDP().searchSavedRecords(customerId(), "%")) == ["100% Recycled_Wood Bath"]
+    assert titles(SavedIDP().searchSavedRecords(customerId(), "_")) == ["100% Recycled_Wood Bath"]
+    assert SavedIDP().searchSavedRecords(customerId(), "k%n") == []
+
+
 # ---------- SearchSavedListController / SavedListPage.validateKeyword() ----------
 
 def test_ut34_4_controller_passesThrough():

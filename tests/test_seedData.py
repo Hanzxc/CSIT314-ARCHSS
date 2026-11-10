@@ -120,3 +120,22 @@ def test_seed_13_runTwice_idsDontJump():
     UserProfile().createUserProfile(UserProfile(profileName="Brand New Group", description="", permissions=["Generate reports"]))
     newId = getAll("SELECT profileId FROM user_profile WHERE profileName = 'Brand New Group'")[0]["profileId"]
     assert newId == 101
+
+
+# ---------- database/seedAnalyticsData.py (demo views + saves for US37/38, US46-48) ----------
+
+def test_seed_14_analyticsData_addsViewsAndSaves_onlyOnce():
+    from database.seedCurrentIDPData import seedCurrentIDPData
+    from database.seedAnalyticsData import seedAnalyticsData
+    addSampleData()                  # sample customers to save IDPs
+    seedCurrentIDPData()             # 4 demo IDPs
+    views, saves = seedAnalyticsData()
+    assert views > 0 and saves > 0
+    assert len(getAll("SELECT * FROM idp_view")) == views
+    assert len(getAll("SELECT * FROM saved_idp")) == saves
+    # nothing in the future, and only customers save
+    assert not getAll("SELECT * FROM idp_view WHERE viewedAt > CURRENT_TIMESTAMP")
+    assert not getAll("SELECT * FROM saved_idp s JOIN user_account a ON a.userId = s.customerId "
+                      "JOIN user_profile p ON p.profileId = a.profileId WHERE p.profileName <> 'Customer'")
+    # running it again adds nothing
+    assert seedAnalyticsData() == (0, 0)

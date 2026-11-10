@@ -44,6 +44,17 @@ def test_ut29_3_search_emptyKeywordGivesAll_noMatchGivesEmpty():
     assert IDP().searchByKeywordAndDesigner("zzz", designer) == []
 
 
+def test_ut29_10_search_percentAndUnderscoreAreJustText():
+    designer = createDesigner()
+    kitchen = createCategory("Kitchen")
+    addPast(designer, kitchen, "Modern Kitchen")
+    addPast(designer, kitchen, "100% Recycled_Wood Kitchen")
+    # % and _ used to be LIKE wildcards that matched every row
+    assert titles(IDP().searchByKeywordAndDesigner("%", designer)) == ["100% Recycled_Wood Kitchen"]
+    assert titles(IDP().searchByKeywordAndDesigner("_", designer)) == ["100% Recycled_Wood Kitchen"]
+    assert IDP().searchByKeywordAndDesigner("k%n", designer) == []
+
+
 # ---------- SearchPastIDPController / PastIDPSearchPage.validateKeyword() ----------
 
 def test_ut29_4_controller_passesThrough():
