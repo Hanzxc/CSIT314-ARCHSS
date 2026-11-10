@@ -35,7 +35,6 @@ from boundary.viewUserAccountPage import ViewUserAccountPage
 from boundary.updateUserAccountPage import UpdateUserAccountPage
 from boundary.suspendUserAccountPage import SuspendUserAccountPage
 from boundary.searchUserAccountPage import SearchUserAccountPage
-from entity.userProfile import UserProfile
 
 # Sprint 4 (US25 - US29 past IDPs, US33 - US35 saved list)
 from boundary.addPastIDPPage import AddPastIDPPage
@@ -120,13 +119,12 @@ def managerLoginRequired(routeFunction):
 
 @app.context_processor
 def headerInfo():
-    # base.html shows "Logged in as ..." on every admin page, this saves passing it in every time
-    # "header..." names so a page's own form fields (username, profileName) can't overwrite them
+    # base.html shows "Logged in as ... (User Admin)" on every admin page, this saves passing it in every time.
+    # "header..." name so a page's own form field (username) can't overwrite it. only reads the session -
+    # no entity call here (the B-C-E flow is Boundary -> Control -> Entity)
     if "userId" not in session:
         return {}
-    profile = UserProfile().getUserProfile(session["profileId"])
-    return {"headerUsername": session["username"],
-            "headerProfileName": profile.profileName if profile else ""}
+    return {"headerUsername": session["username"]}
 
 
 # UC1 Log in

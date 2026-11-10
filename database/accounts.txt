@@ -1,0 +1,260 @@
+ARCHSS demo database - user names and passwords
+============================================================
+database/archss.db holds the full demo data (README seed order + the system-test accounts).
+Demo data only - passwords are stored as SHA-256 hashes in the database, listed here so the team can log in.
+Every password below was checked against the database, and every 'log in at' page was checked with
+UserAccount.verifyCredentials (the same check the log in pages use).
+
+Main logins for the demo video
+------------------------------------------------------------
+  admin01          Admin@123    /login            User Admin
+  designer1        Pass@123     /designer/login   Interior Designer, empty (create flows)
+  companydemo001   Demo@123     /designer/login   designer with a company, an IDP and statistics
+  idpdemo001       Demo@123     /designer/login   designer with 2 current IDPs
+  pm005            Pass@123     /manager/login    Platform Manager, reports have data
+  cust001          Cust@123     /customer/login   Customer
+
+Accounts used by the system test cases (docx section 7a)
+------------------------------------------------------------
+  admin01 / Admin@123, admin02 / Admin@123 (Suspended - for the failed login tests), cust001 / Cust@123,
+  designer13 designer15 designer20 designer25 designer37 designer44  -> Design@123  (/designer/login)
+  manager39 manager40 manager41 manager42 manager43 manager44 manager46 -> Manager@123 (/manager/login)
+  nobody99 / nobody13 do not exist on purpose (wrong login tests).
+
+Log in at /login  (User Admin) - 6 accounts
+------------------------------------------------------------
+  username         password     user profile                       
+  admin01          Admin@123    User Admin
+  admin04          Pass@123     User Admin
+  admin07          Pass@123     User Admin
+  admin08          Pass@123     User Admin
+  admin11          Pass@123     User Admin
+  admin12          Pass@123     Backup User Admin
+
+Log in at /designer/login  (Interior Designer) - 133 accounts
+------------------------------------------------------------
+  username         password     user profile                       
+  companydemo001   Demo@123     Interior Designer
+  companydemo002   Demo@123     Interior Designer
+  companydemo003   Demo@123     Interior Designer
+  companydemo004   Demo@123     Interior Designer
+  companydemo005   Demo@123     Interior Designer
+  companydemo006   Demo@123     Interior Designer
+  companydemo007   Demo@123     Interior Designer
+  companydemo008   Demo@123     Interior Designer
+  companydemo009   Demo@123     Interior Designer
+  companydemo010   Demo@123     Interior Designer
+  companydemo011   Demo@123     Interior Designer
+  companydemo012   Demo@123     Interior Designer
+  companydemo013   Demo@123     Interior Designer
+  companydemo014   Demo@123     Interior Designer
+  companydemo015   Demo@123     Interior Designer
+  companydemo016   Demo@123     Interior Designer
+  companydemo017   Demo@123     Interior Designer
+  companydemo018   Demo@123     Interior Designer
+  companydemo019   Demo@123     Interior Designer
+  companydemo020   Demo@123     Interior Designer
+  companydemo021   Demo@123     Interior Designer
+  companydemo022   Demo@123     Interior Designer
+  companydemo023   Demo@123     Interior Designer
+  companydemo024   Demo@123     Interior Designer
+  companydemo025   Demo@123     Interior Designer
+  companydemo026   Demo@123     Interior Designer
+  companydemo027   Demo@123     Interior Designer
+  companydemo028   Demo@123     Interior Designer
+  companydemo029   Demo@123     Interior Designer
+  companydemo030   Demo@123     Interior Designer
+  companydemo031   Demo@123     Interior Designer
+  companydemo032   Demo@123     Interior Designer
+  companydemo033   Demo@123     Interior Designer
+  companydemo034   Demo@123     Interior Designer
+  companydemo035   Demo@123     Interior Designer
+  companydemo036   Demo@123     Interior Designer
+  companydemo037   Demo@123     Interior Designer
+  companydemo038   Demo@123     Interior Designer
+  companydemo039   Demo@123     Interior Designer
+  companydemo040   Demo@123     Interior Designer
+  companydemo041   Demo@123     Interior Designer
+  companydemo042   Demo@123     Interior Designer
+  companydemo043   Demo@123     Interior Designer
+  companydemo044   Demo@123     Interior Designer
+  companydemo045   Demo@123     Interior Designer
+  companydemo046   Demo@123     Interior Designer
+  companydemo047   Demo@123     Interior Designer
+  companydemo048   Demo@123     Interior Designer
+  companydemo049   Demo@123     Interior Designer
+  companydemo050   Demo@123     Interior Designer
+  companydemo051   Demo@123     Interior Designer
+  companydemo052   Demo@123     Interior Designer
+  companydemo053   Demo@123     Interior Designer
+  companydemo054   Demo@123     Interior Designer
+  companydemo055   Demo@123     Interior Designer
+  companydemo056   Demo@123     Interior Designer
+  companydemo057   Demo@123     Interior Designer
+  companydemo058   Demo@123     Interior Designer
+  companydemo059   Demo@123     Interior Designer
+  companydemo060   Demo@123     Interior Designer
+  companydemo061   Demo@123     Interior Designer
+  companydemo062   Demo@123     Interior Designer
+  companydemo063   Demo@123     Interior Designer
+  companydemo064   Demo@123     Interior Designer
+  companydemo065   Demo@123     Interior Designer
+  companydemo066   Demo@123     Interior Designer
+  companydemo067   Demo@123     Interior Designer
+  companydemo068   Demo@123     Interior Designer
+  companydemo069   Demo@123     Interior Designer
+  companydemo070   Demo@123     Interior Designer
+  companydemo071   Demo@123     Interior Designer
+  companydemo072   Demo@123     Interior Designer
+  companydemo073   Demo@123     Interior Designer
+  companydemo074   Demo@123     Interior Designer
+  companydemo075   Demo@123     Interior Designer
+  companydemo076   Demo@123     Interior Designer
+  companydemo077   Demo@123     Interior Designer
+  companydemo078   Demo@123     Interior Designer
+  companydemo079   Demo@123     Interior Designer
+  companydemo080   Demo@123     Interior Designer
+  companydemo081   Demo@123     Interior Designer
+  companydemo082   Demo@123     Interior Designer
+  companydemo083   Demo@123     Interior Designer
+  companydemo084   Demo@123     Interior Designer
+  companydemo085   Demo@123     Interior Designer
+  companydemo086   Demo@123     Interior Designer
+  companydemo087   Demo@123     Interior Designer
+  companydemo088   Demo@123     Interior Designer
+  companydemo089   Demo@123     Interior Designer
+  companydemo090   Demo@123     Interior Designer
+  companydemo091   Demo@123     Interior Designer
+  companydemo092   Demo@123     Interior Designer
+  companydemo093   Demo@123     Interior Designer
+  companydemo094   Demo@123     Interior Designer
+  companydemo095   Demo@123     Interior Designer
+  companydemo096   Demo@123     Interior Designer
+  companydemo097   Demo@123     Interior Designer
+  companydemo098   Demo@123     Interior Designer
+  companydemo099   Demo@123     Interior Designer
+  companydemo100   Demo@123     Interior Designer
+  design003        Pass@123     Freelance Minimalist Designer
+  design005        Pass@123     Lead Retail Space Designer
+  design006        Pass@123     Interior Designer
+  design007        Pass@123     Interior Designer
+  design008        Pass@123     Freelance Minimalist Designer
+  design009        Pass@123     Interior Designer
+  design010        Pass@123     Interior Designer
+  design011        Pass@123     Interior Designer
+  design012        Pass@123     Interior Designer
+  design013        Pass@123     Interior Designer
+  design015        Pass@123     Freelance Retail Space Designer
+  design018        Pass@123     Interior Designer
+  design019        Pass@123     Interior Designer
+  design020        Pass@123     Interior Designer
+  design021        Pass@123     Senior Home Office Designer
+  design024        Pass@123     Lead Restaurant Designer
+  design027        Pass@123     Freelance Restaurant Designer
+  design028        Pass@123     Senior Hotel Designer
+  design029        Pass@123     Interior Designer
+  design031        Pass@123     Interior Designer
+  design032        Pass@123     Interior Designer
+  design033        Pass@123     Interior Designer
+  design034        Pass@123     Interior Designer
+  design035        Pass@123     Junior Japandi Designer
+  designer1        Pass@123     Interior Designer
+  designer13       Design@123   Interior Designer
+  designer15       Design@123   Interior Designer
+  designer20       Design@123   Interior Designer
+  designer25       Design@123   Interior Designer
+  designer37       Design@123   Interior Designer
+  designer44       Design@123   Interior Designer
+  idpdemo001       Demo@123     Interior Designer
+  idpdemo002       Demo@123     Interior Designer
+
+Log in at /manager/login  (Platform Manager) - 16 accounts
+------------------------------------------------------------
+  username         password     user profile                       
+  manager39        Manager@123  Platform Manager
+  manager40        Manager@123  Platform Manager
+  manager41        Manager@123  Platform Manager
+  manager42        Manager@123  Platform Manager
+  manager43        Manager@123  Platform Manager
+  manager44        Manager@123  Platform Manager
+  manager46        Manager@123  Platform Manager
+  pm004            Pass@123     Regional Manager West
+  pm005            Pass@123     Platform Manager
+  pm006            Pass@123     Platform Manager
+  pm007            Pass@123     Platform Manager
+  pm008            Pass@123     Platform Manager
+  pm009            Pass@123     Reports Manager
+  pm010            Pass@123     Platform Manager
+  pm011            Pass@123     Platform Manager
+  pm012            Pass@123     IDP Category Manager
+
+Log in at /customer/login  (Customer) - 35 accounts
+------------------------------------------------------------
+  username         password     user profile                       
+  cust001          Cust@123     Customer
+  cust002          Pass@123     Customer
+  cust004          Pass@123     Customer
+  cust005          Pass@123     Customer
+  cust006          Pass@123     Small Business Customer
+  cust007          Pass@123     Customer
+  cust008          Pass@123     Customer
+  cust009          Pass@123     Corporate Customer
+  cust010          Pass@123     Overseas Customer
+  cust011          Pass@123     Customer
+  cust012          Pass@123     First-time Home Buyer Customer
+  cust013          Pass@123     Customer
+  cust014          Pass@123     Family Customer
+  cust017          Pass@123     Shop Owner Customer
+  cust018          Pass@123     Customer
+  cust019          Pass@123     Landlord Customer
+  cust020          Pass@123     Customer
+  cust021          Pass@123     Retiree Customer
+  cust022          Pass@123     Customer
+  cust023          Pass@123     Customer
+  cust024          Pass@123     Customer
+  cust025          Pass@123     Condo Owner Customer
+  cust026          Pass@123     Customer
+  cust027          Pass@123     Family Customer
+  cust028          Pass@123     Customer
+  cust029          Pass@123     Trial Customer
+  cust030          Pass@123     Corporate Customer
+  cust031          Pass@123     Customer
+  cust032          Pass@123     Restaurant Owner Customer
+  cust034          Pass@123     Customer
+  cust035          Pass@123     Family Customer
+  cust037          Pass@123     Office Tenant Customer
+  cust039          Pass@123     Tenant Customer
+  cust040          Pass@123     Customer
+  cust041          Pass@123     Family Customer
+
+Can't log in anywhere (on purpose - for the suspended / no permission tests) - 26 accounts
+------------------------------------------------------------
+  username         password     user profile                       why not
+  admin02          Admin@123    User Admin                         account Suspended
+  admin03          Pass@123     Security Admin                     profile Suspended
+  admin05          Pass@123     Night Shift Admin                  profile has no full role permission set
+  admin06          Pass@123     Profile Auditor                    profile has no full role permission set
+  admin09          Pass@123     Profile Auditor                    profile has no full role permission set
+  admin10          Pass@123     Backup User Admin                  account Suspended
+  cust003          Pass@123     Retiree Customer                   account Suspended
+  cust015          Pass@123     Tenant Customer                    account Suspended
+  cust016          Pass@123     HDB Owner Customer                 account Suspended
+  cust033          Pass@123     Customer                           account Suspended
+  cust036          Pass@123     Customer                           account Suspended
+  cust038          Pass@123     First-time Home Buyer Customer     account Suspended
+  design001        Pass@123     Junior Scandinavian Designer       profile has no full role permission set
+  design002        Pass@123     Freelance Japandi Designer         profile has no full role permission set
+  design004        Pass@123     Junior Kitchen Designer            profile Suspended
+  design014        Pass@123     Junior Bathroom Designer           profile has no full role permission set
+  design016        Pass@123     Freelance Home Office Designer     profile has no full role permission set
+  design017        Pass@123     Senior Living Room Designer        profile has no full role permission set
+  design022        Pass@123     Freelance Industrial Designer      account Suspended
+  design023        Pass@123     Junior Bathroom Designer           profile has no full role permission set
+  design025        Pass@123     Junior Home Office Designer        profile has no full role permission set
+  design026        Pass@123     Lead Minimalist Designer           profile Suspended
+  design030        Pass@123     Junior Bathroom Designer           account Suspended
+  pm001            Pass@123     Platform Manager                   account Suspended
+  pm002            Pass@123     Content Reviewer                   profile has no full role permission set
+  pm003            Pass@123     Regional Manager South             profile has no full role permission set
+
+Total: 216 accounts

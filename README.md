@@ -37,6 +37,8 @@ python -m pytest                         # runs all the tests
 
 Run the optional seeds in this order. Every seed script is safe to run more than once - rows that already exist are skipped.
 
+**The ready-made demo database is in the repo:** `database/archss.db` already holds all of the above (every seed, in this order) plus the accounts the docx system tests log in with (`designer13` ... / `Design@123`, `manager39` ... / `Manager@123`), so everyone demos on the same data - just run `python app.py`. Every user name and password is in `database/accounts.txt`. Using the app changes the file (views, saves, new rows): don't commit those changes - `git checkout database/archss.db` puts the shared copy back.
+
 The tests never touch `database/archss.db`: `tests/conftest.py` gives every test its own fresh database in a temp folder. One story only: `python -m pytest tests/test_us21_viewCurrentIDPs.py -q`.
 
 If you already have a `database/archss.db` from an earlier sprint you don't need to delete it - `python app.py` (and every seed script) runs `initDatabase()`, which adds any missing tables and the US17 `status` / `revision` columns without touching the existing rows.
@@ -74,6 +76,8 @@ CSIT314-ARCHSS/
 │   └── idpAnalytics.py         US37, US38, US46 - US48
 ├── database/
 │   ├── schema.sql              user_profile, user_account, company_profile, idp_category, idp, saved_idp, idp_view
+│   ├── archss.db               the shared demo database (all seeds + the system-test accounts)
+│   ├── accounts.txt            every user name + password in archss.db, and where each one logs in
 │   ├── db.py                   getConnection(), initDatabase()
 │   ├── seedData.py             default + sample profiles and accounts, 4 IDP categories
 │   ├── seedCompanyData.py      100 demo designers with company profiles

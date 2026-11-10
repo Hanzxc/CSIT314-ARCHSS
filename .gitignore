@@ -3,7 +3,7 @@ __pycache__/
 .pytest_cache/
 venv/
 .venv/
-database/archss.db
+database/*.db-journal
 
 # Mac system files and draw.io temp files
 .DS_Store
