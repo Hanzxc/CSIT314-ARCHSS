@@ -1,69 +1,47 @@
-# US26 – View Past IDPs
-
-This folder contains the documentation and diagram assets for this user story in the CSIT314 Software Development Methodologies group project.
-
-## User story
+# US26 — View past IDPs
 
 > As an interior designer, I want to view my past IDPs so that I can check how they look to customers.
 
-## Overview
+## Behaviour
 
-- **Actor:** Interior Designer
-- **Purpose:** Allows the designer to view a list of completed interior design projects previously added to the platform.
-- **Trigger:** The Interior Designer selects the Past IDPs option from the designer dashboard.
-- **Preconditions:** The Interior Designer is logged in and has an active account and profile.
-- **Postconditions:** The system displays the designer's past IDPs, and the designer can review each project's information and details.
+- "Past IDPs" in the side menu or "View past IDPs" on the dashboard (`openPastIDPs()`) calls `getPastIDPs(designerId)` with `designerId = session["userId"]`.
+- Some past IDPs → `displayPastIDPList(pastIDPs)`: the designer's own Active past IDPs, newest first, each with its category, location and "View". None → `displayEmptyMessage(MSG_NO_PAST_IDPS)` "You have no past IDPs yet".
+- "View" (`selectPastIDP(idpId)`) calls `getPastIDPDetails(designerId, idpId)`. Found → `displayPastIDPDetails(idp)`: title, category, location and description as customers see them, with Update (US27), Delete (US28) and "Back to past IDPs". None (missing, someone else's, Current or deleted) → `displayNotFoundMessage(MSG_NOT_FOUND)` "Past IDP not found" (HTTP 404), no details.
+- Viewing changes nothing and isn't counted as a customer view (US32, US37). The list page also has "+ Add past IDP" (US25) and the search bar (US29).
 
-## Main flow
+## Who checks what
 
-1. The Interior Designer opens the designer dashboard.
-2. The designer selects Past IDPs.
-3. The system retrieves past IDPs belonging to the logged-in designer.
-4. The system displays the list of past IDPs.
-5. The designer selects a project from the list.
-6. The system displays the selected project's details.
-7. The designer reviews the project information.
+- **Boundary** (`PastIDPListPage`): takes the designer from the session (and idpId from the URL) and picks what to show - there is no typed input.
+- **Control** (`ViewPastIDPController`): `getPastIDPs(designerId)` and `getPastIDPDetails(designerId, idpId)` just call the entity and return the result - no checks.
+- **Entity** (`IDP`): `findPastIDPsByDesignerId(designerId)` and `getPastIDPDetails(designerId, idpId)` only return the owner's rows with `projectType = 'Past' AND status = 'Active'`, with the category name joined.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again (no `InteriorDesignerLoginController`).
 
-## Alternative flows
+## Diagram/code mapping
 
-- **No Past IDPs Available:** display a message when the designer has not added past projects.
-- **Project Not Found:** display an error if the selected project cannot be retrieved.
-- **Loading Failure:** display an error and allow the designer to try again.
+| Diagram element | Code |
+|---|---|
+| Boundary `PastIDPListPage` — `openPastIDPs()`, `displayPastIDPList(pastIDPs)`, `displayEmptyMessage(msg)`, `selectPastIDP(idpId)`, `displayPastIDPDetails(idp)`, `displayNotFoundMessage(msg)` | `boundary/pastIDPListPage.py`, `templates/pastIDPs.html`, `templates/viewPastIDP.html`, `templates/pastIDPNotFound.html` |
+| Control `ViewPastIDPController` — `getPastIDPs(designerId): list`, `getPastIDPDetails(designerId, idpId): IDP` | `control/viewPastIDPController.py` |
+| Entity `IDP` — `findPastIDPsByDesignerId(designerId): list`, `getPastIDPDetails(designerId, idpId): IDP` | `entity/idp.py` (table `idp`) |
+| Route | GET `/designer/past-idps` → `pastIDPs()` and GET `/designer/past-idps/<idpId>` → `viewPastIDP(idpId)` in `app.py` (both `@designerLoginRequired`) |
 
-## Taiga task references
+Messages: `MSG_NO_PAST_IDPS` "You have no past IDPs yet", `MSG_NOT_FOUND` "Past IDP not found".
 
-| Deliverable | Taiga Task ID |
-|---|---:|
-| Use case diagram and description | #188 |
-| BCE and sequence diagrams | #196 |
-| Wireframe | #248 |
+## Files
 
-## Test case status
+- `US26 View past IDPs.drawio` — every diagram, one page each
+- `US26 View past IDPs.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Past IDPs list.png`
+  - `4b Wireframe - Past IDP details.png`
+  - `4c Wireframe - No past IDPs yet.png`
+  - `4d Wireframe - Past IDP not found.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-Test ID 26.1 – View Past IDP. The source report records Actual Output: Passed; Test Date: 02 Nov 2026.
+## Tests
 
-**Test data:** Valid interior designer account; Past IDPs page; previously saved past IDP records.
-
-**Expected output:** The Past IDPs Portfolio page is displayed with saved past IDP records and available details. If no records exist, an appropriate empty-state message is shown.
-
-## Files in this folder
-
-The supplied story folder contains the editable draw.io diagram and exported PNG diagram assets. The Sprint 4 report also includes the wireframe and test-case evidence.
-
-The `.drawio` file is the editable diagram source. The `.png` files are exported diagram images. Open draw.io files using [diagrams.net](https://app.diagrams.net/).
-
-## GitHub upload example
-
-Run the following commands from the root of your repository. Replace the folder path if your repository uses a different location:
-
-```bash
-git add Sprint4/US26_viewPastIDP/
-git commit -m "Add US26 – View Past IDPs README and diagrams"
-git push origin main
 ```
-
-After pushing, open the GitHub repository and check that this folder, its README, editable diagram and PNG exports are visible.
-
-## Source note
-
-This README is based on the supplied Sprint 4 report and the corresponding story folder in Sprint4.zip. Where the supplied report leaves test-case fields blank, this README identifies them as not yet documented rather than inventing results.
+python -m pytest tests/test_us26_viewPastIDPs.py -v
+```

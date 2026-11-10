@@ -1,72 +1,48 @@
-# US34 – Search Saved List
-
-This folder contains the documentation and diagram assets for this user story in the CSIT314 Software Development Methodologies group project.
-
-## User story
+# US34 — Search saved list
 
 > As a customer, I want to search my saved list so that I can find an IDP I saved earlier.
 
-## Overview
+## Behaviour
 
-- **Actor:** Customer
-- **Purpose:** Allows the Customer to search previously saved IDPs using keywords to find a particular project to view again.
-- **Trigger:** The Customer enters a keyword into the search bar in the saved list section.
-- **Preconditions:** The Customer is logged in and has access to their saved list.
-- **Postconditions:** The system displays saved IDPs matching the search keyword, and the Customer can select a matching IDP to view its details.
+- The search bar is on the Saved IDPs page (US35). Search sends GET `/customer/saved-list/search?keyword=...`.
+- `submitSearch(keyword)`: the page trims the spaces from the keyword, then `validateKeyword(keyword)` - at most 100 characters; an empty keyword is allowed and shows the whole saved list.
+- Valid → `searchSavedList(customerId, keyword)` (controller, `customerId = session["userId"]`) → `SavedIDP.searchSavedRecords(customerId, keyword)` → `results`.
+- The entity only looks in this customer's saved list and returns the IDPs whose title, description, location or category name contains the keyword (capitals ignored), only Active IDPs in Active categories, most recently saved first.
+- `[results is not empty]` → `displaySearchResults(results)`: the matching cards, keyword kept in the box (wireframe 4a). `[no match]` → `displayNoResultsMessage(MSG_NO_RESULTS)`: "No saved IDPs match your search" (wireframe 4b).
+- Keyword longer than 100 characters → `displayErrorMessage(MSG_KEYWORD_TOO_LONG)`: "The keyword can be at most 100 characters" (HTTP 400); the controller is never called.
+- Clear goes back to the whole saved list (US35). View on a card opens the IDP's details (US32). Searching never changes any data.
 
-## Main flow
+## Who checks what
 
-1. The Customer opens the saved list section.
-2. The system displays the Customer's saved IDPs and a search bar.
-3. The Customer enters a keyword into the search bar.
-4. The Customer submits the search request.
-5. The system searches the Customer's saved list using the entered keyword.
-6. The system retrieves matching saved IDPs.
-7. The system displays the search results.
-8. The Customer selects an IDP from the results.
-9. The system displays the selected IDP's details.
+- **Boundary** (`SavedListPage`, shared with US35): trims the keyword and checks its length, then shows the results or a message.
+- **Control** (`SearchSavedListController`): `searchSavedList(customerId, keyword)` just calls `SavedIDP().searchSavedRecords(customerId, keyword)` and returns the list - no checks, no trimming.
+- **Entity** (`SavedIDP`): limits the search to this customer's saved list and to IDPs customers can still see.
+- Precondition: logged in as a Customer (UC30). `customerLoginRequired` in `app.py` only sends someone with no session to `/customer/login`. The role isn't checked again (no `CustomerLoginController`).
 
-## Alternative flows
+## Diagram/code mapping
 
-- **Empty Search:** display all saved IDPs or ask the Customer to enter a keyword.
-- **No Matching Results:** display a no-results message.
-- **Invalid Search Input:** display a validation message.
-- **Search Failure:** display an error and allow the Customer to try again.
+| Diagram element | Code |
+|---|---|
+| Boundary `SavedListPage` — attributes `searchSavedListController`, `keyword`; `validateKeyword(keyword): str \| None`, `submitSearch(keyword)`, `displaySearchResults(results)`, `displayNoResultsMessage(msg)`, `displayErrorMessage(msg)` | `boundary/savedListPage.py`, `templates/savedList.html` |
+| Control `SearchSavedListController` — `searchSavedList(customerId, keyword): list` | `control/searchSavedListController.py` |
+| Entity `SavedIDP` — `searchSavedRecords(customerId, keyword): list` (IDP objects) | `entity/savedIDP.py` (tables `saved_idp`, `idp`, `idp_category`) |
+| Route | GET `/customer/saved-list/search` (`@customerLoginRequired`) → `searchSavedList()` in `app.py` |
 
-## Taiga task references
+Messages: `MSG_NO_RESULTS` "No saved IDPs match your search", `MSG_KEYWORD_TOO_LONG` "The keyword can be at most 100 characters".
 
-| Deliverable | Taiga Task ID |
-|---|---:|
-| Use case diagram and description | #193 |
-| BCE and sequence diagrams | #201 |
-| Wireframe | #253 |
+## Files
 
-## Test case status
+- `US34 Search saved list.drawio` — every diagram, one page each
+- `US34 Search saved list.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Search results.png`
+  - `4b Wireframe - No results.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-The supplied Sprint 4 report contains an unfilled test-case template for US34. Add the executed test ID, procedure, test data, expected/actual output, test date, result and screenshot after testing.
+## Tests
 
-**Test data:** Not specified in the supplied US34 test-case template.
-
-**Expected output:** Based on the use case, the system displays saved IDPs matching the keyword and lets the Customer select a result to view its details.
-
-## Files in this folder
-
-The supplied story folder contains the editable draw.io diagram and exported PNG diagram assets. The Sprint 4 report includes a blank test-case template; it does not provide completed test evidence for US34.
-
-The `.drawio` file is the editable diagram source. The `.png` files are exported diagram images. Open draw.io files using [diagrams.net](https://app.diagrams.net/).
-
-## GitHub upload example
-
-Run the following commands from the root of your repository. Replace the folder path if your repository uses a different location:
-
-```bash
-git add Sprint4/US34_SearchSavedList/
-git commit -m "Add US34 – Search Saved List README and diagrams"
-git push origin main
 ```
-
-After pushing, open the GitHub repository and check that this folder, its README, editable diagram and PNG exports are visible.
-
-## Source note
-
-This README is based on the supplied Sprint 4 report and the corresponding story folder in Sprint4.zip. Where the supplied report leaves test-case fields blank, this README identifies them as not yet documented rather than inventing results.
+python -m pytest tests/test_us34_searchSavedList.py -v
+```

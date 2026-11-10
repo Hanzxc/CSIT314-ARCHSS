@@ -1,72 +1,47 @@
-# US35 – View Saved List
-
-This folder contains the documentation and diagram assets for this user story in the CSIT314 Software Development Methodologies group project.
-
-## User story
+# US35 — View saved list
 
 > As a customer, I want to view my saved list so that I can see all the IDPs I have saved.
 
-## Overview
+## Behaviour
 
-- **Actor:** Customer
-- **Purpose:** Allows the Customer to view all previously saved interior design projects in one place and access projects of interest.
-- **Trigger:** The Customer selects the Saved List option from the customer dashboard or navigation menu.
-- **Preconditions:** The Customer is logged in and has access to the saved list section.
-- **Postconditions:** The system displays the Customer's saved IDPs, and the Customer can select a saved project to view its details.
+- "Saved IDPs" on the customer dashboard or the sidebar opens GET `/customer/saved-list`.
+- `openSavedList()` → `getSavedList(customerId)` (controller, `customerId = session["userId"]`) → `SavedIDP.getSavedRecords(customerId)` → `savedIDPs`.
+- The entity returns the customer's saved IDPs as IDP objects (with `categoryName`), only Active IDPs in Active categories, most recently saved first. A saved IDP that was deleted or whose category was suspended is left out (its `saved_idp` row stays).
+- `[savedIDPs is not empty]` → `displaySavedProjects(savedIDPs)`: one card per IDP with title, category, location, project type and View (wireframe 4a). View opens the IDP's details (US32).
+- `[nothing saved yet]` → `displayEmptyMessage(MSG_NO_SAVED)`: "You have not saved any IDPs yet" (wireframe 4b).
+- The search bar on the same page is US34. Managing the saved list means saving (US33), viewing (US35) and searching (US34) only - there is no remove / unsave. Viewing never changes any data.
 
-## Main flow
+## Who checks what
 
-1. The Customer opens the customer dashboard.
-2. The Customer selects Saved List.
-3. The system retrieves saved IDPs associated with the Customer's account.
-4. The system displays the saved projects.
-5. The Customer browses the saved IDPs.
-6. The Customer selects a project from the list.
-7. The system retrieves the selected project's information.
-8. The system displays the project's details.
-9. The Customer reviews the selected IDP.
+- **Boundary** (`SavedListPage`, shared with US34): there is no typed input - it passes the logged-in customer's id and shows the list or the empty message.
+- **Control** (`ViewSavedListController`): `getSavedList(customerId)` just calls `SavedIDP().getSavedRecords(customerId)` and returns the list - no checks.
+- **Entity** (`SavedIDP`): reads only this customer's saved list and leaves out IDPs customers can't see.
+- Precondition: logged in as a Customer (UC30). `customerLoginRequired` in `app.py` only sends someone with no session to `/customer/login`. The role isn't checked again (no `CustomerLoginController`).
 
-## Alternative flows
+## Diagram/code mapping
 
-- **Empty Saved List:** display a message if the Customer has not saved any IDPs.
-- **Saved IDP No Longer Available:** indicate that the project cannot currently be viewed.
-- **Project Not Found:** display an error if the selected IDP cannot be retrieved.
-- **Loading Failure:** display an error and allow the Customer to try again.
+| Diagram element | Code |
+|---|---|
+| Boundary `SavedListPage` — attribute `viewSavedListController`; `openSavedList()`, `displaySavedProjects(savedIDPs)`, `displayEmptyMessage(msg)` | `boundary/savedListPage.py`, `templates/savedList.html` |
+| Control `ViewSavedListController` — `getSavedList(customerId): list` | `control/viewSavedListController.py` |
+| Entity `SavedIDP` — attributes `savedId`, `customerId`, `idpId`, `savedDate`; `getSavedRecords(customerId): list` (IDP objects) | `entity/savedIDP.py` (tables `saved_idp`, `idp`, `idp_category`) |
+| Route | GET `/customer/saved-list` (`@customerLoginRequired`) → `savedList()` in `app.py` |
 
-## Taiga task references
+Messages: `MSG_NO_SAVED` "You have not saved any IDPs yet".
 
-| Deliverable | Taiga Task ID |
-|---|---:|
-| Use case diagram and description | #194 (use case description shows #143) |
-| BCE and sequence diagrams | #202 |
-| Wireframe | #254 |
+## Files
 
-## Test case status
+- `US35 View saved list.drawio` — every diagram, one page each
+- `US35 View saved list.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Saved list.png`
+  - `4b Wireframe - Nothing saved yet.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-The supplied Sprint 4 report contains an unfilled test-case template for US35. Add the executed test ID, procedure, test data, expected/actual output, test date, result and screenshot after testing.
+## Tests
 
-**Test data:** Not specified in the supplied US35 test-case template.
-
-**Expected output:** Based on the use case, the system displays the Customer's saved IDPs and allows the Customer to select a saved project to view its details.
-
-## Files in this folder
-
-The supplied story folder contains the editable draw.io diagram and exported PNG diagram assets. The Sprint 4 report includes a blank test-case template; it does not provide completed test evidence for US35.
-
-The `.drawio` file is the editable diagram source. The `.png` files are exported diagram images. Open draw.io files using [diagrams.net](https://app.diagrams.net/).
-
-## GitHub upload example
-
-Run the following commands from the root of your repository. Replace the folder path if your repository uses a different location:
-
-```bash
-git add Sprint4/US35_ViewSavedList/
-git commit -m "Add US35 – View Saved List README and diagrams"
-git push origin main
 ```
-
-After pushing, open the GitHub repository and check that this folder, its README, editable diagram and PNG exports are visible.
-
-## Source note
-
-This README is based on the supplied Sprint 4 report and the corresponding story folder in Sprint4.zip. Where the supplied report leaves test-case fields blank, this README identifies them as not yet documented rather than inventing results.
+python -m pytest tests/test_us35_viewSavedList.py -v
+```

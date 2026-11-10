@@ -1,73 +1,45 @@
-# US28 – Delete Past IDP
-
-This folder contains the documentation and diagram assets for this user story in the CSIT314 Software Development Methodologies group project.
-
-## User story
+# US28 — Delete past IDP
 
 > As an interior designer, I want to delete a past IDP so that it is no longer shown on the platform.
 
-## Overview
+## Behaviour
 
-- **Actor:** Interior Designer
-- **Purpose:** Allows the designer to remove a previously added completed project from the platform so customers can no longer view it.
-- **Trigger:** The Interior Designer selects the Delete option for an existing past IDP.
-- **Preconditions:** The Interior Designer is logged in, has an active account, and the selected Past IDP exists and belongs to the designer.
-- **Postconditions:** The selected Past IDP is deleted or made unavailable for public viewing, and is no longer displayed to customers.
+- "Delete" on the past IDP's details (`clickDelete(idpId)`) loads the IDP with the controller's own loader `getPastIDP(designerId, idpId)` (`designerId = session["userId"]`). Found → `displayDeleteConfirmation(idp)`: "Delete past IDP?" - `Are you sure you want to delete <title>?`. None → "Past IDP not found" (HTTP 404). Nothing is deleted yet.
+- The box posts `choice`. "Delete past IDP" (`choice == "delete"`) → `confirmDeletion(idpId)` → `deletePastIDP(designerId, idpId)`. Anything else ("Cancel") → `cancelDeletion(idpId)`, back to the details, nothing changes.
+- Delete is a soft delete: the entity sets the owner's Active past IDP to `status = 'Suspended'`; the row, its details and its views / saves are kept. It disappears from the list, the details, update, search and from customers.
+- Deleted → `refreshPastIDPList(MSG_DELETED)`: the past IDPs list with "Past IDP deleted successfully". Not deleted (no longer the designer's Active past IDP, e.g. already deleted) → `displayNotFoundMessage(MSG_NOT_FOUND)` "Past IDP not found" (HTTP 404) - there is no second lookup and no other error message.
 
-## Main flow
+## Who checks what
 
-1. The Interior Designer opens the Past IDPs section.
-2. The system displays the designer's past projects.
-3. The designer selects the project to delete.
-4. The system displays the selected project's details.
-5. The designer selects Delete.
-6. The system displays a confirmation message.
-7. The designer confirms the deletion.
-8. The system processes the deletion request.
-9. The system removes the project from publicly displayed Past IDPs.
-10. The system displays a successful deletion confirmation.
-11. The system refreshes the Past IDPs list.
+- **Boundary** (`PastIDPListPage`, its US28 methods): passes the session owner and the idpId from the URL on and picks the page to show - there is no typed input.
+- **Control** (`DeletePastIDPController`): `getPastIDP(designerId, idpId)` (US28's own loader for the box) and `deletePastIDP(designerId, idpId)` just call the entity and return the result - no checks.
+- **Entity** (`IDP`): `markPastIDPUnavailable(designerId, idpId)` updates `WHERE idpId = ? AND designerId = ? AND projectType = 'Past' AND status = 'Active'`; 0 rows → False.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again (no `InteriorDesignerLoginController`).
 
-## Alternative flows
+## Diagram/code mapping
 
-- **Deletion Cancelled:** return to project details without deleting the project.
-- **Project Not Found:** display an error if the selected project cannot be found.
-- **Deletion Failure:** display an error and allow the designer to try again.
+| Diagram element | Code |
+|---|---|
+| Boundary `PastIDPListPage` (US28 methods) — `clickDelete(idpId)`, `displayDeleteConfirmation(idp)`, `confirmDeletion(idpId)`, `cancelDeletion(idpId)`, `refreshPastIDPList(msg)`, `displayNotFoundMessage(msg)` | `boundary/pastIDPListPage.py`, `templates/deletePastIDP.html`, `templates/pastIDPNotFound.html` |
+| Control `DeletePastIDPController` — `getPastIDP(designerId, idpId): IDP`, `deletePastIDP(designerId, idpId): bool` | `control/deletePastIDPController.py` |
+| Entity `IDP` — `getPastIDPDetails(designerId, idpId): IDP`, `markPastIDPUnavailable(designerId, idpId): bool` | `entity/idp.py` (table `idp`) |
+| Route | GET / POST `/designer/past-idps/<idpId>/delete` (`@designerLoginRequired`) → `deletePastIDP(idpId)` in `app.py`: GET → `clickDelete`, POST `choice == "delete"` → `confirmDeletion`, otherwise `cancelDeletion` |
 
-## Taiga task references
+Messages: `MSG_DELETED` "Past IDP deleted successfully", `MSG_NOT_FOUND` "Past IDP not found".
 
-| Deliverable | Taiga Task ID |
-|---|---:|
-| Use case diagram and description | #190 |
-| BCE and sequence diagrams | #198 |
-| Wireframe | #250 |
+## Files
 
-## Test case status
+- `US28 Delete past IDP.drawio` — every diagram, one page each
+- `US28 Delete past IDP.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Confirm delete.png`
+  - `4b Wireframe - Past IDP deleted.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-Test ID 28 – Delete Past IDP. The source report records Actual Output: Passed; Test Date: 02 Nov 2026.
+## Tests
 
-**Test data:** Project to delete: Modern 4-Room HDB Resale Transformation. Action: select Delete, then confirm with OK.
-
-**Expected output:** The system asks for confirmation. After confirmation, the selected past IDP is deleted, a success message appears and the project is removed from the portfolio.
-
-## Files in this folder
-
-The supplied story folder contains the editable draw.io diagram and exported PNG diagram assets. The Sprint 4 report also includes the wireframe and test-case evidence.
-
-The `.drawio` file is the editable diagram source. The `.png` files are exported diagram images. Open draw.io files using [diagrams.net](https://app.diagrams.net/).
-
-## GitHub upload example
-
-Run the following commands from the root of your repository. Replace the folder path if your repository uses a different location:
-
-```bash
-git add Sprint4/US28_DeletePastIDP/
-git commit -m "Add US28 – Delete Past IDP README and diagrams"
-git push origin main
 ```
-
-After pushing, open the GitHub repository and check that this folder, its README, editable diagram and PNG exports are visible.
-
-## Source note
-
-This README is based on the supplied Sprint 4 report and the corresponding story folder in Sprint4.zip. Where the supplied report leaves test-case fields blank, this README identifies them as not yet documented rather than inventing results.
+python -m pytest tests/test_us28_deletePastIDP.py -v
+```

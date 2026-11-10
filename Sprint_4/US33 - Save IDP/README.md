@@ -1,72 +1,49 @@
-# US33 – Save IDP
-
-This folder contains the documentation and diagram assets for this user story in the CSIT314 Software Development Methodologies group project.
-
-## User story
+# US33 — Save IDP
 
 > As a customer, I want to save an IDP so that I can look at it again later.
 
-## Overview
+## Behaviour
 
-- **Actor:** Customer
-- **Purpose:** Allows a customer to save an interior design project to their saved list for easy access later.
-- **Trigger:** The Customer clicks the Save option on an IDP details page.
-- **Preconditions:** The Customer is logged in; the selected IDP exists and is available on the platform; and the Customer has permission to save IDPs.
-- **Postconditions:** The selected IDP is added to the Customer's saved list, recorded under the Customer's account, and can be accessed later.
+- The Save IDP button is on the US32 View IDP page (`ViewIDPPage`) and is always shown (the button has no "Saved" state). Clicking it posts to `/customer/idps/<idpId>/save` (wireframe 4a).
+- `clickSave(idpId)` → `saveIDP(customerId, idpId)` (controller, `customerId = session["userId"]`) → `SavedIDP.createSavedRecord(customerId, idpId)` → `saved`.
+- `createSavedRecord()` only inserts the `saved_idp` row when the IDP is Active and its category is Active, and `UNIQUE(customerId, idpId)` stops a duplicate. It returns True when a row was added, otherwise False. Nothing is checked before this call.
+- `[saved == True]` → `displaySavedState(idpId, MSG_SAVED)`: "IDP saved to your saved list" (wireframe 4b).
+- `[saved == False]` → `displayErrorMessage(idpId, MSG_NOT_SAVED)`: "This IDP is already in your saved list or is no longer available" (wireframe 4c). Nothing is added.
+- Both results send an HTTP 302 to `/customer/idps/<idpId>?saved=1`. US32 shows the IDP again without counting that reload as a view, so the view statistics (US37) only count real visits.
+- Current and Past IDPs can both be saved. A saved IDP is listed in Saved IDPs (US35) and can be searched there (US34). There is no remove / unsave.
 
-## Main flow
+## Who checks what
 
-1. The Customer browses the available IDPs.
-2. The Customer selects an IDP of interest.
-3. The system displays the selected IDP's details.
-4. The Customer clicks Save.
-5. The system checks whether the IDP is already in the Customer's saved list.
-6. The system adds the selected IDP to the Customer's saved list.
-7. The system updates the saved list.
-8. The system displays a successful confirmation message.
-9. The Save option changes to indicate that the IDP has been saved.
+- **Boundary** (`IDPDetailsPage`): there is no typed input - it takes `idpId` from the URL and `customerId` from the session, calls the controller and shows one of the two messages.
+- **Control** (`SaveIDPController`): `saveIDP(customerId, idpId)` just calls `SavedIDP().createSavedRecord(customerId, idpId)` and returns `saved` - no checks.
+- **Entity** (`SavedIDP`): refuses a duplicate (UNIQUE customerId + idpId) and an IDP customers can't see (Suspended IDP or Suspended category), otherwise inserts the row and commits.
+- Precondition: logged in as a Customer (UC30). `customerLoginRequired` in `app.py` only sends someone with no session to `/customer/login`. The role isn't checked again (no `CustomerLoginController`).
 
-## Alternative flows
+## Diagram/code mapping
 
-- **IDP Already Saved:** inform the Customer that the project has already been saved and do not create a duplicate.
-- **Customer Not Logged In:** request the Customer to log in before saving.
-- **IDP Not Available:** display an error if the selected IDP is no longer available.
-- **Saving Failure:** display an error and allow the Customer to try again.
+| Diagram element | Code |
+|---|---|
+| Boundary `IDPDetailsPage` — attribute `saveIDPController`; `clickSave(idpId)`, `displaySavedState(idpId, msg)`, `displayErrorMessage(idpId, msg)` | `boundary/idpDetailsPage.py` (the button is in `templates/customerViewIDP.html`) |
+| Control `SaveIDPController` — `saveIDP(customerId, idpId): bool` | `control/saveIDPController.py` |
+| Entity `SavedIDP` — attributes `savedId`, `customerId`, `idpId`, `savedDate`; `createSavedRecord(customerId, idpId): bool` | `entity/savedIDP.py` (table `saved_idp`) |
+| Route | POST `/customer/idps/<idpId>/save` (`@customerLoginRequired`) → `saveIDP(idpId)` in `app.py`; it redirects to GET `/customer/idps/<idpId>?saved=1` (US32) |
 
-## Taiga task references
+Messages: `MSG_SAVED` "IDP saved to your saved list", `MSG_NOT_SAVED` "This IDP is already in your saved list or is no longer available".
 
-| Deliverable | Taiga Task ID |
-|---|---:|
-| Use case diagram and description | #192 |
-| BCE and sequence diagrams | #200 |
-| Wireframe | #252 |
+## Files
 
-## Test case status
+- `US33 Save IDP.drawio` — every diagram, one page each
+- `US33 Save IDP.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Save button.png`
+  - `4b Wireframe - IDP saved.png`
+  - `4c Wireframe - Already saved.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-The supplied Sprint 4 report contains an unfilled test-case template for US33. Add the executed test ID, procedure, test data, expected/actual output, test date, result and screenshot after testing.
+## Tests
 
-**Test data:** Not specified in the supplied US33 test-case template.
-
-**Expected output:** Based on the use case, the selected IDP is added to the Customer's saved list, the list is updated, a confirmation is shown and the Save option indicates the saved state.
-
-## Files in this folder
-
-The supplied story folder contains the editable draw.io diagram and exported PNG diagram assets. The Sprint 4 report includes a blank test-case template; it does not provide completed test evidence for US33.
-
-The `.drawio` file is the editable diagram source. The `.png` files are exported diagram images. Open draw.io files using [diagrams.net](https://app.diagrams.net/).
-
-## GitHub upload example
-
-Run the following commands from the root of your repository. Replace the folder path if your repository uses a different location:
-
-```bash
-git add Sprint4/US33_SaveIDP/
-git commit -m "Add US33 – Save IDP README and diagrams"
-git push origin main
 ```
-
-After pushing, open the GitHub repository and check that this folder, its README, editable diagram and PNG exports are visible.
-
-## Source note
-
-This README is based on the supplied Sprint 4 report and the corresponding story folder in Sprint4.zip. Where the supplied report leaves test-case fields blank, this README identifies them as not yet documented rather than inventing results.
+python -m pytest tests/test_us33_saveIDP.py -v
+```

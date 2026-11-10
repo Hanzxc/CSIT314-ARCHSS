@@ -12,7 +12,6 @@ from control.deletePastIDPController import DeletePastIDPController
 MSG_NO_PAST_IDPS = "You have no past IDPs yet"
 MSG_NOT_FOUND = "Past IDP not found"
 MSG_DELETED = "Past IDP deleted successfully"
-MSG_NOT_DELETED = "Past IDP could not be deleted. Please try again"
 
 
 class PastIDPListPage:
@@ -69,14 +68,12 @@ class PastIDPListPage:
         return render_template("deletePastIDP.html", idp=idp, activePage="pastIDPs")
 
     # UC28 Delete past IDP
-    # designer pressed "Delete past IDP" in the box
+    # designer pressed "Delete past IDP" in the box. not deleted = it's no longer their Active
+    # past IDP (deleted meanwhile / not theirs), so no second lookup
     def confirmDeletion(self, idpId):
         if self.deletePastIDPController.deletePastIDP(session["userId"], idpId):
             return self.refreshPastIDPList(MSG_DELETED)
-        if self.deletePastIDPController.getPastIDP(session["userId"], idpId) is None:
-            return self.displayNotFoundMessage(MSG_NOT_FOUND)
-        flash(MSG_NOT_DELETED, "error")
-        return redirect(url_for("viewPastIDP", idpId=idpId))
+        return self.displayNotFoundMessage(MSG_NOT_FOUND)
 
     # UC28 Delete past IDP
     # designer pressed Cancel - nothing is deleted, back to the IDP's details (alt flow)

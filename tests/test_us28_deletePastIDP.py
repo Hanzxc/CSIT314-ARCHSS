@@ -83,3 +83,16 @@ def test_ut28_7_page_otherDesignersIDP_notFound():
 def test_ut28_8_page_notLoggedIn_redirectsToDesignerLogin():
     response = app.test_client().post("/designer/past-idps/1/delete", data={"choice": "delete"})
     assert response.status_code == 302 and "/designer/login" in response.headers["Location"]
+
+
+def test_ut28_9_page_confirmAgain_notFoundNoSecondLookup(monkeypatch):
+    client, designer = loggedInDesigner()
+    idpId = addPast(designer, createCategory("Kitchen"))
+    client.post(f"/designer/past-idps/{idpId}/delete", data={"choice": "delete"}, follow_redirects=True)
+    lookups = []
+    monkeypatch.setattr(DeletePastIDPController, "getPastIDP", lambda self, *args: lookups.append(args))
+    response = client.post(f"/designer/past-idps/{idpId}/delete", data={"choice": "delete"})
+    html = response.get_data(as_text=True)
+    assert response.status_code == 404 and MSG_NOT_FOUND in html
+    assert lookups == []                                    # deletePastIDP() False -> no getPastIDP()
+    assert html.count('class="message') == 1               # only the not-found message

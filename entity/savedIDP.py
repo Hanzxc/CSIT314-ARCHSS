@@ -22,15 +22,6 @@ class SavedIDP:
         self.savedDate = savedDate
 
     # UC33 Save IDP
-    # true if this customer already has this IDP in their saved list
-    def exists(self, customerId, idpId):
-        conn = getConnection()
-        row = conn.execute("SELECT 1 FROM saved_idp WHERE customerId = ? AND idpId = ?",
-                           (customerId, idpId)).fetchone()
-        conn.close()
-        return row is not None
-
-    # UC33 Save IDP
     # adds the IDP to the saved list. the entity checks the rest: no duplicate (UNIQUE customerId + idpId),
     # and the IDP must be one customers can see. true if a row was added
     def createSavedRecord(self, customerId, idpId):

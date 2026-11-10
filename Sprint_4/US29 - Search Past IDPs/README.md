@@ -1,72 +1,46 @@
-# US29 – Search Past IDPs
-
-This folder contains the documentation and diagram assets for this user story in the CSIT314 Software Development Methodologies group project.
-
-## User story
+# US29 — Search past IDPs
 
 > As an interior designer, I want to search my past IDPs so that I can find the IDP I need to manage.
 
-## Overview
+## Behaviour
 
-- **Actor:** Interior Designer
-- **Purpose:** Allows the designer to search previously added completed projects using keywords to find a specific IDP to manage.
-- **Trigger:** The Interior Designer enters a keyword into the search bar in the Past IDPs section.
-- **Preconditions:** The Interior Designer is logged in and has access to the Past IDPs section.
-- **Postconditions:** The system displays past IDPs matching the search keyword, and the designer can select a matching project to view or manage.
+- The search bar sits on the past IDPs list (US26). "Search" (`submitSearch(keyword)`) trims the keyword and keeps it in the box.
+- `validateKeyword(keyword)`: at most 100 characters, empty is allowed. Too long → `displayErrorMessage(MSG_KEYWORD_TOO_LONG)` "The keyword can be at most 100 characters" (HTTP 400) and the controller is not called.
+- Otherwise `searchPastIDPs(designerId, keyword)` with `designerId = session["userId"]` → the entity matches the keyword (any case) against the title, description, location and category name of the designer's own Active past IDPs, newest first. An empty keyword returns all of them.
+- Matches → `displaySearchResults(results)` with "View" links (US26 details). None → `displayNoResultsMessage(MSG_NO_RESULTS)` "No past IDPs match your search". "Clear" goes back to the full list.
+- Current IDPs, deleted past IDPs and other designers' IDPs are never shown. Searching changes nothing.
 
-## Main flow
+## Who checks what
 
-1. The Interior Designer opens the Past IDPs section.
-2. The system displays the designer's past IDPs and a search bar.
-3. The designer enters a keyword into the search bar.
-4. The designer submits the search request.
-5. The system searches the designer's past IDPs using the entered keyword.
-6. The system retrieves matching projects.
-7. The system displays the search results.
-8. The designer selects a project from the results.
-9. The system displays the selected project's details.
+- **Boundary** (`PastIDPSearchPage`): trims the keyword and checks its length (`validateKeyword`).
+- **Control** (`SearchPastIDPController`): `searchPastIDPs(designerId, keyword)` just calls the entity and returns the result - no checks, no trimming.
+- **Entity** (`IDP`): `searchByKeywordAndDesigner(keyword, designerId)` only searches the owner's rows with `projectType = 'Past' AND status = 'Active'`.
+- Precondition: logged in as an interior designer (UC13). `designerLoginRequired` in `app.py` only sends someone with no session to `/designer/login`; the use case doesn't check the designer again (no `InteriorDesignerLoginController`).
 
-## Alternative flows
+## Diagram/code mapping
 
-- **Empty Search:** display all past IDPs or ask the designer to enter a keyword.
-- **No Matching Results:** display a no-results message.
-- **Invalid Search Input:** display an appropriate validation message.
-- **Search Failure:** display an error and allow the designer to try again.
+| Diagram element | Code |
+|---|---|
+| Boundary `PastIDPSearchPage` — `submitSearch(keyword)`, `validateKeyword(keyword): str \| None`, `displaySearchResults(results)`, `displayNoResultsMessage(msg)`, `displayErrorMessage(msg)` | `boundary/pastIDPSearchPage.py`, `templates/pastIDPs.html` |
+| Control `SearchPastIDPController` — `searchPastIDPs(designerId, keyword): list` | `control/searchPastIDPController.py` |
+| Entity `IDP` — `searchByKeywordAndDesigner(keyword, designerId): list` | `entity/idp.py` (table `idp`) |
+| Route | GET `/designer/past-idps/search?keyword=...` (`@designerLoginRequired`) → `searchPastIDPs()` in `app.py` |
 
-## Taiga task references
+Messages: `MSG_NO_RESULTS` "No past IDPs match your search", `MSG_KEYWORD_TOO_LONG` "The keyword can be at most 100 characters".
 
-| Deliverable | Taiga Task ID |
-|---|---:|
-| Use case diagram and description | #191 |
-| BCE and sequence diagrams | #199 |
-| Wireframe | #251 |
+## Files
 
-## Test case status
+- `US29 Search past IDPs.drawio` — every diagram, one page each
+- `US29 Search past IDPs.docx` — user story, use case description, diagrams, wireframes and test cases
+- `diagrams/`
+  - `2 Use Case Diagram.png`
+  - `4a Wireframe - Search results.png`
+  - `4b Wireframe - No results.png`
+  - `5 BCE Class Diagram.png`
+  - `6 Sequence Diagram.png`
 
-Test ID 29 – Search Past IDP. The source report records Actual Output: Passed; Test Date: 02 Nov 2026.
+## Tests
 
-**Test data:** Search keyword: Modern. Expected matching project: Modern 4-Room HDB Resale Transformation.
-
-**Expected output:** The system displays past IDP records matching the keyword. If no record matches, an appropriate no-results message is displayed.
-
-## Files in this folder
-
-The supplied story folder contains the editable draw.io diagram and exported PNG diagram assets. The Sprint 4 report also includes the wireframe and test-case evidence.
-
-The `.drawio` file is the editable diagram source. The `.png` files are exported diagram images. Open draw.io files using [diagrams.net](https://app.diagrams.net/).
-
-## GitHub upload example
-
-Run the following commands from the root of your repository. Replace the folder path if your repository uses a different location:
-
-```bash
-git add Sprint4/US29_SearchPastIDP/
-git commit -m "Add US29 – Search Past IDPs README and diagrams"
-git push origin main
 ```
-
-After pushing, open the GitHub repository and check that this folder, its README, editable diagram and PNG exports are visible.
-
-## Source note
-
-This README is based on the supplied Sprint 4 report and the corresponding story folder in Sprint4.zip. Where the supplied report leaves test-case fields blank, this README identifies them as not yet documented rather than inventing results.
+python -m pytest tests/test_us29_searchPastIDPs.py -v
+```

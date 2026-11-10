@@ -6,6 +6,7 @@ from app import app
 from entity.savedIDP import SavedIDP
 from entity.userAccount import UserAccount
 from control.searchSavedListController import SearchSavedListController
+import boundary.savedListPage as savedListPage
 from boundary.savedListPage import SavedListPage, MSG_NO_RESULTS, MSG_KEYWORD_TOO_LONG
 from test_us37_viewIDPViewStatistics import createDesigner, customerId, createCategory, addIDP
 from test_us33_saveIDP import loggedInCustomer
@@ -83,3 +84,15 @@ def test_ut34_8_page_keywordTooLong_showsError():
 def test_ut34_9_page_notLoggedIn_redirectsToCustomerLogin():
     response = app.test_client().get("/customer/saved-list/search?keyword=x")
     assert response.status_code == 302 and response.headers["Location"].endswith("/customer/login")
+
+
+def test_ut34_10_page_trimsKeywordBeforeController(monkeypatch):
+    calls = []
+    class StubController:
+        def searchSavedList(self, customer, keyword):
+            calls.append((customer, keyword))
+            return []
+    monkeypatch.setattr(savedListPage, "SearchSavedListController", StubController)
+    html = loggedInCustomer().get("/customer/saved-list/search", query_string={"keyword": "  kitchen  "}).get_data(as_text=True)
+    assert calls == [(customerId(), "kitchen")]
+    assert 'value="kitchen"' in html
