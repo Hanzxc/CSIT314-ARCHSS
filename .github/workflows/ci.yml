@@ -1,0 +1,44 @@
+# CI/CD for ARCHSS
+# CI: every push and pull request runs the whole pytest suite (all 48 user stories) on a clean machine.
+# CD: when the tests pass on main, the ready-to-run app (code + shared demo database) is packaged
+#     as a download ("archss-app") on the workflow run page.
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run all tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install requirements
+        run: pip install -r requirements.txt
+      - name: Run pytest
+        run: python -m pytest -q
+
+  deliver:
+    name: Package the app (main only)
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archss-app
+          path: |
+            app.py
+            requirements.txt
+            README.md
+            boundary/
+            control/
+            entity/
+            database/
+            templates/
+            static/
