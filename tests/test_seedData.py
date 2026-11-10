@@ -139,3 +139,22 @@ def test_seed_14_analyticsData_addsViewsAndSaves_onlyOnce():
                       "JOIN user_profile p ON p.profileId = a.profileId WHERE p.profileName <> 'Customer'")
     # running it again adds nothing
     assert seedAnalyticsData() == (0, 0)
+
+
+def test_seed_15_analyticsData_rerunAddsNothing_inReadmeOrder():
+    # the README order makes 8 IDPs, so some IDP can get 0 views on the first run -
+    # a re-run still mustn't add any views or saves
+    from database.seedCompanyData import seedCompanyData
+    from database.seedIDPCategoryData import seedIDPCategoryData
+    from database.seedCurrentIDPData import seedCurrentIDPData
+    from database.seedAnalyticsData import seedAnalyticsData
+    addSampleData()
+    seedCompanyData()
+    seedIDPCategoryData()
+    seedCurrentIDPData()
+    seedAnalyticsData()
+    viewCount = len(getAll("SELECT * FROM idp_view"))
+    saveCount = len(getAll("SELECT * FROM saved_idp"))
+    assert seedAnalyticsData() == (0, 0)
+    assert len(getAll("SELECT * FROM idp_view")) == viewCount
+    assert len(getAll("SELECT * FROM saved_idp")) == saveCount

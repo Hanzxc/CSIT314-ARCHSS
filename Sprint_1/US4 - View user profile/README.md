@@ -6,13 +6,13 @@
 
 - "View" next to a profile on the User Profiles list (`selectUserProfile(profileId)`) gets the profile with `getUserProfile(profileId)`.
 - Found → `displayUserProfile(profile)` shows the name, description, status (Active or Suspended) and every permission. Suspended profiles can still be viewed.
-- Not found (e.g. a wrong link) → `displayErrorMessage("User profile not found")`. No error page.
+- Not found (e.g. a wrong link like `/profiles/9999`) → `displayErrorMessage("User profile not found")` shows a page with the heading "User profile", the red message and a grey "Back to User Profiles" button (wireframe 4c). It does not go back to the list. No error page.
 - Viewing never changes any data. The details page links to Update (US5) and Suspend (US6).
 - US6 and US9 borrow `ViewUserProfileController.getUserProfile()` when they need to show a profile.
 
 ## Who checks what
 
-- **Boundary** (`ViewUserProfilePage`): passes the selected id on and shows the details or the not-found message.
+- **Boundary** (`ViewUserProfilePage`): passes the selected id on and shows the details or the not-found page (message + "Back to User Profiles" button).
 - **Control** (`ViewUserProfileController`): just calls `UserProfile.getUserProfile(profileId)` and returns the result - no checks.
 - **Entity** (`UserProfile`): reads the row; returns None if there is no profile with this id.
 - Precondition: logged in as a User Admin (UC1). `loginRequired` in `app.py` only sends someone with no session to `/login`; the use case doesn't check the role again.

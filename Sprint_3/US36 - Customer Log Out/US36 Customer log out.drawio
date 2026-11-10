@@ -113,38 +113,44 @@
         <mxCell id="14" value="Search IDPs" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#222;" vertex="1" parent="1">
           <mxGeometry x="72" y="280" width="175" height="29" as="geometry" />
         </mxCell>
-        <mxCell id="15" value="Welcome back, cust001" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=32;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
+        <mxCell id="15" value="Saved IDPs" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#222;" vertex="1" parent="1">
+          <mxGeometry x="72" y="336" width="175" height="29" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="Welcome back, cust001" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=32;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
           <mxGeometry x="300" y="226" width="1000" height="45" as="geometry" />
         </mxCell>
-        <mxCell id="16" value="Your interior design inspiration" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#666;" vertex="1" parent="1">
+        <mxCell id="17" value="Your interior design inspiration" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#666;" vertex="1" parent="1">
           <mxGeometry x="300" y="290" width="1000" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="17" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#ddd;" vertex="1" parent="1">
+        <mxCell id="18" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#ddd;" vertex="1" parent="1">
           <mxGeometry x="300" y="350" width="498" height="215" as="geometry" />
         </mxCell>
-        <mxCell id="18" value="Find designs" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=24;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
+        <mxCell id="19" value="Find designs" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=24;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
           <mxGeometry x="324" y="371" width="450" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="19" value="Browse current and past interior design projects." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#555;" vertex="1" parent="1">
+        <mxCell id="20" value="Browse current and past interior design projects." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#555;" vertex="1" parent="1">
           <mxGeometry x="324" y="431" width="450" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="20" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#222;" vertex="1" parent="1">
+        <mxCell id="21" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#222;" vertex="1" parent="1">
           <mxGeometry x="324" y="490" width="145" height="36" as="geometry" />
         </mxCell>
-        <mxCell id="21" value="Search IDPs" style="text;html=0;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=15;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
+        <mxCell id="22" value="Search IDPs" style="text;html=0;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=15;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
           <mxGeometry x="330" y="493" width="133" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="22" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#ddd;" vertex="1" parent="1">
+        <mxCell id="23" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#ddd;" vertex="1" parent="1">
           <mxGeometry x="822" y="350" width="498" height="215" as="geometry" />
         </mxCell>
-        <mxCell id="23" value="Saved IDPs" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=24;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
+        <mxCell id="24" value="Saved IDPs" style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=24;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
           <mxGeometry x="846" y="371" width="450" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="24" value="Keep your favourite design projects together." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#555;" vertex="1" parent="1">
+        <mxCell id="25" value="Keep your favourite interior design projects together." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=0;fontColor=#555;" vertex="1" parent="1">
           <mxGeometry x="846" y="431" width="450" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="25" value="Saved IDP viewing and management will be&#10;available in a later story." style="text;html=0;align=left;verticalAlign=middle;whiteSpace=wrap;fontSize=13;fontStyle=0;fontColor=#888;" vertex="1" parent="1">
-          <mxGeometry x="846" y="485" width="450" height="48" as="geometry" />
+        <mxCell id="26" value="" style="rounded=1;arcSize=6;html=0;fillColor=#fff;strokeColor=#222;" vertex="1" parent="1">
+          <mxGeometry x="846" y="490" width="170" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="View saved IDPs" style="text;html=0;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=15;fontStyle=1;fontColor=#222;" vertex="1" parent="1">
+          <mxGeometry x="852" y="493" width="158" height="30" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
