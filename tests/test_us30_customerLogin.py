@@ -105,9 +105,11 @@ def test_ut30_12_validateInput(username, password, expected):
 
 
 def test_ut30_13_loginForm(client):
-    response = client.get('/customer/login')
+    # the old address now opens the shared login page with Customer picked
+    assert client.get('/customer/login').headers['Location'].endswith('/login?role=customer')
+    response = client.get('/login?role=customer')
     assert response.status_code == 200
-    assert b'Customer' in response.data and b'action="/customer/login"' in response.data
+    assert b'value="customer" selected' in response.data and b'action="/login"' in response.data
     assert b'type="password"' in response.data and b'autocomplete="current-password"' in response.data
     assert b'Cache-Control' not in response.data
     assert response.headers['Cache-Control'] == 'no-store'

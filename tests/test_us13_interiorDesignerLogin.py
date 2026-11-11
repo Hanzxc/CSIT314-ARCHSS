@@ -119,9 +119,11 @@ def test_ut13_13_validateInput_filledIn():
 
 def test_ut13_14_loginPage_showsForm():
     client = app.test_client()
-    response = client.get("/designer/login")
+    # the old address now opens the shared login page with Interior Designer picked
+    assert client.get("/designer/login").headers["Location"].endswith("/login?role=designer")
+    response = client.get("/login?role=designer")
     assert response.status_code == 200
-    assert b"Interior Designer" in response.data
+    assert b'value="designer" selected' in response.data
     assert b'name="username"' in response.data
     assert b'type="password"' in response.data
 

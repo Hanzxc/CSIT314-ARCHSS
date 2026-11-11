@@ -22,7 +22,7 @@
 
 | Diagram element | Code |
 |---|---|
-| Boundary `InteriorDesignerLogoutPage` — attribute `interiorDesignerLogoutController`; `clickLogout()`, `displayLoginPage(msg)` | `boundary/interiorDesignerLogoutPage.py`, Log out button in `templates/interiorDesignerBase.html`, message on `templates/interiorDesignerLogin.html` |
+| Boundary `InteriorDesignerLogoutPage` — attribute `interiorDesignerLogoutController`; `clickLogout()`, `displayLoginPage(msg)` | `boundary/interiorDesignerLogoutPage.py`, Log out button in `templates/interiorDesignerBase.html`, message on `templates/login.html` (shared login page) |
 | Control `InteriorDesignerLogoutController` — `logout(): bool` | `control/interiorDesignerLogoutController.py` |
 | Route | POST `/designer/logout` → `interiorDesignerLogout()` in `app.py` |
 

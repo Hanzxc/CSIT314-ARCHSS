@@ -11,7 +11,7 @@
 - `verifyCredentials()` returns the account only if the password hash matches, the account is Active, its user profile is Active and that profile has every required permission. Otherwise it returns None.
 - Account found → `redirectToDashboard(account)` starts a new session (userId, profileId, username) and opens the User Admin dashboard (`/dashboard`).
 - None → "Invalid login details or account suspended". The same message is used for a wrong username, a wrong password, a suspended account, a suspended profile and an account that isn't a User Admin, so nobody can guess which usernames exist.
-- `/login` is for User Admins only. Interior designers, customers and platform managers log in on their own pages (US13 `/designer/login`, US30 `/customer/login`, US39 `/manager/login`); here they get the error message.
+- `/login` is the one login page for every role. The **Log in as** box picks the role, and `login()` in `app.py` hands the form to that role's page: `LoginPage` (this story) for User Admin, `InteriorDesignerLoginPage` (US13), `CustomerLoginPage` (US30) or `PlatformManagerLoginPage` (US39). An account that isn't a User Admin gets the error message if User Admin is picked. No role sent = User Admin; an unknown role shows `MSG_CHOOSE_ROLE` ("Please choose who you are logging in as"). `/login?role=customer` etc. opens the page with that role picked (tests: `tests/test_us1_sharedLoginPage.py`, UT1.13 - UT1.22).
 
 ## Who checks what
 

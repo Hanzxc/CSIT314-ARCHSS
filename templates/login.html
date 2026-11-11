@@ -7,13 +7,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <!-- US1 Log in - wireframes 4a and 4b -->
+    <!-- one login page for all four roles: US1 (User Admin), US13 (Interior Designer),
+         US30 (Customer), US39 (Platform Manager). the "Log in as" box picks which role's
+         boundary + controller checks the details (see login() in app.py) -->
+    {% set role = selectedRole or 'admin' %}
     <div class="login-card">
         <h1>Interior Design Platform</h1>
         <p class="subtitle">Log in to your account</p>
 
         {% if errorMessage %}
-            <div class="message error">{{ errorMessage }}</div>
+            <div class="message error" role="alert">{{ errorMessage }}</div>
         {% endif %}
         {% if successMessage %}
             <div class="message success">&#10003; {{ successMessage }}</div>
@@ -21,13 +24,24 @@
         {% if infoMessage %}
             <div class="message info">&#8505; {{ infoMessage }}</div>
         {% endif %}
+        {% for category, msg in get_flashed_messages(with_categories=true) %}
+            <div class="message {{ category }}" role="status">{{ msg }}</div>
+        {% endfor %}
 
         <form method="POST" action="{{ url_for('login') }}">
+            <label for="role">Log in as</label>
+            <select id="role" name="role">
+                <option value="admin" {% if role == 'admin' %}selected{% endif %}>User Admin</option>
+                <option value="designer" {% if role == 'designer' %}selected{% endif %}>Interior Designer</option>
+                <option value="customer" {% if role == 'customer' %}selected{% endif %}>Customer</option>
+                <option value="manager" {% if role == 'manager' %}selected{% endif %}>Platform Manager</option>
+            </select>
+
             <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter your username" value="{{ username or '' }}">
+            <input type="text" id="username" name="username" placeholder="Enter your username" value="{{ username or '' }}" autocomplete="username">
 
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password">
+            <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
 
             <button type="submit" class="btn-primary">Log in</button>
         </form>

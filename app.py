@@ -19,7 +19,7 @@ from boundary.searchCurrentIDPPage import SearchCurrentIDPPage
 
 from boundary.restoreCompanyProfilePage import RestoreCompanyProfilePage
 from boundary.platformManagerLoginPage import PlatformManagerLoginPage
-from boundary.loginPage import LoginPage
+from boundary.loginPage import LoginPage, MSG_CHOOSE_ROLE
 from boundary.customerLoginPage import CustomerLoginPage
 from boundary.customerLogoutPage import CustomerLogoutPage
 from boundary.searchIDPPage import SearchIDPPage
@@ -134,23 +134,36 @@ def home():
     return redirect(url_for("login"))
 
 
-# US1 Log in
+# US1, US13, US30, US39 Log in
+# one login page for all four roles. "Log in as" picks the role, and that role's own boundary
+# (and so its own controller + permission check) handles the form. no role sent at all = User Admin,
+# which is what /login always was
+LOGIN_PAGES = {
+    "admin": LoginPage,                         # US1
+    "designer": InteriorDesignerLoginPage,      # US13
+    "customer": CustomerLoginPage,              # US30
+    "manager": PlatformManagerLoginPage,        # US39
+}
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    page = LoginPage()
     if request.method == "POST":
-        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
-    return page.openLoginPage()
+        pageClass = LOGIN_PAGES.get(request.form.get("role", "admin"))
+        if pageClass is None:
+            return LoginPage().displayErrorMessage(MSG_CHOOSE_ROLE)
+        return pageClass().submitLogin(request.form.get("username", ""), request.form.get("password", ""))
+    # ?role=customer etc. opens the page with that role already picked
+    return LOGIN_PAGES.get(request.args.get("role"), LoginPage)().openLoginPage()
 
 
 # UC30 Customer log in
-# customers log in on their own page (the shared /login is only for User Admins, US1)
+# old address - opening it goes to the shared login page with Customer picked (POST still works)
 @app.route("/customer/login", methods=["GET", "POST"])
 def customerLogin():
-    page = CustomerLoginPage()
     if request.method == "POST":
-        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
-    return page.openLoginPage()
+        return CustomerLoginPage().submitLogin(request.form.get("username", ""), request.form.get("password", ""))
+    return redirect(url_for("login", role="customer"))
 
 
 # UC30 Customer log in
@@ -185,12 +198,13 @@ def viewIDP(idpId):
 
 
 # US13: dedicated designer entry point, using the same CSS and entities.
+# old address - opening it goes to the shared login page with Interior Designer picked (POST still works)
 @app.route("/designer/login", methods=["GET", "POST"])
 def interiorDesignerLogin():
-    page = InteriorDesignerLoginPage()
     if request.method == "POST":
-        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
-    return page.openLoginPage()
+        return InteriorDesignerLoginPage().submitLogin(request.form.get("username", ""),
+                                                       request.form.get("password", ""))
+    return redirect(url_for("login", role="designer"))
 
 
 # UC13 Interior designer log in
@@ -445,12 +459,13 @@ def suspendUserAccount(userId):
 
 
 # US39 Platform manager login, sharing the existing account and profile entities.
+# old address - opening it goes to the shared login page with Platform Manager picked (POST still works)
 @app.route("/manager/login", methods=["GET", "POST"])
 def platformManagerLogin():
-    page = PlatformManagerLoginPage()
     if request.method == "POST":
-        return page.submitLogin(request.form.get("username", ""), request.form.get("password", ""))
-    return page.openLoginPage()
+        return PlatformManagerLoginPage().submitLogin(request.form.get("username", ""),
+                                                      request.form.get("password", ""))
+    return redirect(url_for("login", role="manager"))
 
 
 # UC39 Platform manager log in

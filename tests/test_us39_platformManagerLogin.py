@@ -115,9 +115,11 @@ def test_ut39_13_validateInput_filledIn():
 
 def test_ut39_14_loginPage_showsForm():
     client = app.test_client()
-    response = client.get("/manager/login")
+    # the old address now opens the shared login page with Platform Manager picked
+    assert client.get("/manager/login").headers["Location"].endswith("/login?role=manager")
+    response = client.get("/login?role=manager")
     assert response.status_code == 200
-    assert b"Platform Manager" in response.data
+    assert b'value="manager" selected' in response.data
     assert b'name="username"' in response.data
     assert b'type="password"' in response.data
 

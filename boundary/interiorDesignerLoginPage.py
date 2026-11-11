@@ -1,7 +1,7 @@
 # Boundary: InteriorDesignerLoginPage - UC13 Interior designer log in (US13)
-# /designer/login is only for interior designers - the dashboard borrows US15's and US17-R's
+# handles the shared /login page when "Log in as" is Interior Designer - the dashboard borrows US15's and US17-R's
 # controllers to pick the Company Profile button
-# templates: interiorDesignerLogin.html, interiorDesignerDashboard.html
+# templates: login.html (shared with US1, US30, US39), interiorDesignerDashboard.html
 
 from flask import redirect, render_template, session, url_for
 
@@ -27,7 +27,7 @@ class InteriorDesignerLoginPage:
     # UC13 Interior designer log in
     # shows the empty login form
     def displayLoginForm(self):
-        return render_template("interiorDesignerLogin.html")
+        return render_template("login.html", selectedRole="designer")
 
     # UT13.10 to UT13.13
     # both boxes have to be filled in (spaces only doesn't count)
@@ -60,7 +60,7 @@ class InteriorDesignerLoginPage:
     # UC13 Interior designer log in
     # show the login form again with the error message
     def displayErrorMessage(self, msg):
-        return render_template("interiorDesignerLogin.html", errorMessage=msg)
+        return render_template("login.html", errorMessage=msg, selectedRole="designer")
 
     # UC13 Interior designer log in
     # being logged in is checked by designerLoginRequired in app.py, so this just renders.

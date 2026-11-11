@@ -4,7 +4,7 @@
 
 ## Behaviour
 
-- `/designer/login` shows the designer login form (username and password; the password is shown as dots).
+- The designer logs in on the shared `/login` page with **Log in as** = Interior Designer (username and password; the password is shown as dots). `/designer/login` opens that page with Interior Designer already picked.
 - On "Log in" the page checks that both fields are filled in (`validateInput(username, password)`). An empty field (or a username of only spaces) → "Please enter your username and password", and the database is not checked.
 - The page trims the spaces from the username, then calls `login(username, password)`.
 - `InteriorDesignerLoginController.login()` makes one call: `UserAccount().verifyCredentials(username, password, REQUIRED_DESIGNER_PERMISSIONS)`, where `REQUIRED_DESIGNER_PERMISSIONS` = "Manage company profile" + "Manage own IDPs".
@@ -15,7 +15,7 @@
   - US15 `ViewCompanyProfileController.viewCompanyProfile(designerId)` → an Active profile → "View company profile";
   - US17-R `RestoreCompanyProfileController.getSuspendedCompanyProfile(designerId)` → a deleted (Suspended) profile → "Restore company profile" with hidden `companyId` and `revision`;
   - neither → "Create company profile" (US14).
-- The shared `/login` page (US1) is for User Admins only, so a designer gets the US1 error message there.
+- With User Admin picked in **Log in as**, a designer gets the US1 error message.
 
 ## Who checks what
 
@@ -28,13 +28,13 @@
 
 | Diagram element | Code |
 |---|---|
-| Boundary `InteriorDesignerLoginPage` — `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password): bool`, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` | `boundary/interiorDesignerLoginPage.py`, `templates/interiorDesignerLogin.html`, `templates/interiorDesignerDashboard.html` |
+| Boundary `InteriorDesignerLoginPage` — `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password): bool`, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` | `boundary/interiorDesignerLoginPage.py`, `templates/login.html` (shared login page), `templates/interiorDesignerDashboard.html` |
 | Control `InteriorDesignerLoginController` — `login(username, password): UserAccount \| None`, constant `REQUIRED_DESIGNER_PERMISSIONS` | `control/interiorDesignerLoginController.py` |
 | Borrowed control `«control» (from US15) ViewCompanyProfileController` — `viewCompanyProfile(designerId)` | `control/viewCompanyProfileController.py` |
 | Borrowed control `«control» (from US17-R) RestoreCompanyProfileController` — `getSuspendedCompanyProfile(designerId)` | `control/restoreCompanyProfileController.py` |
 | Entity `UserAccount` — `verifyCredentials(username, password, requiredPermissions): UserAccount \| None` | `entity/userAccount.py` (tables `user_account` and `user_profile`) |
 | Entity `CompanyProfile` — `getCompanyProfile(designerId)`, `getSuspendedCompanyProfile(designerId)` (through the borrowed controllers) | `entity/companyProfile.py` |
-| Route | GET / POST `/designer/login` → `interiorDesignerLogin()`; GET `/designer/dashboard` (`@designerLoginRequired`) → `interiorDesignerDashboard()` in `app.py` |
+| Route | POST `/login` with `role=designer` → `login()` → `InteriorDesignerLoginPage`; GET `/designer/login` redirects to `/login?role=designer` (POST there still works); GET `/designer/dashboard` (`@designerLoginRequired`) → `interiorDesignerDashboard()` in `app.py` |
 
 Messages: `MSG_EMPTY_FIELDS` "Please enter your username and password", `MSG_INVALID_LOGIN` "Invalid login details or access unavailable".
 

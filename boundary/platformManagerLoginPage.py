@@ -1,6 +1,6 @@
 # Boundary: PlatformManagerLoginPage - UC39 Platform manager log in (US39)
-# /manager/login is only for platform managers
-# templates: platformManagerLogin.html, platformManagerDashboard.html
+# handles the shared /login page when "Log in as" is Platform Manager
+# templates: login.html (shared with US1, US13, US30), platformManagerDashboard.html
 
 from flask import redirect, render_template, session, url_for
 
@@ -24,7 +24,7 @@ class PlatformManagerLoginPage:
     # UC39 Platform manager log in
     # shows the empty login form
     def displayLoginForm(self):
-        return render_template("platformManagerLogin.html")
+        return render_template("login.html", selectedRole="manager")
 
     # UT39.10 to UT39.13
     # both boxes have to be filled in (spaces only doesn't count)
@@ -57,7 +57,7 @@ class PlatformManagerLoginPage:
     # UC39 Platform manager log in
     # show the login form again with the error message
     def displayErrorMessage(self, msg):
-        return render_template("platformManagerLogin.html", errorMessage=msg)
+        return render_template("login.html", errorMessage=msg, selectedRole="manager")
 
     # UC39 Platform manager log in
     # being logged in is checked by managerLoginRequired in app.py, so this just renders

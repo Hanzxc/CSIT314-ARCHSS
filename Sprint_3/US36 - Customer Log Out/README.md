@@ -22,7 +22,7 @@
 
 | Diagram element | Code |
 |---|---|
-| Boundary `CustomerLogoutPage` — attribute `customerLogoutController`; `clickLogout()`, `displayLoginPage(msg)` | `boundary/customerLogoutPage.py`, Log out button in `templates/customerBase.html`, message on `templates/customerLogin.html` |
+| Boundary `CustomerLogoutPage` — attribute `customerLogoutController`; `clickLogout()`, `displayLoginPage(msg)` | `boundary/customerLogoutPage.py`, Log out button in `templates/customerBase.html`, message on `templates/login.html` (shared login page) |
 | Control `CustomerLogoutController` — `logout(): bool` | `control/customerLogoutController.py` |
 | Route | POST `/customer/logout` → `customerLogout()` in `app.py` |
 

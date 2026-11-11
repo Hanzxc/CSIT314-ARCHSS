@@ -1,7 +1,7 @@
 # Boundary: LoginPage - UC1 Log in (US1)
-# /login is only for User Admins - designers, customers and platform managers use their own
-# login pages (US13, US30, US39), so here they just get MSG_INVALID_LOGIN
-# template: templates/login.html
+# /login is the one login page for every role - this boundary handles it when "Log in as" is
+# User Admin. a designer, customer or manager account picked as User Admin gets MSG_INVALID_LOGIN
+# template: templates/login.html (shared with US13, US30, US39)
 
 from flask import render_template, redirect, url_for, session
 
@@ -9,6 +9,7 @@ from control.loginController import LoginController
 
 MSG_EMPTY_FIELDS = "Please enter your username and password"
 MSG_INVALID_LOGIN = "Invalid login details or account suspended"
+MSG_CHOOSE_ROLE = "Please choose who you are logging in as"
 
 
 class LoginPage:
@@ -26,7 +27,7 @@ class LoginPage:
     # UC1 Log in
     # shows the empty login form
     def displayLoginForm(self):
-        return render_template("login.html")
+        return render_template("login.html", selectedRole="admin")
 
     def submitLogin(self, username, password):
         self.username = username
@@ -59,4 +60,4 @@ class LoginPage:
     # UC1 Log in
     # show the login form again with the error message (the password box is cleared)
     def displayErrorMessage(self, msg):
-        return render_template("login.html", errorMessage=msg, username=self.username)
+        return render_template("login.html", errorMessage=msg, username=self.username, selectedRole="admin")

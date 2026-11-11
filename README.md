@@ -43,7 +43,7 @@ The tests never touch `database/archss.db`: `tests/conftest.py` gives every test
 
 If you already have a `database/archss.db` from an earlier sprint you don't need to delete it - `python app.py` (and every seed script) runs `initDatabase()`, which adds any missing tables and the US17 `status` / `revision` columns without touching the existing rows.
 
-Log in pages: User Admin `/login`, Interior Designer `/designer/login`, Customer `/customer/login`, Platform Manager `/manager/login`. Each role only logs in on its own page. After `seedData`: `admin01 / Admin@123` (User Admin), `designer1 / Pass@123` (designer), `cust001 / Cust@123` (customer). The sample accounts all use `Pass@123`, e.g. `design006` is an active designer, `cust002` an active customer and `pm005` an active manager (not every sample account can log in - some are suspended or miss a permission).
+Log in page: everyone logs in at `/login` and picks their role in **Log in as** (User Admin, Interior Designer, Customer, Platform Manager). The old addresses `/designer/login`, `/customer/login` and `/manager/login` still work - they open `/login` with that role already picked. After `seedData`: `admin01 / Admin@123` (User Admin), `designer1 / Pass@123` (designer), `cust001 / Cust@123` (customer). The sample accounts all use `Pass@123`, e.g. `design006` is an active designer, `cust002` an active customer and `pm005` an active manager (not every sample account can log in - some are suspended or miss a permission).
 
 ## Folder layout (B-C-E)
 
@@ -57,7 +57,7 @@ The actor only talks to the **boundary**, the boundary only talks to the **contr
 | Control | just calls the entity and returns the result straight back - no checking, no `success` variable |
 | Entity | checks the database state (username / profile name / category name taken, profile or category not Active, company profile already exists, IDP already saved or not visible, only suspending Active rows), then inserts / updates and commits. No `.strip()` here |
 
-Being logged in as the right role is the **precondition** of every use case after log in, so no page, controller or entity checks the role. `app.py` has one small route decorator per role - `loginRequired` (User Admin pages), `designerLoginRequired`, `customerLoginRequired` and `managerLoginRequired` - and all it does is redirect someone with no session to that role's login page, so a page doesn't crash when nobody is logged in. The four log out routes have no decorator (with no session you just get "Your session has already ended").
+Being logged in as the right role is the **precondition** of every use case after log in, so no page, controller or entity checks the role. `app.py` has one small route decorator per role - `loginRequired` (User Admin pages), `designerLoginRequired`, `customerLoginRequired` and `managerLoginRequired` - and all it does is redirect someone with no session to that role's old login address (which opens `/login` with the role picked), so a page doesn't crash when nobody is logged in. The four log out routes have no decorator (with no session you just get "Your session has already ended").
 
 ```
 CSIT314-ARCHSS/
@@ -251,10 +251,10 @@ A view is one `idp_view` row (added by US32 `IDP.viewIDP`), a save is one `saved
 
 | Role | Logs in at | Needs these permissions | Checked by | Route decorator |
 |---|---|---|---|---|
-| User Admin | US1 `/login` | Manage user accounts + Manage user profiles | `LoginController` | `loginRequired` |
-| Interior Designer | US13 `/designer/login` | Manage company profile + Manage own IDPs | `InteriorDesignerLoginController` | `designerLoginRequired` |
-| Customer | US30 `/customer/login` | Search, view and save IDPs | `CustomerLoginController` | `customerLoginRequired` |
-| Platform Manager | US39 `/manager/login` | Manage IDP categories + Generate reports | `PlatformManagerLoginController` | `managerLoginRequired` |
+| User Admin | US1 `/login`, Log in as: User Admin | Manage user accounts + Manage user profiles | `LoginController` | `loginRequired` |
+| Interior Designer | US13 `/login`, Log in as: Interior Designer | Manage company profile + Manage own IDPs | `InteriorDesignerLoginController` | `designerLoginRequired` |
+| Customer | US30 `/login`, Log in as: Customer | Search, view and save IDPs | `CustomerLoginController` | `customerLoginRequired` |
+| Platform Manager | US39 `/login`, Log in as: Platform Manager | Manage IDP categories + Generate reports | `PlatformManagerLoginController` | `managerLoginRequired` |
 
 Each `login()` is one call to `UserAccount.verifyCredentials(username, password, requiredPermissions)`, which checks the password, that the account and its profile are both Active, and the permissions in one go. Being logged in as that role is the precondition of all the role's other stories - the decorator only sends someone with no session to that role's login page. Each role has its own log out story and controller (US2, US19, US36, US40); they all just clear the session.
 
@@ -427,10 +427,10 @@ Use these names for the same things everywhere (they come from the sequence diag
 
 **Templates:**
 
-- Sprint 1 (User Admin): `base.html` (admin pages extend this), `login.html`, `dashboard.html`, `userProfiles.html`, `createUserProfile.html`, `viewUserProfile.html`, `updateUserProfile.html`, `userAccounts.html`, `createUserAccount.html`, `viewUserAccount.html`, `updateUserAccount.html`
-- Sprint 2 (designer): `interiorDesignerBase.html` (designer pages extend this - header has the US19 Log out button), `interiorDesignerLogin.html`, `interiorDesignerDashboard.html`, `createCompanyProfile.html`, `viewCompanyProfile.html`, `companyProfileDetails.html` (the reusable company card), `companyProfileNotFound.html`, `updateCompanyProfile.html`, `deleteCompanyProfile.html`, `companyProfileDeleteError.html`, `searchCompanyInformation.html`
-- Sprint 2 (manager): `platformManagerBase.html` (manager pages extend this - header has the US40 Log out button), `platformManagerLogin.html`, `platformManagerDashboard.html`, `idpCategories.html`, `createIDPCategory.html`, `viewIDPCategory.html`, `updateIDPCategory.html`
-- Sprint 3: `addCurrentIDP.html`, `currentIDPs.html`, `currentIDPCards.html` (reusable cards, US21 + US24), `viewCurrentIDP.html`, `idpDetailContent.html` (reusable IDP details, designer preview + customer page), `currentIDPNotFound.html`, `updateCurrentIDP.html`, `deleteCurrentIDP.html`, `searchCurrentIDPs.html`, `customerBase.html` (customer pages extend this - header has the US36 Log out button), `customerLogin.html`, `customerDashboard.html`, `customerSearchIDPs.html`, `customerViewIDP.html`, `customerIDPNotFound.html`
+- Sprint 1 (User Admin): `base.html` (admin pages extend this), `login.html` (the one login page for all four roles), `dashboard.html`, `userProfiles.html`, `createUserProfile.html`, `viewUserProfile.html`, `updateUserProfile.html`, `userAccounts.html`, `createUserAccount.html`, `viewUserAccount.html`, `updateUserAccount.html`
+- Sprint 2 (designer): `interiorDesignerBase.html` (designer pages extend this - header has the US19 Log out button), `interiorDesignerDashboard.html`, `createCompanyProfile.html`, `viewCompanyProfile.html`, `companyProfileDetails.html` (the reusable company card), `companyProfileNotFound.html`, `updateCompanyProfile.html`, `deleteCompanyProfile.html`, `companyProfileDeleteError.html`, `searchCompanyInformation.html`
+- Sprint 2 (manager): `platformManagerBase.html` (manager pages extend this - header has the US40 Log out button), `platformManagerDashboard.html`, `idpCategories.html`, `createIDPCategory.html`, `viewIDPCategory.html`, `updateIDPCategory.html`
+- Sprint 3: `addCurrentIDP.html`, `currentIDPs.html`, `currentIDPCards.html` (reusable cards, US21 + US24), `viewCurrentIDP.html`, `idpDetailContent.html` (reusable IDP details, designer preview + customer page), `currentIDPNotFound.html`, `updateCurrentIDP.html`, `deleteCurrentIDP.html`, `searchCurrentIDPs.html`, `customerBase.html` (customer pages extend this - header has the US36 Log out button), `customerDashboard.html`, `customerSearchIDPs.html`, `customerViewIDP.html`, `customerIDPNotFound.html`
 - Sprint 4: `addPastIDP.html`, `pastIDPs.html`, `viewPastIDP.html`, `editPastIDP.html`, `deletePastIDP.html`, `pastIDPNotFound.html`, `savedList.html`
 - Sprint 5: `idpStatistics.html` (US37 + US38), `idpCategoryReport.html` (US46 - US48)
 
@@ -441,7 +441,7 @@ Decorators: `/dashboard`, `/profiles...` and `/accounts...` use `loginRequired`,
 | URL | Method | Story |
 |---|---|---|
 | `/` | GET | sends you to `/login` |
-| `/login` | GET, POST | US1 (User Admins only - the other roles have their own login page) |
+| `/login` | GET, POST | US1, US13, US30, US39 - the one login page. The `role` field (`?role=` on GET) picks which role's page and controller handle it; no role = User Admin |
 | `/dashboard` | GET | US1 (User Admin dashboard) |
 | `/logout` | POST | US2 |
 | `/profiles` | GET | list page + US7 search (`/profiles?keyword=...`) |
@@ -454,7 +454,7 @@ Decorators: `/dashboard`, `/profiles...` and `/accounts...` use `loginRequired`,
 | `/accounts/<userId>` | GET | US9 |
 | `/accounts/<userId>/update` | GET, POST | US10 |
 | `/accounts/<userId>/suspend` | GET (shows the confirmation box), POST (Suspend / Cancel) | US11 |
-| `/designer/login` | GET, POST | US13 |
+| `/designer/login` | GET, POST | US13 - GET redirects to `/login?role=designer`, POST still logs a designer in |
 | `/designer/dashboard` | GET | US13 (shows a Restore button if the company profile was deleted) |
 | `/designer/company/create` | GET, POST | US14 |
 | `/designer/company` | GET | US15 |
@@ -477,7 +477,7 @@ Decorators: `/dashboard`, `/profiles...` and `/accounts...` use `loginRequired`,
 | `/designer/past-idps/search` | GET (`?keyword=...`) | US29 |
 | `/designer/idps/statistics/views` | GET | US37 |
 | `/designer/idps/statistics/saves` | GET | US38 |
-| `/customer/login` | GET, POST | US30 |
+| `/customer/login` | GET, POST | US30 - GET redirects to `/login?role=customer`, POST still logs a customer in |
 | `/customer/dashboard` | GET | US30 |
 | `/customer/idps/search` | GET (`?keyword=...`, empty = every visible IDP) | US31 |
 | `/customer/idps/<idpId>` | GET | US32 (adds one view; `?saved=1` after a US33 Save isn't counted) |
@@ -485,7 +485,7 @@ Decorators: `/dashboard`, `/profiles...` and `/accounts...` use `loginRequired`,
 | `/customer/saved-list` | GET | US35 |
 | `/customer/saved-list/search` | GET (`?keyword=...`) | US34 |
 | `/customer/logout` | POST | US36 |
-| `/manager/login` | GET, POST | US39 |
+| `/manager/login` | GET, POST | US39 - GET redirects to `/login?role=manager`, POST still logs a manager in |
 | `/manager/dashboard` | GET | US39 |
 | `/manager/logout` | POST | US40 |
 | `/manager/categories` | GET | list page + US45 search (`/manager/categories?keyword=...`) |
@@ -503,6 +503,7 @@ Decorators: `/dashboard`, `/profiles...` and `/accounts...` use `loginRequired`,
 |---|---|---|
 | `MSG_EMPTY_FIELDS` | Please enter your username and password | US1, US13, US30, US39 |
 | `MSG_INVALID_LOGIN` | Invalid login details or account suspended | US1 |
+| `MSG_CHOOSE_ROLE` | Please choose who you are logging in as | US1 (shared login page, unknown role sent) |
 | `MSG_INVALID_LOGIN` | Invalid login details or access unavailable | US13, US30, US39 |
 | `MSG_LOGGED_OUT` | You have logged out successfully | US2, US19, US36, US40 |
 | `MSG_SESSION_ENDED` | Your session has already ended | US2, US19, US36, US40 |

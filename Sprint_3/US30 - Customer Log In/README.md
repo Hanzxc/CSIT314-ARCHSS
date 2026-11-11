@@ -4,7 +4,7 @@
 
 ## Behaviour
 
-- Customers log in on their own page, `/customer/login` (GET shows the form, POST submits it). The shared `/login` page (US1) is for User Admins only - a customer gets the US1 error message there.
+- Customers log in on the shared `/login` page with **Log in as** = Customer. `/customer/login` opens that page with Customer already picked. With User Admin picked, a customer gets the US1 error message.
 - `submitLogin(username, password)` → `validateInput(username, password)` (both fields filled in, spaces-only username counts as empty).
   - `[input is invalid]` → `displayErrorMessage(MSG_EMPTY_FIELDS)` "Please enter your username and password" (wireframe 4d). The controller isn't called.
   - `[input is valid]` → the page trims the spaces from the username (not the password) → `login(username, password)`.
@@ -24,10 +24,10 @@
 
 | Diagram element | Code |
 |---|---|
-| Boundary `CustomerLoginPage` — attribute `customerLoginController`; `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password)`, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` | `boundary/customerLoginPage.py`, `templates/customerLogin.html`, `templates/customerDashboard.html` |
+| Boundary `CustomerLoginPage` — attribute `customerLoginController`; `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password)`, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` | `boundary/customerLoginPage.py`, `templates/login.html` (shared login page), `templates/customerDashboard.html` |
 | Control `CustomerLoginController` — `login(username, password): UserAccount \| None`, constant `REQUIRED_CUSTOMER_PERMISSIONS` | `control/customerLoginController.py` |
 | Entity `UserAccount` — `verifyCredentials(username, password, requiredPermissions): UserAccount \| None` | `entity/userAccount.py` |
-| Route | GET/POST `/customer/login` → `customerLogin()`, GET `/customer/dashboard` (`@customerLoginRequired`) → `customerDashboard()` in `app.py` |
+| Route | POST `/login` with `role=customer` → `login()` → `CustomerLoginPage`; GET `/customer/login` redirects to `/login?role=customer` (POST there still works), GET `/customer/dashboard` (`@customerLoginRequired`) → `customerDashboard()` in `app.py` |
 
 Messages: `MSG_EMPTY_FIELDS` "Please enter your username and password", `MSG_INVALID_LOGIN` "Invalid login details or access unavailable".
 

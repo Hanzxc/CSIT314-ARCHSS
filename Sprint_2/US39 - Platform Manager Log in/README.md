@@ -4,7 +4,7 @@
 
 ## Behaviour
 
-- `/manager/login` shows the platform manager login form (username and password; the password is shown as dots).
+- The platform manager logs in on the shared `/login` page with **Log in as** = Platform Manager (username and password; the password is shown as dots). `/manager/login` opens that page with Platform Manager already picked.
 - On "Log in" the page checks that both fields are filled in (`validateInput(username, password)`). An empty field (or a username of only spaces) → "Please enter your username and password", and the database is not checked.
 - The page trims the spaces from the username, then calls `login(username, password)`.
 - `PlatformManagerLoginController.login()` makes one call: `UserAccount().verifyCredentials(username, password, REQUIRED_MANAGER_PERMISSIONS)`, where `REQUIRED_MANAGER_PERMISSIONS` = "Manage IDP categories" + "Generate reports".
@@ -12,7 +12,7 @@
 - Account found → `redirectToDashboard(account)` clears the old session, saves userId, profileId and username (never the password) and sends the manager to `/manager/dashboard`.
 - None → "Invalid login details or access unavailable". The same message is used for every kind of failure, so nobody can guess which usernames exist.
 - `openDashboard()` just renders the dashboard ("Welcome back, <username>", the IDP Categories and Reports cards) - it doesn't check the account or profile again.
-- The shared `/login` page (US1) is for User Admins only, so a platform manager gets the US1 error message there. Log out is US40.
+- With User Admin picked in **Log in as**, a platform manager gets the US1 error message. Log out is US40.
 
 ## Who checks what
 
@@ -25,10 +25,10 @@
 
 | Diagram element | Code |
 |---|---|
-| Boundary `PlatformManagerLoginPage` — `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password): bool`, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` | `boundary/platformManagerLoginPage.py`, `templates/platformManagerLogin.html`, `templates/platformManagerDashboard.html` |
+| Boundary `PlatformManagerLoginPage` — `openLoginPage()`, `displayLoginForm()`, `submitLogin(username, password)`, `validateInput(username, password): bool`, `redirectToDashboard(account)`, `displayErrorMessage(msg)`, `openDashboard()` | `boundary/platformManagerLoginPage.py`, `templates/login.html` (shared login page), `templates/platformManagerDashboard.html` |
 | Control `PlatformManagerLoginController` — `login(username, password): UserAccount \| None`, constant `REQUIRED_MANAGER_PERMISSIONS` | `control/platformManagerLoginController.py` |
 | Entity `UserAccount` — `verifyCredentials(username, password, requiredPermissions): UserAccount \| None` | `entity/userAccount.py` (tables `user_account` and `user_profile`) |
-| Route | GET / POST `/manager/login` → `platformManagerLogin()`; GET `/manager/dashboard` (`@managerLoginRequired`) → `platformManagerDashboard()` in `app.py` |
+| Route | POST `/login` with `role=manager` → `login()` → `PlatformManagerLoginPage`; GET `/manager/login` redirects to `/login?role=manager` (POST there still works); GET `/manager/dashboard` (`@managerLoginRequired`) → `platformManagerDashboard()` in `app.py` |
 
 Messages: `MSG_EMPTY_FIELDS` "Please enter your username and password", `MSG_INVALID_LOGIN` "Invalid login details or access unavailable".
 

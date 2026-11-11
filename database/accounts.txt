@@ -5,23 +5,25 @@ Demo data only - passwords are stored as SHA-256 hashes in the database, listed 
 Every password below was checked against the database, and every 'log in at' page was checked with
 UserAccount.verifyCredentials (the same check the log in pages use).
 
+Everyone logs in at http://127.0.0.1:5000/login and picks the role in "Log in as".
+
 Main logins for the demo video
 ------------------------------------------------------------
-  admin01          Admin@123    /login            User Admin
-  designer1        Pass@123     /designer/login   Interior Designer, empty (create flows)
-  companydemo001   Demo@123     /designer/login   designer with a company, an IDP and statistics
-  idpdemo001       Demo@123     /designer/login   designer with 2 current IDPs
-  pm005            Pass@123     /manager/login    Platform Manager, reports have data
-  cust001          Cust@123     /customer/login   Customer
+  admin01          Admin@123    User Admin
+  designer1        Pass@123     Interior Designer - empty (create flows)
+  companydemo001   Demo@123     Interior Designer - with a company, an IDP and statistics
+  idpdemo001       Demo@123     Interior Designer - with 2 current IDPs
+  pm005            Pass@123     Platform Manager - reports have data
+  cust001          Cust@123     Customer
 
 Accounts used by the system test cases (docx section 7a)
 ------------------------------------------------------------
   admin01 / Admin@123, admin02 / Admin@123 (Suspended - for the failed login tests), cust001 / Cust@123,
-  designer13 designer15 designer20 designer25 designer37 designer44  -> Design@123  (/designer/login)
-  manager39 manager40 manager41 manager42 manager43 manager44 manager46 -> Manager@123 (/manager/login)
+  designer13 designer15 designer20 designer25 designer37 designer44  -> Design@123  (Log in as: Interior Designer)
+  manager39 manager40 manager41 manager42 manager43 manager44 manager46 -> Manager@123 (Log in as: Platform Manager)
   nobody99 / nobody13 do not exist on purpose (wrong login tests).
 
-Log in at /login  (User Admin) - 6 accounts
+Log in as: User Admin - 6 accounts
 ------------------------------------------------------------
   username         password     user profile                       
   admin01          Admin@123    User Admin
@@ -31,7 +33,7 @@ Log in at /login  (User Admin) - 6 accounts
   admin11          Pass@123     User Admin
   admin12          Pass@123     Backup User Admin
 
-Log in at /designer/login  (Interior Designer) - 133 accounts
+Log in as: Interior Designer - 133 accounts
 ------------------------------------------------------------
   username         password     user profile                       
   companydemo001   Demo@123     Interior Designer
@@ -168,7 +170,7 @@ Log in at /designer/login  (Interior Designer) - 133 accounts
   idpdemo001       Demo@123     Interior Designer
   idpdemo002       Demo@123     Interior Designer
 
-Log in at /manager/login  (Platform Manager) - 16 accounts
+Log in as: Platform Manager - 16 accounts
 ------------------------------------------------------------
   username         password     user profile                       
   manager39        Manager@123  Platform Manager
@@ -188,7 +190,7 @@ Log in at /manager/login  (Platform Manager) - 16 accounts
   pm011            Pass@123     Platform Manager
   pm012            Pass@123     IDP Category Manager
 
-Log in at /customer/login  (Customer) - 35 accounts
+Log in as: Customer - 35 accounts
 ------------------------------------------------------------
   username         password     user profile                       
   cust001          Cust@123     Customer

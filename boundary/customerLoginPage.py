@@ -1,6 +1,6 @@
 # Boundary: CustomerLoginPage - UC30 Customer log in (US30)
-# /customer/login is only for customers (the shared /login is for User Admins, US1)
-# templates: customerLogin.html, customerDashboard.html
+# handles the shared /login page when "Log in as" is Customer
+# templates: login.html (shared with US1, US13, US39), customerDashboard.html
 
 from flask import redirect, render_template, session, url_for
 
@@ -24,7 +24,7 @@ class CustomerLoginPage:
     # UC30 Customer log in
     # shows the empty login form
     def displayLoginForm(self):
-        return render_template("customerLogin.html")
+        return render_template("login.html", selectedRole="customer")
 
     # UT30.12
     # both boxes have to be filled in (spaces only doesn't count)
@@ -58,7 +58,7 @@ class CustomerLoginPage:
     # UC30 Customer log in
     # show the login form again with the error message
     def displayErrorMessage(self, msg):
-        return render_template("customerLogin.html", errorMessage=msg)
+        return render_template("login.html", errorMessage=msg, selectedRole="customer")
 
     # UC30 Customer log in
     # being logged in is checked by customerLoginRequired in app.py, so this just renders.

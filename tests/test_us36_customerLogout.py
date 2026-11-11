@@ -106,7 +106,7 @@ def test_ut36_13_successPage(client):
     response = client.post('/customer/logout', follow_redirects=True)
     assert response.status_code == 200 and b'You have logged out successfully' in response.data
     assert b'class="message success"' in response.data and b'role="status"' in response.data
-    assert b'action="/customer/login"' in response.data
+    assert b'action="/login"' in response.data and b'value="customer" selected' in response.data
     assert b'Logged in as' not in response.data
 
 
@@ -212,7 +212,7 @@ def test_ut36_27_ignoresSubmittedIdentityAndReturnUrl(client):
     response = client.post('/customer/logout?next=https://example.test', data=dict(
         userId=1, username='admin01', returnUrl='https://example.test'))
     assert response.headers['Location'].endswith('/customer/login')
-    client.get('/customer/login')
+    client.get('/login?role=customer')
     with client.session_transaction() as state:
         assert not state
 

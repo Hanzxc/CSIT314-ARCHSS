@@ -167,10 +167,11 @@ def test_ut40_17_adminLogoutUnchanged():
     client = app.test_client()
     client.post("/login", data={"username": "admin01", "password": "Admin@123"})
     response = client.post("/logout")
-    # the US2 admin logout still renders its own login page, not the manager one
+    # the US2 admin logout still renders the login page itself, with User Admin picked
     assert response.status_code == 200
     assert b"You have logged out successfully" in response.data
-    assert b"Platform Manager" not in response.data
+    assert b'value="admin" selected' in response.data
+    assert b'value="manager" selected' not in response.data
 
 
 def test_ut40_18_categoryPages_showLoggedInUsername():
